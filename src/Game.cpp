@@ -18,21 +18,18 @@ void Game::update(float deltaTime) {
     }
     entityManager.cleanup();
 
-    // Retrieve collisions from CollisionSystem (if present) for debug/usage
-    static int dbgCounter = 0;
-    dbgCounter++;
-    for (auto& sys : systems) {
-        if (auto* cs = dynamic_cast<CollisionSystem*>(sys.get())) {
-            auto cols = cs->getCollisions();
-            if (!cols.empty() || dbgCounter % 60 == 0) {
-                std::cout << "[CollisionSystem] Collisions: " << cols.size();
-                for (auto& p : cols) {
-                    if (p.first && p.second)
-                        std::cout << " (" << p.first->id << "," << p.second->id << ")";
-                }
-                std::cout << "\n";
+    // âœ… OPTIMIZATION: Use cached pointer instead of dynamic_cast every frame
+    if (collisionSystem) {
+        static int dbgCounter = 0;
+        dbgCounter++;
+        auto cols = collisionSystem->getCollisions();
+        if (!cols.empty() || dbgCounter % 60 == 0) {
+            std::cout << "[CollisionSystem] Collisions: " << cols.size();
+            for (auto& p : cols) {
+                if (p.first && p.second)
+                    std::cout << " (" << p.first->id << "," << p.second->id << ")";
             }
-            break; // only one collision system expected
+            std::cout << "\n";
         }
     }
 };
@@ -50,7 +47,7 @@ void Game::setupSystems(GLFWwindow* window) {
     renderSystem->init();
 	renderSystem->setViewMatrix(glm::mat4(1.0f));
     
-    // Initiale Projektionsmatrix basierend auf der Fenstergröße
+    // Initiale Projektionsmatrix basierend auf der Fenstergrï¿½ï¿½e
     int width, height;
     glfwGetWindowSize(window, &width, &height);
     renderSystem->setProjectionMatrix(glm::ortho(0.0f, (float)width, 0.0f, (float)height, -1.0f, 1.0f));
@@ -66,7 +63,9 @@ void Game::setupSystems(GLFWwindow* window) {
     systems.push_back(std::make_unique<ModelEditorSystem>()); // <- add this line
 
     // Register CollisionSystem so it's updated and can provide collisions
-    systems.push_back(std::make_unique<CollisionSystem>());
+    auto cs = std::make_unique<CollisionSystem>();
+    collisionSystem = cs.get(); // Cache pointer to avoid dynamic_cast later
+    systems.push_back(std::move(cs));
 
     std::cout << "ECS Systeme initialisiert\n";
 }
