@@ -91,7 +91,21 @@ add_executable(RPG-Looter
     # Collision system files
     "src/CollisionUtils.h"
     "src/CollisionSystem.h"
-    "src/CollisionSystem.cpp")
+    "src/CollisionSystem.cpp"
+
+    # Engine Overlay custom UI system
+    "src/EngineOverlay/DrawList.h"
+    "src/EngineOverlay/DrawList.cpp"
+    "src/EngineOverlay/UIRenderer.h"
+    "src/EngineOverlay/UIRenderer.cpp"
+    "src/EngineOverlay/UIContext.h"
+    "src/EngineOverlay/UIContext.cpp"
+    "src/EngineOverlay/FontAtlas.h"
+    "src/EngineOverlay/FontAtlas.cpp"
+    "src/EngineOverlay/Widgets.h"
+    "src/EngineOverlay/Widgets.cpp"
+    "src/EngineOverlay/EngineOverlaySystem.h"
+    "src/EngineOverlay/EngineOverlaySystem.cpp")
     
     
 # Includes
@@ -100,7 +114,15 @@ target_include_directories(RPG-Looter PUBLIC
 "${CMAKE_CURRENT_SOURCE_DIR}/include/asio-1.36.0/include"
 )
 
-target_link_libraries(RPG-Looter PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/libs/OpenAL32.lib")
+# OpenAL linking - platform specific
+if(WIN32)
+    target_link_libraries(RPG-Looter PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/libs/OpenAL32.lib")
+else()
+    # On Linux/macOS, use system OpenAL
+    find_package(OpenAL REQUIRED)
+    target_link_libraries(RPG-Looter PRIVATE ${OPENAL_LIBRARY})
+    target_include_directories(RPG-Looter PRIVATE ${OPENAL_INCLUDE_DIR})
+endif()
 
 
 # GLFW und GLM linken

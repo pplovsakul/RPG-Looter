@@ -1,6 +1,8 @@
 #include "ESCSound.h"
 #include <iostream>
 #include <fstream>
+#include <cstdint>
+#include <cstring>
 
 // ============================================================================
 // WAV LOADER IMPLEMENTATION (aus Audiomanager.cpp)
