@@ -2,6 +2,8 @@
 #include "Widgets.h"
 #include "../Components.h"
 #include <iostream>
+#include <algorithm>
+#include <cstring>
 
 EngineOverlaySystem::EngineOverlaySystem(GLFWwindow* window)
     : m_window(window)
@@ -24,8 +26,20 @@ EngineOverlaySystem::EngineOverlaySystem(GLFWwindow* window)
         return;
     }
     
+    // Create UI windows
+    m_consoleWindow = std::make_unique<EngineUI::ConsoleWindow>();
+    m_debugUIWindow = std::make_unique<EngineUI::DebugUIWindow>();
+    
+    // Initialize frame history for profiler
+    m_frameHistory.reserve(120); // 2 seconds at 60fps
+    
     m_initialized = true;
     std::cout << "EngineOverlaySystem initialized successfully" << std::endl;
+    
+    // Add initial console log
+    if (m_consoleWindow) {
+        m_consoleWindow->addLog("Engine Overlay System initialized", EngineUI::LogEntry::Level::Info);
+    }
 }
 
 EngineOverlaySystem::~EngineOverlaySystem() {
@@ -48,6 +62,12 @@ void EngineOverlaySystem::update(EntityManager& em, float deltaTime) {
         m_frameTimeMs = m_frameTimeAccum / m_frameCount;
         m_frameTimeAccum = 0.0f;
         m_frameCount = 0;
+        
+        // Update frame history for graph
+        m_frameHistory.push_back(m_frameTimeMs);
+        if (m_frameHistory.size() > 120) {
+            m_frameHistory.erase(m_frameHistory.begin());
+        }
     }
     
     // Handle input
@@ -101,6 +121,9 @@ void EngineOverlaySystem::handleInput() {
 }
 
 void EngineOverlaySystem::renderUI(EntityManager& em, float deltaTime) {
+    // Render menu bar first
+    renderMenuBar();
+    
     if (m_showDemo) {
         renderDemoWindow();
     }
@@ -111,6 +134,14 @@ void EngineOverlaySystem::renderUI(EntityManager& em, float deltaTime) {
     
     if (m_showProfiler) {
         renderProfiler(deltaTime);
+    }
+    
+    if (m_showConsole && m_consoleWindow) {
+        m_consoleWindow->render(&m_showConsole);
+    }
+    
+    if (m_showDebugUI && m_debugUIWindow) {
+        m_debugUIWindow->render(&m_showDebugUI);
     }
 }
 
@@ -236,7 +267,7 @@ void EngineOverlaySystem::renderEntityInspector(EntityManager& em) {
 void EngineOverlaySystem::renderProfiler(float deltaTime) {
     using namespace EngineUI;
     
-    EngineUI::Rect initialRect(900, 100, 300, 200);
+    EngineUI::Rect initialRect(900, 100, 300, 250);
     if (m_uiContext->beginWindow("Profiler", nullptr, &initialRect)) {
         Text("Performance Monitor");
         Separator();
@@ -261,13 +292,92 @@ void EngineOverlaySystem::renderProfiler(float deltaTime) {
         float fraction = m_frameTimeMs / targetFrameTime;
         ProgressBar(fraction);
         
-        char perfText[64];
         if (fraction < 0.8f) {
             TextColored(Color::Green(), "Performance: Excellent");
         } else if (fraction < 1.2f) {
             TextColored(Color::Yellow(), "Performance: Good");
         } else {
             TextColored(Color::Red(), "Performance: Poor");
+        }
+        
+        Separator();
+        
+        // Frame time graph
+        Text("Frame Time History:");
+        if (!m_frameHistory.empty()) {
+            // Find min/max for scaling
+            float minTime = m_frameHistory[0];
+            float maxTime = m_frameHistory[0];
+            for (float t : m_frameHistory) {
+                minTime = std::min(minTime, t);
+                maxTime = std::max(maxTime, t);
+            }
+            
+            char graphText[128];
+            snprintf(graphText, sizeof(graphText), "Range: %.2f - %.2f ms (%zu samples)", 
+                    minTime, maxTime, m_frameHistory.size());
+            Text(graphText);
+            
+            // Simple text-based visualization
+            Text("Graph: (120 samples, newest on right)");
+            char graphLine[128] = "";
+            for (size_t i = 0; i < std::min(m_frameHistory.size(), (size_t)60); ++i) {
+                size_t idx = m_frameHistory.size() > 60 ? m_frameHistory.size() - 60 + i : i;
+                float t = m_frameHistory[idx];
+                
+                // Scale to 0-9 range
+                int barHeight = (int)((t / targetFrameTime) * 5.0f);
+                barHeight = std::max(0, std::min(9, barHeight));
+                
+                char c = '0' + barHeight;
+                strncat(graphLine, &c, 1);
+            }
+            Text(graphLine);
+        }
+        
+        m_uiContext->endWindow();
+    }
+}
+
+void EngineOverlaySystem::renderMenuBar() {
+    using namespace EngineUI;
+    
+    // Simple menu bar at top of screen
+    EngineUI::Rect menuRect(0, 0, 1920, 24); // Fixed width, will clip
+    if (m_uiContext->beginWindow("##MenuBar", nullptr, &menuRect)) {
+        Text("View:");
+        SameLine();
+        
+        if (Button("Demo")) {
+            m_showDemo = !m_showDemo;
+        }
+        SameLine();
+        
+        if (Button("Inspector")) {
+            m_showEntityInspector = !m_showEntityInspector;
+        }
+        SameLine();
+        
+        if (Button("Profiler")) {
+            m_showProfiler = !m_showProfiler;
+        }
+        SameLine();
+        
+        if (Button("Console")) {
+            m_showConsole = !m_showConsole;
+        }
+        SameLine();
+        
+        if (Button("Debug UI")) {
+            m_showDebugUI = !m_showDebugUI;
+        }
+        SameLine();
+        
+        Text("|");
+        SameLine();
+        
+        if (Button("Hide All (F1)")) {
+            toggleOverlay();
         }
         
         m_uiContext->endWindow();

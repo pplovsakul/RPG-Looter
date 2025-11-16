@@ -33,12 +33,10 @@ uniform sampler2D uTexture;
 out vec4 FragColor;
 
 void main() {
-    // If UV is (0,0), render solid color; otherwise sample texture
-    if (vUV.x == 0.0 && vUV.y == 0.0) {
-        FragColor = vColor;
-    } else {
-        FragColor = vColor * texture(uTexture, vUV);
-    }
+    // Always sample texture and multiply by vertex color
+    // For solid color rendering, texture will be 1x1 white pixel
+    vec4 texColor = texture(uTexture, vUV);
+    FragColor = vColor * texColor;
 }
 )";
 
@@ -182,14 +180,14 @@ void UIRenderer::shutdown() {
 }
 
 void UIRenderer::setupRenderState(int screenWidth, int screenHeight) {
-    // Enable blending for transparency
-    GLCall(glEnable(GL_BLEND));
-    GLCall(glBlendEquation(GL_FUNC_ADD));
-    GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
-    
-    // Disable depth test
+    // Disable depth test and culling for UI rendering
     GLCall(glDisable(GL_DEPTH_TEST));
     GLCall(glDisable(GL_CULL_FACE));
+    
+    // Enable blending with proper alpha handling
+    GLCall(glEnable(GL_BLEND));
+    GLCall(glBlendEquation(GL_FUNC_ADD));
+    GLCall(glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA));
     
     // Enable scissor test for clipping
     GLCall(glEnable(GL_SCISSOR_TEST));
@@ -226,6 +224,19 @@ void UIRenderer::render(const DrawList& drawList) {
         return;
     }
     
+    // Save GL state to restore later
+    GLboolean lastEnableBlend = glIsEnabled(GL_BLEND);
+    GLboolean lastEnableDepthTest = glIsEnabled(GL_DEPTH_TEST);
+    GLboolean lastEnableCullFace = glIsEnabled(GL_CULL_FACE);
+    GLboolean lastEnableScissorTest = glIsEnabled(GL_SCISSOR_TEST);
+    GLint lastBlendSrcRGB, lastBlendDstRGB, lastBlendSrcAlpha, lastBlendDstAlpha;
+    glGetIntegerv(GL_BLEND_SRC_RGB, &lastBlendSrcRGB);
+    glGetIntegerv(GL_BLEND_DST_RGB, &lastBlendDstRGB);
+    glGetIntegerv(GL_BLEND_SRC_ALPHA, &lastBlendSrcAlpha);
+    glGetIntegerv(GL_BLEND_DST_ALPHA, &lastBlendDstAlpha);
+    GLint lastViewport[4];
+    glGetIntegerv(GL_VIEWPORT, lastViewport);
+    
     setupRenderState(m_screenWidth, m_screenHeight);
     
     // Upload vertex data
@@ -261,10 +272,18 @@ void UIRenderer::render(const DrawList& drawList) {
                (void*)(cmd.idxOffset * sizeof(unsigned int))));
     }
     
-    // Restore state
-    GLCall(glDisable(GL_SCISSOR_TEST));
+    // Restore GL state
     GLCall(glBindVertexArray(0));
     GLCall(glUseProgram(0));
+    GLCall(glBindTexture(GL_TEXTURE_2D, 0));
+    
+    if (lastEnableBlend) glEnable(GL_BLEND); else glDisable(GL_BLEND);
+    if (lastEnableDepthTest) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
+    if (lastEnableCullFace) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
+    if (lastEnableScissorTest) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
+    
+    glBlendFuncSeparate(lastBlendSrcRGB, lastBlendDstRGB, lastBlendSrcAlpha, lastBlendDstAlpha);
+    glViewport(lastViewport[0], lastViewport[1], lastViewport[2], lastViewport[3]);
 }
 
 } // namespace EngineUI

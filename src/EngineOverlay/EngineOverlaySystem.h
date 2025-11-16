@@ -3,7 +3,10 @@
 #include "../System.h"
 #include "../Entitymanager.h"
 #include "UIContext.h"
+#include "ConsoleWindow.h"
+#include "DebugUIWindow.h"
 #include <GLFW/glfw3.h>
+#include <memory>
 
 /**
  * EngineOverlaySystem - Integrates custom UI system into the game
@@ -29,6 +32,7 @@ public:
 private:
     void handleInput();
     void renderUI(EntityManager& em, float deltaTime);
+    void renderMenuBar();
     void renderDemoWindow();
     void renderEntityInspector(EntityManager& em);
     void renderProfiler(float deltaTime);
@@ -43,15 +47,22 @@ private:
     bool m_showDemo = true;
     bool m_showEntityInspector = true;
     bool m_showProfiler = true;
+    bool m_showConsole = true;
+    bool m_showDebugUI = true;
     
     // Profiler data
     float m_frameTimeMs = 0.0f;
     float m_frameTimeAccum = 0.0f;
     int m_frameCount = 0;
+    std::vector<float> m_frameHistory;
     
     // Input state (previous frame)
     bool m_prevF1Key = false;
     bool m_prevMouseButtons[5] = {false};
     double m_prevMouseX = 0.0;
     double m_prevMouseY = 0.0;
+    
+    // UI Windows
+    std::unique_ptr<EngineUI::ConsoleWindow> m_consoleWindow;
+    std::unique_ptr<EngineUI::DebugUIWindow> m_debugUIWindow;
 };

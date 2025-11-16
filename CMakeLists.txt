@@ -105,7 +105,11 @@ add_executable(RPG-Looter
     "src/EngineOverlay/Widgets.h"
     "src/EngineOverlay/Widgets.cpp"
     "src/EngineOverlay/EngineOverlaySystem.h"
-    "src/EngineOverlay/EngineOverlaySystem.cpp")
+    "src/EngineOverlay/EngineOverlaySystem.cpp"
+    "src/EngineOverlay/ConsoleWindow.h"
+    "src/EngineOverlay/ConsoleWindow.cpp"
+    "src/EngineOverlay/DebugUIWindow.h"
+    "src/EngineOverlay/DebugUIWindow.cpp")
     
     
 # Includes

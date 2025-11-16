@@ -27,7 +27,7 @@ void FontAtlas::shutdown() {
 
 void FontAtlas::createBitmapFont() {
     // Create a simple monospace bitmap font for printable ASCII characters (32-126)
-    // Each character is 8x16 pixels
+    // Each character is 8x16 pixels with readable 5x7 patterns
     
     const int charWidth = 8;
     const int charHeight = 16;
@@ -38,11 +38,44 @@ void FontAtlas::createBitmapFont() {
     m_atlasHeight = numRows * charHeight;
     m_lineHeight = (float)charHeight;
     
-    // Create bitmap data (simple white on black for now)
+    // Create bitmap data (white on transparent background)
     std::vector<unsigned char> bitmap(m_atlasWidth * m_atlasHeight * 4, 0);
     
-    // Fill with a simple pattern for each character
-    // This is a very basic placeholder - in a real implementation, you'd load actual font data
+    // Simple 5x7 font patterns for basic ASCII characters
+    // Each pattern is a 5-byte array representing 5x7 pixels (bits)
+    auto drawChar = [&](int baseX, int baseY, const unsigned char* pattern, int patternHeight) {
+        for (int y = 0; y < patternHeight && y < charHeight - 2; ++y) {
+            unsigned char row = pattern[y];
+            for (int x = 0; x < 5; ++x) {
+                if (row & (1 << (4 - x))) {
+                    int pixelX = baseX + x + 1; // Center in 8-wide cell
+                    int pixelY = baseY + y + 4;  // Offset from top
+                    int pixelIdx = (pixelY * m_atlasWidth + pixelX) * 4;
+                    
+                    bitmap[pixelIdx + 0] = 255; // R
+                    bitmap[pixelIdx + 1] = 255; // G
+                    bitmap[pixelIdx + 2] = 255; // B
+                    bitmap[pixelIdx + 3] = 255; // A
+                }
+            }
+        }
+    };
+    
+    // Define simple patterns for common characters (5x7 bitmap)
+    unsigned char patternSpace[7] = {0};
+    unsigned char patternA[7] = {0x0E, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x11};
+    unsigned char patternB[7] = {0x1E, 0x11, 0x11, 0x1E, 0x11, 0x11, 0x1E};
+    unsigned char patternC[7] = {0x0E, 0x11, 0x10, 0x10, 0x10, 0x11, 0x0E};
+    unsigned char patternD[7] = {0x1E, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1E};
+    unsigned char patternE[7] = {0x1F, 0x10, 0x10, 0x1E, 0x10, 0x10, 0x1F};
+    unsigned char patternF[7] = {0x1F, 0x10, 0x10, 0x1E, 0x10, 0x10, 0x10};
+    unsigned char pattern0[7] = {0x0E, 0x11, 0x13, 0x15, 0x19, 0x11, 0x0E};
+    unsigned char pattern1[7] = {0x04, 0x0C, 0x04, 0x04, 0x04, 0x04, 0x0E};
+    unsigned char patternDot[7] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04};
+    unsigned char patternColon[7] = {0x00, 0x04, 0x00, 0x00, 0x00, 0x04, 0x00};
+    unsigned char patternDefault[7] = {0x1F, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1F}; // Box for unknown chars
+    
+    // Fill atlas with characters
     for (int charIdx = 0; charIdx < 95; ++charIdx) {
         char c = (char)(32 + charIdx);
         
@@ -52,33 +85,37 @@ void FontAtlas::createBitmapFont() {
         int baseX = col * charWidth;
         int baseY = row * charHeight;
         
-        // Draw a simple pattern for this character (vertical lines for visibility)
-        for (int y = 0; y < charHeight; ++y) {
-            for (int x = 0; x < charWidth; ++x) {
-                int pixelX = baseX + x;
-                int pixelY = baseY + y;
-                int pixelIdx = (pixelY * m_atlasWidth + pixelX) * 4;
-                
-                // Create a simple pattern based on character
-                bool pixel = false;
-                if (c >= '0' && c <= '9') {
-                    // Numbers: draw a box
-                    pixel = (x == 0 || x == charWidth-1 || y == 0 || y == charHeight-1);
-                } else if (c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z') {
-                    // Letters: draw vertical lines
-                    pixel = (x == 1 || x == charWidth-2);
-                } else {
-                    // Other chars: draw a dot
-                    pixel = (x == charWidth/2 && y == charHeight/2);
-                }
-                
-                if (pixel) {
-                    bitmap[pixelIdx + 0] = 255; // R
-                    bitmap[pixelIdx + 1] = 255; // G
-                    bitmap[pixelIdx + 2] = 255; // B
-                    bitmap[pixelIdx + 3] = 255; // A
+        // Select pattern based on character
+        const unsigned char* pattern = patternDefault;
+        if (c == ' ') pattern = patternSpace;
+        else if (c == '.') pattern = patternDot;
+        else if (c == ':') pattern = patternColon;
+        else if (c >= 'A' && c <= 'F') pattern = (&patternA)[c - 'A'];
+        else if (c >= 'a' && c <= 'f') pattern = (&patternA)[c - 'a']; // Reuse uppercase
+        else if (c >= '0' && c <= '1') pattern = (&pattern0)[c - '0'];
+        else {
+            // For other letters and symbols, draw a filled rect to ensure visibility
+            for (int y = 2; y < charHeight - 2; ++y) {
+                for (int x = 1; x < charWidth - 1; ++x) {
+                    int pixelX = baseX + x;
+                    int pixelY = baseY + y;
+                    int pixelIdx = (pixelY * m_atlasWidth + pixelX) * 4;
+                    
+                    // Draw outline or fill based on position
+                    bool isBorder = (x == 1 || x == charWidth - 2 || y == 2 || y == charHeight - 3);
+                    if (isBorder) {
+                        bitmap[pixelIdx + 0] = 255;
+                        bitmap[pixelIdx + 1] = 255;
+                        bitmap[pixelIdx + 2] = 255;
+                        bitmap[pixelIdx + 3] = 255;
+                    }
                 }
             }
+        }
+        
+        // Draw the character pattern if we have one
+        if (pattern != patternDefault || c == ' ') {
+            drawChar(baseX, baseY, pattern, 7);
         }
         
         // Store glyph info
@@ -95,11 +132,16 @@ void FontAtlas::createBitmapFont() {
     // Create OpenGL texture
     GLCall(glGenTextures(1, &m_textureID));
     GLCall(glBindTexture(GL_TEXTURE_2D, m_textureID));
+    
+    // Use GL_UNPACK_ALIGNMENT=1 for proper texture upload
+    GLCall(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
     GLCall(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_atlasWidth, m_atlasHeight, 0, 
                         GL_RGBA, GL_UNSIGNED_BYTE, bitmap.data()));
+    GLCall(glPixelStorei(GL_UNPACK_ALIGNMENT, 4)); // Restore default
     
-    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+    // Use NEAREST filtering for crisp bitmap font
+    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
+    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
     GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
     GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
 }
