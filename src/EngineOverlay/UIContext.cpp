@@ -226,6 +226,11 @@ bool UIContext::beginWindow(const char* name, bool* p_open, const Rect* initialR
     Color titleColor = window.focused ? m_style.titleBgActive : m_style.titleBg;
     window.drawList.addRectFilled(titleRect, titleColor);
     
+    // Draw title text
+    float titleTextX = window.rect.x + m_style.windowPadding * 0.5f;
+    float titleTextY = window.rect.y + m_style.windowPadding * 0.5f;
+    drawText(glm::vec2(titleTextX, titleTextY), m_style.text, name);
+    
     // Setup content area
     window.contentRect = Rect(
         window.rect.x + m_style.windowPadding,

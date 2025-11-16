@@ -33,12 +33,10 @@ uniform sampler2D uTexture;
 out vec4 FragColor;
 
 void main() {
-    // If UV is (0,0), render solid color; otherwise sample texture
-    if (vUV.x == 0.0 && vUV.y == 0.0) {
-        FragColor = vColor;
-    } else {
-        FragColor = vColor * texture(uTexture, vUV);
-    }
+    // Always sample texture and multiply by vertex color
+    // For solid color rendering, texture will be 1x1 white pixel
+    vec4 texColor = texture(uTexture, vUV);
+    FragColor = vColor * texColor;
 }
 )";
 
@@ -182,14 +180,14 @@ void UIRenderer::shutdown() {
 }
 
 void UIRenderer::setupRenderState(int screenWidth, int screenHeight) {
-    // Enable blending for transparency
-    GLCall(glEnable(GL_BLEND));
-    GLCall(glBlendEquation(GL_FUNC_ADD));
-    GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
-    
-    // Disable depth test
+    // Disable depth test and culling for UI rendering
     GLCall(glDisable(GL_DEPTH_TEST));
     GLCall(glDisable(GL_CULL_FACE));
+    
+    // Enable blending with proper alpha handling
+    GLCall(glEnable(GL_BLEND));
+    GLCall(glBlendEquation(GL_FUNC_ADD));
+    GLCall(glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA));
     
     // Enable scissor test for clipping
     GLCall(glEnable(GL_SCISSOR_TEST));

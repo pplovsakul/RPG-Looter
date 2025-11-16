@@ -97,10 +97,17 @@ void DrawList::updateCurrentCommand(unsigned int textureID) {
 void DrawList::primRect(const Rect& rect, const Color& color, const Rect& uv) {
     unsigned int idx = m_vertices.size();
     
-    m_vertices.push_back(DrawVertex(glm::vec2(rect.x, rect.y), glm::vec2(uv.x, uv.y), color));
-    m_vertices.push_back(DrawVertex(glm::vec2(rect.x + rect.w, rect.y), glm::vec2(uv.x + uv.w, uv.y), color));
-    m_vertices.push_back(DrawVertex(glm::vec2(rect.x + rect.w, rect.y + rect.h), glm::vec2(uv.x + uv.w, uv.y + uv.h), color));
-    m_vertices.push_back(DrawVertex(glm::vec2(rect.x, rect.y + rect.h), glm::vec2(uv.x, uv.y + uv.h), color));
+    // Ensure UVs are valid (use 0.5, 0.5 for white texture center if UVs are 0)
+    Rect actualUV = uv;
+    if (uv.w == 0 && uv.h == 0) {
+        // For solid colors, sample the center of the 1x1 white texture
+        actualUV = Rect(0.5f, 0.5f, 0.0f, 0.0f);
+    }
+    
+    m_vertices.push_back(DrawVertex(glm::vec2(rect.x, rect.y), glm::vec2(actualUV.x, actualUV.y), color));
+    m_vertices.push_back(DrawVertex(glm::vec2(rect.x + rect.w, rect.y), glm::vec2(actualUV.x + actualUV.w, actualUV.y), color));
+    m_vertices.push_back(DrawVertex(glm::vec2(rect.x + rect.w, rect.y + rect.h), glm::vec2(actualUV.x + actualUV.w, actualUV.y + actualUV.h), color));
+    m_vertices.push_back(DrawVertex(glm::vec2(rect.x, rect.y + rect.h), glm::vec2(actualUV.x, actualUV.y + actualUV.h), color));
     
     m_indices.push_back(idx + 0);
     m_indices.push_back(idx + 1);
@@ -162,10 +169,11 @@ void DrawList::addLine(const glm::vec2& p1, const glm::vec2& p2, const Color& co
     primReserve(6, 4);
     
     unsigned int idx = m_vertices.size();
-    m_vertices.push_back(DrawVertex(p1 - perp, glm::vec2(0, 0), color));
-    m_vertices.push_back(DrawVertex(p2 - perp, glm::vec2(1, 0), color));
-    m_vertices.push_back(DrawVertex(p2 + perp, glm::vec2(1, 1), color));
-    m_vertices.push_back(DrawVertex(p1 + perp, glm::vec2(0, 1), color));
+    // Use center UVs (0.5, 0.5) for solid color sampling
+    m_vertices.push_back(DrawVertex(p1 - perp, glm::vec2(0.5f, 0.5f), color));
+    m_vertices.push_back(DrawVertex(p2 - perp, glm::vec2(0.5f, 0.5f), color));
+    m_vertices.push_back(DrawVertex(p2 + perp, glm::vec2(0.5f, 0.5f), color));
+    m_vertices.push_back(DrawVertex(p1 + perp, glm::vec2(0.5f, 0.5f), color));
     
     m_indices.push_back(idx + 0);
     m_indices.push_back(idx + 1);
@@ -184,9 +192,10 @@ void DrawList::addTriangleFilled(const glm::vec2& p1, const glm::vec2& p2, const
     primReserve(3, 3);
     
     unsigned int idx = m_vertices.size();
-    m_vertices.push_back(DrawVertex(p1, glm::vec2(0, 0), color));
-    m_vertices.push_back(DrawVertex(p2, glm::vec2(0, 0), color));
-    m_vertices.push_back(DrawVertex(p3, glm::vec2(0, 0), color));
+    // Use center UVs (0.5, 0.5) for solid color sampling
+    m_vertices.push_back(DrawVertex(p1, glm::vec2(0.5f, 0.5f), color));
+    m_vertices.push_back(DrawVertex(p2, glm::vec2(0.5f, 0.5f), color));
+    m_vertices.push_back(DrawVertex(p3, glm::vec2(0.5f, 0.5f), color));
     
     m_indices.push_back(idx + 0);
     m_indices.push_back(idx + 1);
@@ -217,7 +226,7 @@ void DrawList::addCircleFilled(const glm::vec2& center, float radius, const Colo
     for (int i = 0; i < segments; ++i) {
         float angle = (float)i / (float)segments * 2.0f * 3.14159265f;
         glm::vec2 p(center.x + std::cos(angle) * radius, center.y + std::sin(angle) * radius);
-        m_vertices.push_back(DrawVertex(p, glm::vec2(0, 0), color));
+        m_vertices.push_back(DrawVertex(p, glm::vec2(0.5f, 0.5f), color));
     }
     
     for (int i = 0; i < segments; ++i) {
