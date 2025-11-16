@@ -14,9 +14,15 @@ public:
 
 class RenderComponent : public Component {
 public:
+    // Enum for common mesh types for faster comparisons
+    enum class MeshType { Unknown = 0, Quad = 1, Circle = 2, Triangle = 3 };
+    
     std::string meshName = "quad";
     std::string shaderName = "default";
     std::string textureName = "";
+    
+    // Cached mesh type for performance (avoid string comparisons in hot path)
+    MeshType meshType = MeshType::Quad;
 
     glm::vec3 color = glm::vec3(1.0f);
     float alpha = 1.0f;
@@ -27,6 +33,15 @@ public:
     int renderLayer = 0;  // For sorting
 
     bool followMouse = false;
+    
+    // Helper to set mesh name and automatically update meshType
+    void setMesh(const std::string& name) {
+        meshName = name;
+        if (name == "quad") meshType = MeshType::Quad;
+        else if (name == "circle") meshType = MeshType::Circle;
+        else if (name == "triangle") meshType = MeshType::Triangle;
+        else meshType = MeshType::Unknown;
+    }
 };
 
 class AudioComponent : public Component {

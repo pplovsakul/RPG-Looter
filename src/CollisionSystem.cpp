@@ -59,7 +59,8 @@ void CollisionSystem::update(EntityManager& em, float /*deltaTime*/) {
         } else if (e->hasComponent<RenderComponent>()) {
             auto* r = e->getComponent<RenderComponent>();
             ModelComponent::Shape s;
-            if (r->meshName == "circle") {
+            // ✅ OPTIMIZATION: Use enum comparison instead of string comparison
+            if (r->meshType == RenderComponent::MeshType::Circle) {
                 s.type = ModelComponent::ShapeType::Circle;
                 s.size = t->scale;
             } else {
@@ -214,7 +215,8 @@ bool CollisionSystem::wouldCollide(Entity* e, const glm::vec2& proposedPos, Enti
     } else if (e->hasComponent<RenderComponent>()) {
         auto* r = e->getComponent<RenderComponent>();
         ModelComponent::Shape s;
-        if (r->meshName == "circle") { s.type = ModelComponent::ShapeType::Circle; s.size = t->scale; }
+        // ✅ OPTIMIZATION: Use enum comparison instead of string comparison
+        if (r->meshType == RenderComponent::MeshType::Circle) { s.type = ModelComponent::ShapeType::Circle; s.size = t->scale; }
         else { s.type = ModelComponent::ShapeType::Rectangle; s.size = t->scale; }
         s.position = glm::vec2(0.0f);
         shapesE.push_back(s);
@@ -236,7 +238,8 @@ bool CollisionSystem::wouldCollide(Entity* e, const glm::vec2& proposedPos, Enti
         } else if (other->hasComponent<RenderComponent>()) {
             auto* ro = other->getComponent<RenderComponent>();
             ModelComponent::Shape so;
-            if (ro->meshName == "circle") { so.type = ModelComponent::ShapeType::Circle; so.size = to->scale; }
+            // ✅ OPTIMIZATION: Use enum comparison instead of string comparison
+            if (ro->meshType == RenderComponent::MeshType::Circle) { so.type = ModelComponent::ShapeType::Circle; so.size = to->scale; }
             else { so.type = ModelComponent::ShapeType::Rectangle; so.size = to->scale; }
             so.position = glm::vec2(0.0f);
             shapesO.push_back(so);

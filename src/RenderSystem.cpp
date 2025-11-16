@@ -102,7 +102,7 @@ void RenderSystem::createDefaultAssets() {
 }
 
 void RenderSystem::update(EntityManager& em, float dt) {
-    // ✅ FIX 1: Entities holen
+    // ✅ FIX 1: Get entities with RenderComponent
     auto entities = em.getEntitiesWith<RenderComponent>();
 
     if (entities.empty()) {
@@ -114,31 +114,35 @@ void RenderSystem::update(EntityManager& em, float dt) {
         //return;
     }
 
-    // ✅ FIX 2: SICHERES Sortieren mit nullptr checks
-    std::sort(entities.begin(), entities.end(), [](Entity* a, Entity* b) {
-        // Safety: Prüfe ob Entities existieren
-        if (!a || !b) return false;
-        if (!a->active || !b->active) return false;
+    // ✅ OPTIMIZATION: Only sort when needed instead of every frame
+    if (needsResort || sortedEntities.size() != entities.size()) {
+        sortedEntities = entities;
+        std::sort(sortedEntities.begin(), sortedEntities.end(), [](Entity* a, Entity* b) {
+            // Safety: Check if entities exist
+            if (!a || !b) return false;
+            if (!a->active || !b->active) return false;
 
-        auto ra = a->getComponent<RenderComponent>();
-        auto rb = b->getComponent<RenderComponent>();
+            auto ra = a->getComponent<RenderComponent>();
+            auto rb = b->getComponent<RenderComponent>();
 
-        // Safety: Prüfe ob Components existieren
-        if (!ra || !rb) return false;
+            // Safety: Check if components exist
+            if (!ra || !rb) return false;
 
-        return ra->renderLayer < rb->renderLayer;
+            return ra->renderLayer < rb->renderLayer;
         });
+        needsResort = false;
+    }
 
-    // Debug output (weniger häufig)
+    // Debug output (less frequent)
     static int frameCounter = 0;
     if (frameCounter++ % 120 == 0) {
-        std::cout << "\r[RenderSystem] Entities: " << entities.size();
-        for (size_t i = 0; i < entities.size() && i < 3; i++) {
-            // ✅ Safety check vor Zugriff
-            if (!entities[i] || !entities[i]->active) continue;
+        std::cout << "\r[RenderSystem] Entities: " << sortedEntities.size();
+        for (size_t i = 0; i < sortedEntities.size() && i < 3; i++) {
+            // ✅ Safety check before access
+            if (!sortedEntities[i] || !sortedEntities[i]->active) continue;
 
-            auto t = entities[i]->getComponent<TransformComponent>();
-            auto r = entities[i]->getComponent<RenderComponent>();
+            auto t = sortedEntities[i]->getComponent<TransformComponent>();
+            auto r = sortedEntities[i]->getComponent<RenderComponent>();
             if (t && r) {
                 std::cout << " | " << r->meshName << "(" << (int)t->position.x << "," << (int)t->position.y << ")";
             }
@@ -149,7 +153,7 @@ void RenderSystem::update(EntityManager& em, float dt) {
     // --------------------------
     // Render entities with RenderComponent, but skip if they have a ModelComponent
     // --------------------------
-    for (Entity* e : entities) {
+    for (Entity* e : sortedEntities) {
         // ✅ KRITISCH: Entity könnte während Iteration gelöscht worden sein!
         if (!e || !e->active) {
             continue;
@@ -206,11 +210,14 @@ void RenderSystem::update(EntityManager& em, float dt) {
             shader->SetUniform4f("u_color", colorWithAlpha.x, colorWithAlpha.y, colorWithAlpha.z, colorWithAlpha.w);
         }
         else {
-            // Fallback: Direkte OpenGL-Calls
-            GLint currentProgram;
-            glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
-            int mvpLocation = glGetUniformLocation(currentProgram, "u_MVP");
-            int colorLocation = glGetUniformLocation(currentProgram, "u_color");
+            // ✅ OPTIMIZATION: Cache program ID to avoid repeated OpenGL queries
+            if (cachedProgramID == 0) {
+                GLint currentProgram;
+                glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
+                cachedProgramID = currentProgram;
+            }
+            int mvpLocation = glGetUniformLocation(cachedProgramID, "u_MVP");
+            int colorLocation = glGetUniformLocation(cachedProgramID, "u_color");
             if (mvpLocation != -1) {
                 glUniformMatrix4fv(mvpLocation, 1, GL_FALSE, &mvp[0][0]);
             }
@@ -229,10 +236,9 @@ void RenderSystem::update(EntityManager& em, float dt) {
                 shader->SetUniform1i("u_UseTexture", 1);
             }
             else {
-                GLint currentProgram;
-                glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
-                int texLoc = glGetUniformLocation(currentProgram, "u_Texture");
-                int useTexLoc = glGetUniformLocation(currentProgram, "u_UseTexture");
+                // ✅ OPTIMIZATION: Reuse cached program ID
+                int texLoc = glGetUniformLocation(cachedProgramID, "u_Texture");
+                int useTexLoc = glGetUniformLocation(cachedProgramID, "u_UseTexture");
                 if (texLoc != -1) glUniform1i(texLoc, 0);
                 if (useTexLoc != -1) glUniform1i(useTexLoc, 1);
             }
@@ -242,9 +248,8 @@ void RenderSystem::update(EntityManager& em, float dt) {
                 shader->SetUniform1i("u_UseTexture", 0);
             }
             else {
-                GLint currentProgram;
-                glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
-                int useTexLoc = glGetUniformLocation(currentProgram, "u_UseTexture");
+                // ✅ OPTIMIZATION: Reuse cached program ID
+                int useTexLoc = glGetUniformLocation(cachedProgramID, "u_UseTexture");
                 if (useTexLoc != -1) glUniform1i(useTexLoc, 0);
             }
         }
@@ -315,10 +320,9 @@ void RenderSystem::update(EntityManager& em, float dt) {
                 glm::vec4 colorWithAlpha(s.color, 1.0f);
                 shader->SetUniform4f("u_color", colorWithAlpha.x, colorWithAlpha.y, colorWithAlpha.z, colorWithAlpha.w);
             } else {
-                GLint currentProgram;
-                glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
-                int mvpLocation = glGetUniformLocation(currentProgram, "u_MVP");
-                int colorLocation = glGetUniformLocation(currentProgram, "u_color");
+                // ✅ OPTIMIZATION: Reuse cached program ID
+                int mvpLocation = glGetUniformLocation(cachedProgramID, "u_MVP");
+                int colorLocation = glGetUniformLocation(cachedProgramID, "u_color");
                 if (mvpLocation != -1) glUniformMatrix4fv(mvpLocation, 1, GL_FALSE, &mvp[0][0]);
                 if (colorLocation != -1) glUniform4f(colorLocation, s.color.r, s.color.g, s.color.b, 1.0f);
             }
@@ -333,23 +337,28 @@ void RenderSystem::update(EntityManager& em, float dt) {
                         shader->SetUniform1i("u_Texture", 0);
                         shader->SetUniform1i("u_UseTexture", 1);
                     } else {
-                        GLint currentProgram;
-                        glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
-                        int texLoc = glGetUniformLocation(currentProgram, "u_Texture");
-                        int useTexLoc = glGetUniformLocation(currentProgram, "u_UseTexture");
+                        // ✅ OPTIMIZATION: Reuse cached program ID
+                        int texLoc = glGetUniformLocation(cachedProgramID, "u_Texture");
+                        int useTexLoc = glGetUniformLocation(cachedProgramID, "u_UseTexture");
                         if (texLoc != -1) glUniform1i(texLoc, 0);
                         if (useTexLoc != -1) glUniform1i(useTexLoc, 1);
                     }
                 } else {
                     if (shader) shader->SetUniform1i("u_UseTexture", 0);
                     else {
-                        GLint currentProgram; glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
-                        int useTexLoc = glGetUniformLocation(currentProgram, "u_UseTexture"); if (useTexLoc != -1) glUniform1i(useTexLoc, 0);
+                        // ✅ OPTIMIZATION: Reuse cached program ID
+                        int useTexLoc = glGetUniformLocation(cachedProgramID, "u_UseTexture");
+                        if (useTexLoc != -1) glUniform1i(useTexLoc, 0);
                     }
                 }
             } else {
                 if (shader) shader->SetUniform1i("u_UseTexture", 0);
-                else { GLint currentProgram; glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram); int useTexLoc = glGetUniformLocation(currentProgram, "u_UseTexture"); if (useTexLoc != -1) glUniform1i(useTexLoc, 0); }
+                else {
+                    // ✅ OPTIMIZATION: Reuse cached program ID
+                    int useTexLoc = glGetUniformLocation(cachedProgramID, "u_UseTexture");
+                    if (useTexLoc != -1) glUniform1i(useTexLoc, 0);
+                }
+            }
             }
 
             // Draw
@@ -447,6 +456,7 @@ void RenderSystem::createFallbackShader() {
         // This is a workaround - we should ideally create a proper Shader object
         std::cout << "[RenderSystem] Fallback shader created with ID: " << shaderProgram << "\n";
         fallbackShaderID = shaderProgram;
+        cachedProgramID = shaderProgram; // Cache the program ID
     } catch (const std::exception& e) {
         std::cout << "[RenderSystem] Failed to store fallback shader: " << e.what() << "\n";
     }

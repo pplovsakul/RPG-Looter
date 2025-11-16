@@ -18,21 +18,18 @@ void Game::update(float deltaTime) {
     }
     entityManager.cleanup();
 
-    // Retrieve collisions from CollisionSystem (if present) for debug/usage
-    static int dbgCounter = 0;
-    dbgCounter++;
-    for (auto& sys : systems) {
-        if (auto* cs = dynamic_cast<CollisionSystem*>(sys.get())) {
-            auto cols = cs->getCollisions();
-            if (!cols.empty() || dbgCounter % 60 == 0) {
-                std::cout << "[CollisionSystem] Collisions: " << cols.size();
-                for (auto& p : cols) {
-                    if (p.first && p.second)
-                        std::cout << " (" << p.first->id << "," << p.second->id << ")";
-                }
-                std::cout << "\n";
+    // âœ… OPTIMIZATION: Use cached pointer instead of dynamic_cast every frame
+    if (collisionSystem) {
+        static int dbgCounter = 0;
+        dbgCounter++;
+        auto cols = collisionSystem->getCollisions();
+        if (!cols.empty() || dbgCounter % 60 == 0) {
+            std::cout << "[CollisionSystem] Collisions: " << cols.size();
+            for (auto& p : cols) {
+                if (p.first && p.second)
+                    std::cout << " (" << p.first->id << "," << p.second->id << ")";
             }
-            break; // only one collision system expected
+            std::cout << "\n";
         }
     }
 };
@@ -50,7 +47,7 @@ void Game::setupSystems(GLFWwindow* window) {
     renderSystem->init();
 	renderSystem->setViewMatrix(glm::mat4(1.0f));
     
-    // Initiale Projektionsmatrix basierend auf der Fenstergröße
+    // Initiale Projektionsmatrix basierend auf der Fenstergrï¿½ï¿½e
     int width, height;
     glfwGetWindowSize(window, &width, &height);
     renderSystem->setProjectionMatrix(glm::ortho(0.0f, (float)width, 0.0f, (float)height, -1.0f, 1.0f));
@@ -66,7 +63,9 @@ void Game::setupSystems(GLFWwindow* window) {
     systems.push_back(std::make_unique<ModelEditorSystem>()); // <- add this line
 
     // Register CollisionSystem so it's updated and can provide collisions
-    systems.push_back(std::make_unique<CollisionSystem>());
+    auto cs = std::make_unique<CollisionSystem>();
+    collisionSystem = cs.get(); // Cache pointer to avoid dynamic_cast later
+    systems.push_back(std::move(cs));
 
     std::cout << "ECS Systeme initialisiert\n";
 }
@@ -78,7 +77,8 @@ void Game::setupEntities() {
     test_entity->getComponent<TransformComponent>()->position = glm::vec2(960.0f, 540.0f);
     test_entity->getComponent<TransformComponent>()->scale = glm::vec2(100.0f, 100.0f);
     test_entity->addComponent<RenderComponent>();
-    test_entity->getComponent<RenderComponent>()->meshName = "quad";
+    // âœ… OPTIMIZATION: Use setMesh to properly initialize meshType enum
+    test_entity->getComponent<RenderComponent>()->setMesh("quad");
     test_entity->getComponent<RenderComponent>()->shaderName = "default";
     test_entity->getComponent<RenderComponent>()->color = glm::vec3(1.0f, 1.0f, 1.0f);
     test_entity->getComponent<RenderComponent>()->alpha = 1.0f;
@@ -90,7 +90,8 @@ void Game::setupEntities() {
     test_entity2->getComponent<TransformComponent>()->position = glm::vec2(1260.0f, 540.0f);
     test_entity2->getComponent<TransformComponent>()->scale = glm::vec2(100.0f, 100.0f);
     test_entity2->addComponent<RenderComponent>();
-    test_entity2->getComponent<RenderComponent>()->meshName = "circle";
+    // âœ… OPTIMIZATION: Use setMesh to properly initialize meshType enum
+    test_entity2->getComponent<RenderComponent>()->setMesh("circle");
     test_entity2->getComponent<RenderComponent>()->shaderName = "default";
     test_entity2->getComponent<RenderComponent>()->color = glm::vec3(1.0f, 1.0f, 1.0f);
     test_entity2->getComponent<RenderComponent>()->alpha = 1.0f;
