@@ -111,3 +111,4 @@ While the current implementation is functional and readable, potential improveme
 
 ## Summary
 The EngineOverlaySystem UI is no longer cryptic. All standard text displays with readable characters, making the debug overlay, profiler, entity inspector, and console windows much more user-friendly and professional-looking.
+
