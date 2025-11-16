@@ -70,10 +70,19 @@ bool UIContext::init(int screenWidth, int screenHeight) {
         return false;
     }
     
+    // Initialize font atlas
+    if (!m_fontAtlas.init()) {
+        return false;
+    }
+    
+    // Set font texture on renderer
+    m_renderer.setFontTexture(m_fontAtlas.getTexture());
+    
     return true;
 }
 
 void UIContext::shutdown() {
+    m_fontAtlas.shutdown();
     m_renderer.shutdown();
     m_windows.clear();
 }
@@ -204,6 +213,9 @@ bool UIContext::beginWindow(const char* name, bool* p_open, const Rect* initialR
     
     // Clear draw list
     window.drawList.clear();
+    
+    // Set font texture
+    window.drawList.setFontTexture(m_fontAtlas.getTexture());
     
     // Draw window background
     window.drawList.addRectFilled(window.rect, m_style.windowBg);
@@ -360,6 +372,36 @@ DrawList& UIContext::getDrawList() {
     // Return a dummy draw list (should not happen)
     static DrawList dummy;
     return dummy;
+}
+
+void UIContext::drawText(const glm::vec2& pos, const Color& color, const char* text) {
+    if (!text || !text[0] || !m_currentWindow) return;
+    
+    DrawList& draw = m_currentWindow->drawList;
+    
+    float x = pos.x;
+    float y = pos.y;
+    
+    while (*text) {
+        const Glyph* glyph = m_fontAtlas.getGlyph(*text);
+        if (glyph) {
+            // Create quad for this glyph
+            Rect glyphRect(x + glyph->bearing.x, y + glyph->bearing.y, 
+                          glyph->size.x, glyph->size.y);
+            Rect glyphUV(glyph->uvMin.x, glyph->uvMin.y,
+                        glyph->uvMax.x - glyph->uvMin.x,
+                        glyph->uvMax.y - glyph->uvMin.y);
+            
+            draw.addImage(m_fontAtlas.getTexture(), glyphRect, glyphUV, color);
+            
+            x += glyph->advance;
+        }
+        ++text;
+    }
+}
+
+glm::vec2 UIContext::measureText(const char* text) const {
+    return m_fontAtlas.measureText(text);
 }
 
 void UIContext::setMousePos(float x, float y) {

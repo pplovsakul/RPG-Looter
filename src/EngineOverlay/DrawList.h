@@ -106,6 +106,9 @@ public:
     const std::vector<unsigned int>& getIndices() const { return m_indices; }
     const std::vector<DrawCommand>& getCommands() const { return m_commands; }
     
+    // Set font texture for text rendering
+    void setFontTexture(unsigned int fontTexID) { m_fontTexture = fontTexID; }
+    
     void clear();
     
 private:
@@ -113,6 +116,7 @@ private:
     std::vector<unsigned int> m_indices;
     std::vector<DrawCommand> m_commands;
     std::vector<Rect> m_clipRectStack;
+    unsigned int m_fontTexture = 0;
     
     void primReserve(int idxCount, int vtxCount);
     void primRect(const Rect& rect, const Color& color, const Rect& uv = Rect(0, 0, 1, 1));

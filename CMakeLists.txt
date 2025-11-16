@@ -100,6 +100,8 @@ add_executable(RPG-Looter
     "src/EngineOverlay/UIRenderer.cpp"
     "src/EngineOverlay/UIContext.h"
     "src/EngineOverlay/UIContext.cpp"
+    "src/EngineOverlay/FontAtlas.h"
+    "src/EngineOverlay/FontAtlas.cpp"
     "src/EngineOverlay/Widgets.h"
     "src/EngineOverlay/Widgets.cpp"
     "src/EngineOverlay/EngineOverlaySystem.h"

@@ -11,32 +11,25 @@ namespace EngineUI {
 
 void Text(const char* text) {
     UIContext* ctx = GetContext();
-    if (!ctx) return;
+    if (!ctx || !text) return;
     
     Style& style = ctx->getStyle();
-    Rect rect = ctx->allocRect(0, style.lineHeight);
+    glm::vec2 textSize = ctx->measureText(text);
     
-    // TODO: Actual text rendering with font
-    // For now, just draw a placeholder rect
-    DrawList& draw = ctx->getDrawList();
-    // draw.addText(glm::vec2(rect.x, rect.y), style.text, text);
+    Rect rect = ctx->allocRect(textSize.x, textSize.y);
     
-    // Placeholder: draw text as colored rect
-    float textWidth = std::strlen(text) * 7.0f; // Rough estimate
-    draw.addRectFilled(Rect(rect.x, rect.y, std::min(textWidth, rect.w), rect.h * 0.8f), 
-                       Color(0.2f, 0.2f, 0.2f, 0.5f));
+    // Draw actual text
+    ctx->drawText(glm::vec2(rect.x, rect.y), style.text, text);
 }
 
 void TextColored(const Color& color, const char* text) {
     UIContext* ctx = GetContext();
-    if (!ctx) return;
+    if (!ctx || !text) return;
     
-    Style& style = ctx->getStyle();
-    Rect rect = ctx->allocRect(0, style.lineHeight);
+    glm::vec2 textSize = ctx->measureText(text);
+    Rect rect = ctx->allocRect(textSize.x, textSize.y);
     
-    DrawList& draw = ctx->getDrawList();
-    float textWidth = std::strlen(text) * 7.0f;
-    draw.addRectFilled(Rect(rect.x, rect.y, std::min(textWidth, rect.w), rect.h * 0.8f), color);
+    ctx->drawText(glm::vec2(rect.x, rect.y), color, text);
 }
 
 bool Button(const char* label, float width, float height) {
@@ -45,8 +38,9 @@ bool Button(const char* label, float width, float height) {
     
     Style& style = ctx->getStyle();
     
-    if (width == 0.0f) width = std::strlen(label) * 8.0f + style.windowPadding * 2;
-    if (height == 0.0f) height = style.lineHeight + style.windowPadding;
+    glm::vec2 textSize = ctx->measureText(label);
+    if (width == 0.0f) width = textSize.x + style.windowPadding * 2;
+    if (height == 0.0f) height = textSize.y + style.windowPadding;
     
     Rect rect = ctx->allocRect(width, height);
     WidgetID id = ctx->getID(label);
@@ -72,11 +66,10 @@ bool Button(const char* label, float width, float height) {
     draw.addRectFilled(rect, btnColor, style.frameRounding);
     draw.addRect(rect, style.border, style.frameRounding);
     
-    // Draw label (placeholder)
-    float textWidth = std::strlen(label) * 7.0f;
-    float textX = rect.x + (rect.w - textWidth) * 0.5f;
-    float textY = rect.y + (rect.h - style.lineHeight) * 0.5f;
-    draw.addRectFilled(Rect(textX, textY, textWidth, style.lineHeight * 0.8f), style.text);
+    // Draw label centered
+    float textX = rect.x + (rect.w - textSize.x) * 0.5f;
+    float textY = rect.y + (rect.h - textSize.y) * 0.5f;
+    ctx->drawText(glm::vec2(textX, textY), style.text, label);
     
     return pressed;
 }

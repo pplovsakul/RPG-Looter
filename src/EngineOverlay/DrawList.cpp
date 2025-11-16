@@ -244,11 +244,14 @@ void DrawList::addCircle(const glm::vec2& center, float radius, const Color& col
 }
 
 void DrawList::addText(const glm::vec2& pos, const Color& color, const char* text) {
-    // TODO: Implement text rendering with font atlas
-    // For now, this is a placeholder
-    (void)pos;
-    (void)color;
-    (void)text;
+    if (!text || !text[0] || m_fontTexture == 0) return;
+    
+    // Note: We need the FontAtlas to render text properly
+    // For now, this is a simplified version that won't work without FontAtlas access
+    // The actual implementation should be done through UIContext
+    
+    // This is a placeholder - real implementation needs glyph data
+    updateCurrentCommand(m_fontTexture);
 }
 
 void DrawList::addImage(unsigned int textureID, const Rect& rect, const Rect& uv, const Color& tint) {

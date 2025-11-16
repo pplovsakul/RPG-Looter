@@ -2,6 +2,7 @@
 
 #include "DrawList.h"
 #include "UIRenderer.h"
+#include "FontAtlas.h"
 #include <string>
 #include <unordered_map>
 #include <stack>
@@ -188,6 +189,8 @@ public:
     
     // Drawing
     DrawList& getDrawList();
+    void drawText(const glm::vec2& pos, const Color& color, const char* text);
+    glm::vec2 measureText(const char* text) const;
     
     // Input queries
     const InputState& getInput() const { return m_input; }
@@ -195,6 +198,9 @@ public:
     bool isMouseClicked(int button = 0) const;
     bool isMouseReleased(int button = 0) const;
     glm::vec2 getMousePos() const { return m_input.mousePos; }
+    
+    // Get current window's font atlas if available
+    FontAtlas* getFontAtlas() { return &m_fontAtlas; }
     
 private:
     int m_screenWidth = 0;
@@ -204,6 +210,7 @@ private:
     InputState m_input;
     InputState m_inputPrev;
     UIRenderer m_renderer;
+    FontAtlas m_fontAtlas;
     
     // Window management
     std::unordered_map<std::string, WindowState> m_windows;
