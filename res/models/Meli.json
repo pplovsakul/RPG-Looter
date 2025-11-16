@@ -1,0 +1,15 @@
+{
+  "shapes": [
+    {
+      "type": "Rectangle",
+      "position": [0, 0],
+      "rotation": 0,
+      "size": [200, 200],
+      "scale": [1, 1],
+      "color": [1, 1, 1],
+      "filled": true,
+      "layer": 0,
+      "texture": "Meli"
+    }
+  ]
+}
