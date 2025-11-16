@@ -12,7 +12,7 @@
 // ✅ OPTIMIZATION: Add debug level control to reduce excessive console output
 namespace DebugConfig {
     // Debug levels: 0 = Off, 1 = Errors only, 2 = Warnings, 3 = Info (default), 4 = Verbose
-    inline int debugLevel = 3;
+    extern int debugLevel;
     
     inline void setDebugLevel(int level) {
         debugLevel = level;

@@ -301,13 +301,9 @@ void RenderSystem::update(EntityManager& em, float dt) {
             float totalRot = t->rotation + glm::radians(s.rotation);
             model = glm::rotate(model, totalRot, glm::vec3(0.0f, 0.0f, 1.0f));
             // scale: mesh is normalized to 1.0 -> apply shape size and scales
-            // IMPORTANT: do not multiply entity->scale (which is often used as absolute pixel size for RenderComponent)
-            // to avoid massively oversized objects when users set transform->scale to pixel values.
             glm::vec2 totalScale = s.size * s.scale; // size in pixels
-            // If entity scale is close to 1.0 use it as multiplier, otherwise ignore to preserve previous semantics
             const float EPS = 1e-3f;
             if (std::abs(t->scale.x - 1.0f) < 10.0f && std::abs(t->scale.y - 1.0f) < 10.0f) {
-                // treat small transform scales as multipliers
                 totalScale *= t->scale;
             }
             model = glm::scale(model, glm::vec3(totalScale, 1.0f));
@@ -320,7 +316,6 @@ void RenderSystem::update(EntityManager& em, float dt) {
                 glm::vec4 colorWithAlpha(s.color, 1.0f);
                 shader->SetUniform4f("u_color", colorWithAlpha.x, colorWithAlpha.y, colorWithAlpha.z, colorWithAlpha.w);
             } else {
-                // ✅ OPTIMIZATION: Reuse cached program ID
                 int mvpLocation = glGetUniformLocation(cachedProgramID, "u_MVP");
                 int colorLocation = glGetUniformLocation(cachedProgramID, "u_color");
                 if (mvpLocation != -1) glUniformMatrix4fv(mvpLocation, 1, GL_FALSE, &mvp[0][0]);
@@ -337,7 +332,6 @@ void RenderSystem::update(EntityManager& em, float dt) {
                         shader->SetUniform1i("u_Texture", 0);
                         shader->SetUniform1i("u_UseTexture", 1);
                     } else {
-                        // ✅ OPTIMIZATION: Reuse cached program ID
                         int texLoc = glGetUniformLocation(cachedProgramID, "u_Texture");
                         int useTexLoc = glGetUniformLocation(cachedProgramID, "u_UseTexture");
                         if (texLoc != -1) glUniform1i(texLoc, 0);
@@ -346,7 +340,6 @@ void RenderSystem::update(EntityManager& em, float dt) {
                 } else {
                     if (shader) shader->SetUniform1i("u_UseTexture", 0);
                     else {
-                        // ✅ OPTIMIZATION: Reuse cached program ID
                         int useTexLoc = glGetUniformLocation(cachedProgramID, "u_UseTexture");
                         if (useTexLoc != -1) glUniform1i(useTexLoc, 0);
                     }
@@ -354,11 +347,9 @@ void RenderSystem::update(EntityManager& em, float dt) {
             } else {
                 if (shader) shader->SetUniform1i("u_UseTexture", 0);
                 else {
-                    // ✅ OPTIMIZATION: Reuse cached program ID
                     int useTexLoc = glGetUniformLocation(cachedProgramID, "u_UseTexture");
                     if (useTexLoc != -1) glUniform1i(useTexLoc, 0);
                 }
-            }
             }
 
             // Draw
@@ -453,7 +444,6 @@ void RenderSystem::createFallbackShader() {
 
     // Create and store as AssetManager shader for consistency
     try {
-        // This is a workaround - we should ideally create a proper Shader object
         std::cout << "[RenderSystem] Fallback shader created with ID: " << shaderProgram << "\n";
         fallbackShaderID = shaderProgram;
         cachedProgramID = shaderProgram; // Cache the program ID

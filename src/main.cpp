@@ -74,18 +74,25 @@ int main(void) {
 
     glfwSwapInterval(1);
 
+    bool audioAvailable = false;
     ALCdevice* device = alcOpenDevice(nullptr);
     if (!device) {
-        std::cerr << "Failed to open OpenAL device" << std::endl;
-        return -1;
+        std::cerr << "Failed to open OpenAL device, continuing without audio." << std::endl;
+    } else {
+        ALCcontext* context = alcCreateContext(device, nullptr);
+        if (!context || !alcMakeContextCurrent(context)) {
+            std::cerr << "Failed to create/make current OpenAL context, disabling audio." << std::endl;
+            if (context) alcDestroyContext(context);
+            alcCloseDevice(device);
+        } else {
+            std::cout << "OpenAL ready: " << alGetString(AL_VERSION) << std::endl;
+            audioAvailable = true;
+        }
     }
+    game.setAudioAvailable(audioAvailable);
 
-    ALCcontext* context = alcCreateContext(device, nullptr);
-    alcMakeContextCurrent(context);
-    std::cout << "OpenAL ready: " << alGetString(AL_VERSION) << std::endl;
-    
-	int width, height;
-	glfwGetFramebufferSize(window, &width, &height);
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
     
     ImGui::CreateContext();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -142,14 +149,27 @@ int main(void) {
 
         AssetManager::getInstance()->clear();
 
-        alcDestroyContext(context);
-        alcCloseDevice(device);
+        // Cleanup OpenAL if it was initialized
+    if (audioAvailable) {
+        ALCcontext* current = alcGetCurrentContext();
+        if (current) {
+            ALCdevice* dev = alcGetContextsDevice(current);
+            alcMakeContextCurrent(nullptr);
+            alcDestroyContext(current);
+            if (dev) alcCloseDevice(dev);
+        }
+    }
 
         glfwDestroyWindow(window);
         glfwTerminate();
 
         return 0;
     }
+
+
+
+
+
 
 
 

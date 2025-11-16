@@ -15,6 +15,7 @@ private:
 	
 	// Cache pointers to avoid repeated dynamic_cast
 	CollisionSystem* collisionSystem = nullptr;
+    bool audioAvailable = false; // flag to control optional audio system
 
 	void setupSystems(GLFWwindow* window);
 	void setupEntities();
@@ -25,4 +26,5 @@ public:
 	void update(float deltaTime);
 	EntityManager& getEntityManager() { return entityManager; }
 	void onWindowResize(GLFWwindow* window, int width, int height);
+    void setAudioAvailable(bool available); // setter
 };

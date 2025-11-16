@@ -13,6 +13,7 @@ add_subdirectory("extern/glfw-3.4")
 add_executable(RPG-Looter
 
     "src/Debug.h"
+    "src/Debug.cpp"
 
     "src/Renderer.cpp"
     "src/Renderer.h"
@@ -190,10 +191,14 @@ set(OPENAL_DLLS
 )
 
 foreach(DLL_FILE ${OPENAL_DLLS})
-    get_filename_component(DLL_NAME ${DLL_FILE} NAME)
-    add_custom_command(
-        TARGET RPG-Looter POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DLL_FILE} ${CMAKE_CURRENT_BINARY_DIR}/${DLL_NAME}
-        COMMENT "Kopiere DLL: ${DLL_NAME}"
-    )
+    if(EXISTS ${DLL_FILE})
+        get_filename_component(DLL_NAME ${DLL_FILE} NAME)
+        add_custom_command(
+            TARGET RPG-Looter POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DLL_FILE} ${CMAKE_CURRENT_BINARY_DIR}/${DLL_NAME}
+            COMMENT "Kopiere DLL: ${DLL_NAME}"
+        )
+    else()
+        message(WARNING "OpenAL DLL fehlt: ${DLL_FILE}")
+    endif()
 endforeach()
