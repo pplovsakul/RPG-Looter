@@ -26,6 +26,8 @@ public:
 template<typename... Components>
 std::vector<Entity*> EntityManager::getEntitiesWith() const {
     std::vector<Entity*> result;
+    // ✅ OPTIMIZATION: Reserve space to avoid reallocation
+    result.reserve(entities.size() / 2); // Heuristic: assume ~50% match
     for (auto& entity : entities) {
         if (entity->active && (entity->hasComponent<Components>() && ...)) {
             result.push_back(entity.get());

@@ -29,6 +29,8 @@ void EntityManager::cleanup() {
 
 std::vector<Entity*> EntityManager::getAllEntities() const {
     std::vector<Entity*> result;
+    // ✅ OPTIMIZATION: Reserve exact space needed
+    result.reserve(entities.size());
     for (auto& entity : entities) {
         if (entity->active) {
             result.push_back(entity.get());

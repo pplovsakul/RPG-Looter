@@ -77,7 +77,8 @@ void Game::setupEntities() {
     test_entity->getComponent<TransformComponent>()->position = glm::vec2(960.0f, 540.0f);
     test_entity->getComponent<TransformComponent>()->scale = glm::vec2(100.0f, 100.0f);
     test_entity->addComponent<RenderComponent>();
-    test_entity->getComponent<RenderComponent>()->meshName = "quad";
+    // ✅ OPTIMIZATION: Use setMesh to properly initialize meshType enum
+    test_entity->getComponent<RenderComponent>()->setMesh("quad");
     test_entity->getComponent<RenderComponent>()->shaderName = "default";
     test_entity->getComponent<RenderComponent>()->color = glm::vec3(1.0f, 1.0f, 1.0f);
     test_entity->getComponent<RenderComponent>()->alpha = 1.0f;
@@ -89,7 +90,8 @@ void Game::setupEntities() {
     test_entity2->getComponent<TransformComponent>()->position = glm::vec2(1260.0f, 540.0f);
     test_entity2->getComponent<TransformComponent>()->scale = glm::vec2(100.0f, 100.0f);
     test_entity2->addComponent<RenderComponent>();
-    test_entity2->getComponent<RenderComponent>()->meshName = "circle";
+    // ✅ OPTIMIZATION: Use setMesh to properly initialize meshType enum
+    test_entity2->getComponent<RenderComponent>()->setMesh("circle");
     test_entity2->getComponent<RenderComponent>()->shaderName = "default";
     test_entity2->getComponent<RenderComponent>()->color = glm::vec3(1.0f, 1.0f, 1.0f);
     test_entity2->getComponent<RenderComponent>()->alpha = 1.0f;

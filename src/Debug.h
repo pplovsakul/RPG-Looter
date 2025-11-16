@@ -9,6 +9,24 @@
 #define ASSERT(x) if (!(x)) assert(false)
 #define INT2VOIDP(i) (void*)(uintptr_t)(i)
 
+// ✅ OPTIMIZATION: Add debug level control to reduce excessive console output
+namespace DebugConfig {
+    // Debug levels: 0 = Off, 1 = Errors only, 2 = Warnings, 3 = Info (default), 4 = Verbose
+    inline int debugLevel = 3;
+    
+    inline void setDebugLevel(int level) {
+        debugLevel = level;
+    }
+    
+    inline bool shouldLog(int level) {
+        return debugLevel >= level;
+    }
+}
+
+// Macro for conditional debug output
+#define DEBUG_LOG(level, msg) if (DebugConfig::shouldLog(level)) { std::cout << msg; }
+#define DEBUG_LOG_LN(level, msg) if (DebugConfig::shouldLog(level)) { std::cout << msg << std::endl; }
+
 void inline GLClearError()
 {
     while (glGetError() != GL_NO_ERROR);
