@@ -1,0 +1,14 @@
+{
+	"contexts": [
+		{
+			"name": "game",
+			"bindings": {
+				"move_up": [ "W", "UP" ],
+				"move_down": [ "S", "DOWN" ],
+				"move_left": [ "A", "LEFT" ],
+				"move_right": [ "D", "RIGHT" ],
+				"sprint": [ "SHIFT" ]
+			}
+		}
+	]
+}

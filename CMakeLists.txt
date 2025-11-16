@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 
-project(Pong)
+project(RPG-Looter)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -8,22 +8,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # GLFW einbinden
 add_subdirectory("extern/glfw-3.4")
 
-# Executable definieren
-add_executable(Pong 
-# Hauptdatei
-    "src/main.cpp"
 
-# Gameplay Dateien
-    "src/GameLogic.cpp"
-    "src/GameLogic.h"
+# Executable definieren
+add_executable(RPG-Looter
+
     "src/Debug.h"
 
-# Menü Dateien
-    "src/Menu.cpp"
-    "src/Menu.h"
-# Networking Dateien
-
-# Rendering Dateien "GameRendering-alle-includes.txt"
     "src/Renderer.cpp"
     "src/Renderer.h"
     "src/VertexBuffer.h"
@@ -69,22 +59,51 @@ add_executable(Pong
     "src/Texture.cpp" 
     "src/Texture.h"
 
-# Sound
-    "src/Audiomanager.h"
-    "src/Audiomanager.cpp"
-  )
+    "src/AudioSystem.h"
+    "src/Audiosystem.cpp"
+    "src/Component.h" 
+    "src/Components.h" 
+    "src/Entity.h" 
+    "src/Entity.cpp" 
+    "src/Entitymanager.cpp" 
+    "src/Entitymanager.h" 
+    "src/System.h" 
+    "src/RenderSystem.h" 
+    "src/RenderSystem.cpp" 
+    "src/InputSystem.h" 
+    "src/InputSystem.cpp"  
+    "src/AssetManager.h" 
+    "src/AssetManager.cpp" 
+    "src/ESCSound.h" 
+    "src/ECSSound.cpp" 
 
+    "src/EditorSystem.h"
+    "src/EditorSystem.cpp"
+    "src/AssetManagerWindow.h"
+    "src/AssetManagerWindow.cpp"
+    "src/EntitySerializer.cpp"
+    "src/ModelEditorSystem.h"
+    "src/ModelEditorSystem.cpp"   
+    
+    "src/main.cpp" "src/Game.cpp"  "src/JsonParser.h" "src/ModelSerializer.h" "src/ModelSerializer.cpp"
 
+    # Collision system files
+    "src/CollisionUtils.h"
+    "src/CollisionSystem.h"
+    "src/CollisionSystem.cpp")
+    
+    
 # Includes
-target_include_directories(Pong PUBLIC 
+target_include_directories(RPG-Looter PUBLIC 
 "${CMAKE_CURRENT_SOURCE_DIR}/include/" 
 "${CMAKE_CURRENT_SOURCE_DIR}/include/asio-1.36.0/include"
 )
 
-target_link_libraries(Pong PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/libs/OpenAL32.lib")
+target_link_libraries(RPG-Looter PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/libs/OpenAL32.lib")
+
 
 # GLFW und GLM linken
-target_link_libraries(Pong PRIVATE glfw)
+target_link_libraries(RPG-Looter PRIVATE glfw)
 
 # === Shader kopieren (res/shaders -> build/res/shaders) ===
 
@@ -97,7 +116,7 @@ foreach(SHADER_FILE ${SHADER_FILES})
     configure_file(${SHADER_FILE} ${SHADER_BUILD_DIR}/ COPYONLY)
 endforeach()
 
-target_compile_definitions(Pong PRIVATE SHADER_DIR="${SHADER_BUILD_DIR}")
+target_compile_definitions(RPG-Looter PRIVATE SHADER_DIR="${SHADER_BUILD_DIR}")
 
 # === Texturen kopieren (res/textures -> build/res/textures) ===
 
@@ -126,11 +145,11 @@ endforeach()
 # Custom target, das alle Texturen erzeugt
 add_custom_target(copy_textures ALL DEPENDS ${COPIED_TEXTURES})
 
-# Sorge dafür, dass dein Spiel erst nach den Texturen gebaut wird
-add_dependencies(Pong copy_textures)
+# Sorge dafuer, dass dein Spiel erst nach den Texturen gebaut wird
+add_dependencies(RPG-Looter copy_textures)
 
-# Definiere TEXTURE_DIR für dein Programm
-target_compile_definitions(Pong PRIVATE TEXTURE_DIR="${TEXTURE_BUILD_DIR}")
+# Definiere TEXTURE_DIR fuer dein Programm
+target_compile_definitions(RPG-Looter PRIVATE TEXTURE_DIR="${TEXTURE_BUILD_DIR}")
 
 # === Sounds kopieren (res/sounds -> build/res/sounds) ===
 set(SOUND_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/res/sounds")
@@ -156,6 +175,25 @@ foreach(SOUND_FILE ${SOUND_FILES})
 endforeach()
 
 add_custom_target(copy_sounds ALL DEPENDS ${COPIED_SOUNDS})
-add_dependencies(Pong copy_sounds)
+add_dependencies(RPG-Looter copy_sounds)
 
-target_compile_definitions(Pong PRIVATE SOUND_DIR="${SOUND_BUILD_DIR}")
+target_compile_definitions(RPG-Looter PRIVATE SOUND_DIR="${SOUND_BUILD_DIR}")
+
+# === OpenAL DLLs kopieren ===
+set(OPENAL_DLL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/extern/openal-soft")
+set(OPENAL_DLLS
+    "${OPENAL_DLL_DIR}/router/Win64/OpenAL32.dll"
+    "${OPENAL_DLL_DIR}/bin/Win64/soft_oal.dll"
+    "${OPENAL_DLL_DIR}/alsoft-config/libgcc_s_seh-1.dll"
+    "${OPENAL_DLL_DIR}/alsoft-config/libstdc++-6.dll"
+    "${OPENAL_DLL_DIR}/alsoft-config/libwinpthread-1.dll"
+)
+
+foreach(DLL_FILE ${OPENAL_DLLS})
+    get_filename_component(DLL_NAME ${DLL_FILE} NAME)
+    add_custom_command(
+        TARGET RPG-Looter POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DLL_FILE} ${CMAKE_CURRENT_BINARY_DIR}/${DLL_NAME}
+        COMMENT "Kopiere DLL: ${DLL_NAME}"
+    )
+endforeach()

@@ -1,0 +1,44 @@
+{
+  "entities": [
+    {
+      "id": 0,
+      "tag": "Player",
+      "components": {
+        "Transform": {
+          "position": [1014.9, 540],
+          "rotation": 0,
+          "scale": [100, 100]
+        },
+        "Render": {
+          "meshName": "quad",
+          "shaderName": "default",
+          "textureName": "playerTexture",
+          "color": [1, 1, 1],
+          "alpha": 1,
+          "enabled": true,
+          "renderLayer": 1
+        }
+      }
+    },
+    {
+      "id": 1,
+      "tag": "Player2",
+      "components": {
+        "Transform": {
+          "position": [1260, 540],
+          "rotation": 0,
+          "scale": [100, 100]
+        },
+        "Render": {
+          "meshName": "circle",
+          "shaderName": "default",
+          "textureName": "gelb",
+          "color": [1, 1, 1],
+          "alpha": 1,
+          "enabled": true,
+          "renderLayer": 0
+        }
+      }
+    }
+  ]
+}

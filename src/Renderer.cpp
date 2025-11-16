@@ -47,7 +47,8 @@ RenderObject::RenderObject(const void* vertices, size_t vertexSize,
     vb(std::make_unique<VertexBuffer>(vertices, vertexSize)),
     ib(std::make_unique<IndexBuffer>(indices.data(), indices.size())),
     texture(std::move(texture)),
-    position(pos)
+    position(pos),
+	m_visible(true)
 {
     // --- Automatisches Layout ---
     layout.AddFloat(3); // Position
@@ -62,11 +63,11 @@ void RenderObject::UpdateTexture(std::unique_ptr<Texture> newTex) {
 }
 
 void RenderObject::UpdateVertices(const void* vertices, size_t vertexSize) {
-    vb->UpdateData(vertices, vertexSize); // muss in VertexBuffer implementiert sein
+    vb->UpdateData(vertices, vertexSize); 
 }
 
 void RenderObject::UpdateIndices(const std::vector<unsigned int>& indices) {
-    ib->UpdateData(indices.data(), indices.size()); // muss in IndexBuffer implementiert sein
+    ib->UpdateData(indices.data(), indices.size());
 }
 
 void RenderObject::UpdateColor(const glm::vec4& newColor) {
@@ -83,4 +84,12 @@ void RenderObject::UpdateModelMatrix(const glm::vec2& pos) {
     model = m;
 
 
+}
+
+void RenderObject::setVisible(bool visible) {
+    m_visible = visible;
+}
+
+bool RenderObject::isVisible() {
+    return m_visible;
 }

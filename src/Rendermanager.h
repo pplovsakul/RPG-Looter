@@ -31,6 +31,8 @@ public:
     // Zeichnet alle
     void DrawAll() {
         for (auto& [name, obj] : objects) {
+            if (!obj->isVisible())  
+                continue;
             renderer.Draw_RenderObject(*obj, shader, proj, obj->position);
         }
     }

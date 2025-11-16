@@ -46,12 +46,17 @@ struct RenderObject {
 
     void UpdateTexture(std::unique_ptr<Texture> newTex);
 
+    void setVisible(bool visible);
+    bool isVisible();
+
     void UpdateVertices(const void* vertices, size_t vertexSize);
     void UpdateIndices(const std::vector<unsigned int>& indices);
     
     void UpdateColor(const glm::vec4& newColor);
 
 	void UpdateModelMatrix(const glm::vec2& pos);
+private:
+    bool m_visible;
 };
 class Renderer {
 public:

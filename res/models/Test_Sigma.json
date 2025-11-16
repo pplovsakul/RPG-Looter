@@ -1,0 +1,103 @@
+{
+  "shapes": [
+    {
+      "type": "Rectangle",
+      "position": [0, 0],
+      "rotation": 0,
+      "size": [50, 50],
+      "scale": [1, 1],
+      "color": [1, 1, 1],
+      "filled": true,
+      "layer": 0,
+      "texture": ""
+    },
+    {
+      "type": "Rectangle",
+      "position": [-34, -21],
+      "rotation": 0,
+      "size": [50, 50],
+      "scale": [1, 1],
+      "color": [1, 1, 1],
+      "filled": true,
+      "layer": 0,
+      "texture": ""
+    },
+    {
+      "type": "Circle",
+      "position": [-25, 11],
+      "rotation": 0,
+      "size": [50, 50],
+      "scale": [1, 1],
+      "color": [1, 1, 1],
+      "filled": true,
+      "layer": 0,
+      "texture": ""
+    },
+    {
+      "type": "Triangle",
+      "position": [-4, 46],
+      "rotation": 0,
+      "size": [50, 50],
+      "scale": [1, 1],
+      "color": [1, 1, 1],
+      "filled": true,
+      "layer": 0,
+      "texture": ""
+    },
+    {
+      "type": "Triangle",
+      "position": [126, -4],
+      "rotation": 0,
+      "size": [50, 50],
+      "scale": [1, 1],
+      "color": [1, 1, 1],
+      "filled": true,
+      "layer": 0,
+      "texture": ""
+    },
+    {
+      "type": "Triangle",
+      "position": [104, 15],
+      "rotation": 0,
+      "size": [50, 50],
+      "scale": [1, 1],
+      "color": [1, 1, 1],
+      "filled": true,
+      "layer": 0,
+      "texture": ""
+    },
+    {
+      "type": "Triangle",
+      "position": [79, 37],
+      "rotation": 0,
+      "size": [50, 50],
+      "scale": [1, 1],
+      "color": [1, 1, 1],
+      "filled": true,
+      "layer": 0,
+      "texture": ""
+    },
+    {
+      "type": "Triangle",
+      "position": [78, 82],
+      "rotation": 0,
+      "size": [50, 50],
+      "scale": [1, 1],
+      "color": [1, 1, 1],
+      "filled": true,
+      "layer": 0,
+      "texture": ""
+    },
+    {
+      "type": "Triangle",
+      "position": [32, 81],
+      "rotation": 0,
+      "size": [50, 50],
+      "scale": [1, 1],
+      "color": [1, 1, 1],
+      "filled": true,
+      "layer": 0,
+      "texture": ""
+    }
+  ]
+}

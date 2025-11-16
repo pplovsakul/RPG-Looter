@@ -26,6 +26,10 @@ void VertexArray::AddBuffer(const VertexBuffer& vb, const VertexBufferLayout& la
 
 void VertexArray::Bind() const {
     GLCall(glBindVertexArray(m_RendererID));
+    // IndexBuffer wird automatisch mit VAO gebunden, wenn SetIndexBuffer aufgerufen wurde
+    if (m_IndexBuffer) {
+        m_IndexBuffer->Bind();
+    }
 }
 
 void VertexArray::Unbind() const {
