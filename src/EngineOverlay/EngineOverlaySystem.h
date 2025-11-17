@@ -32,7 +32,7 @@ public:
 private:
     void handleInput();
     void renderUI(EntityManager& em, float deltaTime);
-    void renderMenuBar();
+    void renderMenuBar(int screenWidth);
     void renderDemoWindow();
     void renderEntityInspector(EntityManager& em);
     void renderProfiler(float deltaTime);

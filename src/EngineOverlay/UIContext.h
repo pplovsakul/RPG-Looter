@@ -58,24 +58,24 @@ inline WidgetID hashID(const void* ptr) {
 // ============================================================================
 
 struct Style {
-    // Colors
-    Color windowBg = Color(0.1f, 0.1f, 0.1f, 0.95f);
-    Color titleBg = Color(0.04f, 0.04f, 0.04f, 1.0f);
-    Color titleBgActive = Color(0.16f, 0.29f, 0.48f, 1.0f);
-    Color border = Color(0.43f, 0.43f, 0.50f, 0.50f);
+    // Colors - Yellow/Golden ImGui-inspired theme
+    Color windowBg = Color(0.94f, 0.94f, 0.86f, 1.0f);  // Light beige background - fully opaque
+    Color titleBg = Color(0.80f, 0.70f, 0.20f, 1.0f);     // Golden title bar
+    Color titleBgActive = Color(1.00f, 0.85f, 0.00f, 1.0f); // Bright yellow when active
+    Color border = Color(0.60f, 0.50f, 0.10f, 1.0f);     // Dark golden border - fully opaque
     
-    Color button = Color(0.26f, 0.59f, 0.98f, 0.40f);
-    Color buttonHovered = Color(0.26f, 0.59f, 0.98f, 1.00f);
-    Color buttonActive = Color(0.06f, 0.53f, 0.98f, 1.00f);
+    Color button = Color(0.90f, 0.75f, 0.20f, 0.80f);     // Yellow button
+    Color buttonHovered = Color(1.00f, 0.85f, 0.30f, 1.00f); // Bright yellow on hover
+    Color buttonActive = Color(0.80f, 0.65f, 0.10f, 1.00f);  // Darker yellow when pressed
     
-    Color text = Color(1.00f, 1.00f, 1.00f, 1.00f);
-    Color textDisabled = Color(0.50f, 0.50f, 0.50f, 1.00f);
+    Color text = Color(0.00f, 0.00f, 0.00f, 1.00f);       // Black text for contrast
+    Color textDisabled = Color(0.40f, 0.40f, 0.40f, 1.00f); // Gray disabled text
     
-    Color frameBg = Color(0.43f, 0.43f, 0.50f, 0.50f);
-    Color frameBgHovered = Color(0.26f, 0.59f, 0.98f, 0.40f);
-    Color frameBgActive = Color(0.26f, 0.59f, 0.98f, 0.67f);
+    Color frameBg = Color(0.85f, 0.85f, 0.75f, 0.80f);    // Light frame background
+    Color frameBgHovered = Color(0.95f, 0.85f, 0.50f, 0.80f); // Yellow-tinted on hover
+    Color frameBgActive = Color(0.90f, 0.75f, 0.30f, 0.90f);  // More yellow when active
     
-    Color checkMark = Color(0.26f, 0.59f, 0.98f, 1.00f);
+    Color checkMark = Color(0.80f, 0.65f, 0.00f, 1.00f);  // Dark yellow checkmark
     
     // Spacing
     float windowPadding = 8.0f;
