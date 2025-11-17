@@ -233,8 +233,11 @@ void FontAtlas::createBitmapFont() {
         
         // Store glyph info
         Glyph glyph;
-        glyph.uvMin = glm::vec2((float)baseX / m_atlasWidth, (float)baseY / m_atlasHeight);
-        glyph.uvMax = glm::vec2((float)(baseX + charWidth) / m_atlasWidth, (float)(baseY + charHeight) / m_atlasHeight);
+        // Flip Y coordinates for OpenGL (texture Y=0 is at bottom, but bitmap Y=0 is at top)
+        float uvMinY = 1.0f - (float)(baseY + charHeight) / m_atlasHeight;
+        float uvMaxY = 1.0f - (float)baseY / m_atlasHeight;
+        glyph.uvMin = glm::vec2((float)baseX / m_atlasWidth, uvMinY);
+        glyph.uvMax = glm::vec2((float)(baseX + charWidth) / m_atlasWidth, uvMaxY);
         glyph.size = glm::vec2((float)charWidth, (float)charHeight);
         glyph.bearing = glm::vec2(0, 0);
         glyph.advance = (float)charWidth;
