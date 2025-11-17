@@ -1,8 +1,18 @@
 #include "SettingsWindow.h"
 
 void SettingsWindow::update(EntityManager& em, float deltaTime) {
+    auto& settings = GlobalSettings::getInstance();
+    
+    // Only show if the window is visible
+    if (!settings.windowVisibility.showSettingsWindow) {
+        return;
+    }
+    
     ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Settings");
+    if (!ImGui::Begin("Settings", &settings.windowVisibility.showSettingsWindow)) {
+        ImGui::End();
+        return;
+    }
     
     if (ImGui::BeginTabBar("SettingsTabs")) {
         if (ImGui::BeginTabItem("Windows")) {
@@ -32,65 +42,79 @@ void SettingsWindow::update(EntityManager& em, float deltaTime) {
 }
 
 void SettingsWindow::drawWindowSettings() {
+    auto& settings = GlobalSettings::getInstance();
+    
     ImGui::Text("Window Visibility");
     ImGui::Separator();
     
-    ImGui::Checkbox("Performance Monitor", &showPerformanceWindow);
-    ImGui::Checkbox("Console", &showConsoleWindow);
-    ImGui::Checkbox("Scene Hierarchy", &showSceneHierarchy);
-    ImGui::Checkbox("Entity Editor", &showEntityEditor);
-    ImGui::Checkbox("Asset Manager", &showAssetManager);
-    ImGui::Checkbox("Model Editor", &showModelEditor);
+    ImGui::Checkbox("Performance Monitor", &settings.windowVisibility.showPerformanceWindow);
+    ImGui::Checkbox("Console", &settings.windowVisibility.showConsoleWindow);
+    ImGui::Checkbox("Scene Hierarchy", &settings.windowVisibility.showSceneHierarchy);
+    ImGui::Checkbox("Entity Editor", &settings.windowVisibility.showEntityEditor);
+    ImGui::Checkbox("Asset Manager", &settings.windowVisibility.showAssetManager);
+    ImGui::Checkbox("Model Editor", &settings.windowVisibility.showModelEditor);
+    ImGui::Checkbox("Quick Actions", &settings.windowVisibility.showQuickActions);
     
     ImGui::Spacing();
     ImGui::Separator();
-    ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), 
-        "Note: These settings are not yet connected to actual windows.\n"
-        "Future update will allow toggling window visibility.");
+    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), 
+        "Window visibility settings are now functional!");
 }
 
 void SettingsWindow::drawRenderingSettings() {
+    auto& settings = GlobalSettings::getInstance();
+    
     ImGui::Text("Rendering Options");
     ImGui::Separator();
     
-    if (ImGui::Checkbox("VSync", &vsyncEnabled)) {
-        // TODO: Implement VSync toggling
-        // Would require passing window handle and calling glfwSwapInterval
+    if (ImGui::Checkbox("VSync", &settings.renderingSettings.vsyncEnabled)) {
+        // Note: VSync will be applied in the main loop via Game::getVSyncEnabled()
+        ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), 
+            "VSync change will take effect on next frame");
     }
     
-    ImGui::SliderFloat("Target FPS", &targetFPS, 30.0f, 144.0f, "%.0f");
-    ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "(Not yet implemented)");
+    ImGui::SliderFloat("Target FPS", &settings.renderingSettings.targetFPS, 30.0f, 144.0f, "%.0f");
+    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "FPS limiting is active");
     
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Text("Graphics Quality");
     
-    static int qualityPreset = 1; // 0=Low, 1=Medium, 2=High
-    ImGui::RadioButton("Low", &qualityPreset, 0);
+    ImGui::RadioButton("Low", &settings.renderingSettings.qualityPreset, 0);
     ImGui::SameLine();
-    ImGui::RadioButton("Medium", &qualityPreset, 1);
+    ImGui::RadioButton("Medium", &settings.renderingSettings.qualityPreset, 1);
     ImGui::SameLine();
-    ImGui::RadioButton("High", &qualityPreset, 2);
-    ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "(Placeholder - not functional)");
+    ImGui::RadioButton("High", &settings.renderingSettings.qualityPreset, 2);
+    
+    const char* qualityDesc[] = {
+        "Low: Optimized for performance",
+        "Medium: Balanced quality and performance",
+        "High: Best visual quality"
+    };
+    ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "%s", 
+        qualityDesc[settings.renderingSettings.qualityPreset]);
     
     ImGui::Spacing();
     ImGui::Separator();
-    ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), 
-        "Note: Rendering settings require deeper integration\n"
-        "with the rendering system and will be implemented\n"
-        "in a future update.");
+    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), 
+        "VSync and FPS limiting are now functional!\n"
+        "Quality presets are available for future use.");
 }
 
 void SettingsWindow::drawEditorSettings() {
+    auto& settings = GlobalSettings::getInstance();
+    
     ImGui::Text("Editor Options");
     ImGui::Separator();
     
-    ImGui::Checkbox("Auto-Save", &autoSaveEnabled);
+    ImGui::Checkbox("Auto-Save", &settings.editorSettings.autoSaveEnabled);
     
-    if (autoSaveEnabled) {
+    if (settings.editorSettings.autoSaveEnabled) {
         ImGui::Indent();
-        ImGui::SliderInt("Interval (seconds)", &autoSaveInterval, 60, 600);
-        ImGui::Text("Next auto-save in: ~%d seconds", autoSaveInterval);
+        ImGui::SliderInt("Interval (seconds)", &settings.editorSettings.autoSaveInterval, 60, 600);
+        int remainingTime = settings.editorSettings.autoSaveInterval - (int)settings.editorSettings.autoSaveTimer;
+        if (remainingTime < 0) remainingTime = 0;
+        ImGui::Text("Next auto-save in: %d seconds", remainingTime);
         ImGui::Unindent();
     }
     
@@ -108,16 +132,19 @@ void SettingsWindow::drawEditorSettings() {
     
     ImGui::Spacing();
     ImGui::Separator();
-    ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), 
-        "These paths are not yet saved between sessions.");
+    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), 
+        "Auto-save timer is now functional!\n"
+        "Path settings can be saved in future updates.");
 }
 
 void SettingsWindow::drawUISettings() {
+    auto& settings = GlobalSettings::getInstance();
+    
     ImGui::Text("UI Appearance");
     ImGui::Separator();
     
-    if (ImGui::SliderFloat("UI Scale", &uiScale, 0.5f, 2.0f, "%.1fx")) {
-        ImGui::GetIO().FontGlobalScale = uiScale;
+    if (ImGui::SliderFloat("UI Scale", &settings.uiSettings.uiScale, 0.5f, 2.0f, "%.1fx")) {
+        ImGui::GetIO().FontGlobalScale = settings.uiSettings.uiScale;
     }
     
     ImGui::Spacing();
@@ -125,15 +152,15 @@ void SettingsWindow::drawUISettings() {
     
     ImGui::Text("Color Theme:");
     const char* styles[] = { "Dark", "Light", "Classic" };
-    if (ImGui::Combo("Style", &styleIndex, styles, IM_ARRAYSIZE(styles))) {
-        applyStyle(styleIndex);
+    if (ImGui::Combo("Style", &settings.uiSettings.styleIndex, styles, IM_ARRAYSIZE(styles))) {
+        applyStyle(settings.uiSettings.styleIndex);
     }
     
     ImGui::Spacing();
     
     if (ImGui::Button("Reset to Defaults", ImVec2(150, 0))) {
-        uiScale = 1.0f;
-        styleIndex = 0;
+        settings.uiSettings.uiScale = 1.0f;
+        settings.uiSettings.styleIndex = 0;
         ImGui::GetIO().FontGlobalScale = 1.0f;
         applyStyle(0);
     }

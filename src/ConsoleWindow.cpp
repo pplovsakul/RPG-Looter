@@ -7,10 +7,20 @@
 std::vector<LogEntry> ConsoleWindow::logs;
 
 void ConsoleWindow::update(EntityManager& em, float deltaTime) {
+    auto& settings = GlobalSettings::getInstance();
+    
+    // Only show if the window is visible
+    if (!settings.windowVisibility.showConsoleWindow) {
+        return;
+    }
+    
     ImGui::SetNextWindowPos(ImVec2(10, 400), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(600, 300), ImGuiCond_FirstUseEver);
     
-    ImGui::Begin("Console");
+    if (!ImGui::Begin("Console", &settings.windowVisibility.showConsoleWindow)) {
+        ImGui::End();
+        return;
+    }
     
     // Top controls
     ImGui::Checkbox("Info", &showInfo); ImGui::SameLine();

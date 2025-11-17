@@ -4,10 +4,20 @@
 #include <map>
 
 void SceneHierarchyWindow::update(EntityManager& em, float deltaTime) {
+    auto& settings = GlobalSettings::getInstance();
+    
+    // Only show if the window is visible
+    if (!settings.windowVisibility.showSceneHierarchy) {
+        return;
+    }
+    
     ImGui::SetNextWindowPos(ImVec2(10, 320), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 400), ImGuiCond_FirstUseEver);
     
-    ImGui::Begin("Scene Hierarchy");
+    if (!ImGui::Begin("Scene Hierarchy", &settings.windowVisibility.showSceneHierarchy)) {
+        ImGui::End();
+        return;
+    }
     
     // Search bar
     ImGui::InputTextWithHint("##search", "Search entities...", searchBuffer, sizeof(searchBuffer));
