@@ -121,8 +121,12 @@ void EngineOverlaySystem::handleInput() {
 }
 
 void EngineOverlaySystem::renderUI(EntityManager& em, float deltaTime) {
+    // Get window size for menu bar
+    int width, height;
+    glfwGetWindowSize(m_window, &width, &height);
+    
     // Render menu bar first
-    renderMenuBar();
+    renderMenuBar(width);
     
     if (m_showDemo) {
         renderDemoWindow();
@@ -339,11 +343,11 @@ void EngineOverlaySystem::renderProfiler(float deltaTime) {
     }
 }
 
-void EngineOverlaySystem::renderMenuBar() {
+void EngineOverlaySystem::renderMenuBar(int screenWidth) {
     using namespace EngineUI;
     
-    // Simple menu bar at top of screen
-    EngineUI::Rect menuRect(0, 0, 1920, 24); // Fixed width, will clip
+    // Simple menu bar at top of screen using actual screen width
+    EngineUI::Rect menuRect(0, 0, (float)screenWidth, 24);
     if (m_uiContext->beginWindow("##MenuBar", nullptr, &menuRect)) {
         Text("View:");
         SameLine();
