@@ -48,8 +48,18 @@ static bool pointInConvexPoly(const ImVec2& p, const ImVec2* pts, int n) {
 }
 
 void ModelEditorSystem::update(EntityManager& em, float /*deltaTime*/) {
+    auto& settings = GlobalSettings::getInstance();
+    
+    // Only show if the window is visible
+    if (!settings.windowVisibility.showModelEditor) {
+        return;
+    }
+    
     ImGui::SetNextWindowSize(ImVec2(900, 700), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Model Editor");
+    if (!ImGui::Begin("Model Editor", &settings.windowVisibility.showModelEditor)) {
+        ImGui::End();
+        return;
+    }
     
     // Toolbar at the top
     drawToolbar();

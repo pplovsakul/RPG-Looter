@@ -8,8 +8,18 @@ static char savePathBuf[256] = "res/entities/entities.json";
 static char loadPathBuf[256] = "res/entities/entities.json";
 
 void EditorSystem::update(EntityManager& em, float /*deltaTime*/) {
+    auto& settings = GlobalSettings::getInstance();
+    
+    // Only show if the window is visible
+    if (!settings.windowVisibility.showEntityEditor) {
+        return;
+    }
+    
     ImGui::SetNextWindowSize(ImVec2(500, 700), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Entity Editor");
+    if (!ImGui::Begin("Entity Editor", &settings.windowVisibility.showEntityEditor)) {
+        ImGui::End();
+        return;
+    }
 
     // Tabs for better organization
     if (ImGui::BeginTabBar("EditorTabs")) {

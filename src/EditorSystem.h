@@ -1,6 +1,7 @@
 #pragma once
 #include "System.h"
 #include "Entitymanager.h"
+#include "GlobalSettings.h"
 #include "Components.h"
 #include "vendor/imgui/imgui.h"
 #include <string>

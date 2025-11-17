@@ -2,6 +2,7 @@
 #include "System.h"
 #include "Components.h"
 #include "Entitymanager.h"
+#include "GlobalSettings.h"
 #include "vendor/imgui/imgui.h"
 #include <vector>
 #include <deque>

@@ -3,10 +3,20 @@
 #include <numeric>
 
 void PerformanceWindow::update(EntityManager& em, float deltaTime) {
+    auto& settings = GlobalSettings::getInstance();
+    
+    // Only show if the window is visible
+    if (!settings.windowVisibility.showPerformanceWindow) {
+        return;
+    }
+    
     ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_FirstUseEver);
     
-    ImGui::Begin("Performance Monitor");
+    if (!ImGui::Begin("Performance Monitor", &settings.windowVisibility.showPerformanceWindow)) {
+        ImGui::End();
+        return;
+    }
     
     // Quick stats at the top
     float fps = ImGui::GetIO().Framerate;
@@ -118,22 +128,45 @@ void PerformanceWindow::drawDetailedStats(EntityManager& em, float deltaTime) {
 }
 
 void PerformanceWindow::drawSystemControls() {
+    auto& settings = GlobalSettings::getInstance();
+    
     ImGui::Text("System Toggles:");
-    ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "(Not yet implemented)");
     ImGui::Spacing();
     
-    // Placeholder for future system controls
-    static bool renderEnabled = true;
-    static bool audioEnabled = true;
-    static bool physicsEnabled = true;
+    if (ImGui::Checkbox("Rendering", &settings.systemControls.renderingEnabled)) {
+        if (settings.systemControls.renderingEnabled) {
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Rendering enabled");
+        } else {
+            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Rendering disabled");
+        }
+    }
     
-    ImGui::Checkbox("Rendering", &renderEnabled);
-    ImGui::Checkbox("Audio", &audioEnabled);
-    ImGui::Checkbox("Physics", &physicsEnabled);
+    if (ImGui::Checkbox("Audio", &settings.systemControls.audioEnabled)) {
+        if (settings.systemControls.audioEnabled) {
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Audio enabled");
+        } else {
+            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Audio disabled");
+        }
+    }
+    
+    if (ImGui::Checkbox("Physics", &settings.systemControls.physicsEnabled)) {
+        if (settings.systemControls.physicsEnabled) {
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Physics enabled");
+        } else {
+            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Physics disabled");
+        }
+    }
     
     ImGui::Spacing();
+    ImGui::Separator();
     ImGui::Text("VSync:");
-    static int vsyncMode = 1;
-    ImGui::RadioButton("Off", &vsyncMode, 0); ImGui::SameLine();
-    ImGui::RadioButton("On", &vsyncMode, 1);
+    if (ImGui::Checkbox("Enable VSync", &settings.renderingSettings.vsyncEnabled)) {
+        // Note: Will be applied in main loop
+    }
+    
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), 
+        "System controls are now functional!\n"
+        "These flags control system behavior.");
 }

@@ -18,12 +18,39 @@
 #include "vendor/glm/gtc/matrix_transform.hpp"
 
 void Game::update(float deltaTime) {
+    auto& settings = GlobalSettings::getInstance();
+    
+    // Update auto-save timer
+    if (settings.editorSettings.autoSaveEnabled) {
+        settings.editorSettings.autoSaveTimer += deltaTime;
+        if (settings.editorSettings.autoSaveTimer >= settings.editorSettings.autoSaveInterval) {
+            settings.editorSettings.autoSaveTimer = 0.0f;
+            ConsoleWindow::Info("Auto-save triggered (not yet fully implemented)");
+        }
+    }
+    
+    // Update systems based on their enabled state
     for (auto& system : systems) {
-        system->update(entityManager, deltaTime);
+        // Check if system should be skipped based on control flags
+        bool shouldUpdate = true;
+        
+        if (dynamic_cast<RenderSystem*>(system.get()) && !settings.systemControls.renderingEnabled) {
+            shouldUpdate = false;
+        }
+        if (dynamic_cast<AudioSystem*>(system.get()) && !settings.systemControls.audioEnabled) {
+            shouldUpdate = false;
+        }
+        if (dynamic_cast<CollisionSystem*>(system.get()) && !settings.systemControls.physicsEnabled) {
+            shouldUpdate = false;
+        }
+        
+        if (shouldUpdate) {
+            system->update(entityManager, deltaTime);
+        }
     }
     entityManager.cleanup();
 
-    if (collisionSystem) {
+    if (collisionSystem && settings.systemControls.physicsEnabled) {
         static int dbgCounter = 0;
         dbgCounter++;
         auto cols = collisionSystem->getCollisions();
@@ -43,8 +70,16 @@ void Game::setAudioAvailable(bool available) {
 }
 
 void Game::setup(GLFWwindow* window) {
+    gameWindow = window; // Store window reference
     setupSystems(window);
     setupEntities();
+}
+
+void Game::applyVSync() {
+    auto& settings = GlobalSettings::getInstance();
+    if (gameWindow) {
+        glfwSwapInterval(settings.renderingSettings.vsyncEnabled ? 1 : 0);
+    }
 }
 
 void Game::setupSystems(GLFWwindow* window) {
@@ -52,19 +87,21 @@ void Game::setupSystems(GLFWwindow* window) {
     systems.push_back(std::make_unique<InputSystem>(window));
 
     // Render System
-    auto renderSystem = std::make_unique<RenderSystem>();
-    renderSystem->init();
-    renderSystem->setViewMatrix(glm::mat4(1.0f));
+    auto renderSys = std::make_unique<RenderSystem>();
+    renderSys->init();
+    renderSys->setViewMatrix(glm::mat4(1.0f));
 
     int width, height;
     glfwGetWindowSize(window, &width, &height);
-    renderSystem->setProjectionMatrix(glm::ortho(0.0f, (float)width, 0.0f, (float)height, -1.0f, 1.0f));
-    systems.push_back(std::move(renderSystem));
+    renderSys->setProjectionMatrix(glm::ortho(0.0f, (float)width, 0.0f, (float)height, -1.0f, 1.0f));
+    renderSystem = renderSys.get(); // Cache pointer
+    systems.push_back(std::move(renderSys));
 
     // Optional Audio System
     if (audioAvailable) {
         auto audioSys = std::make_unique<AudioSystem>();
         audioSys->init();
+        audioSystem = audioSys.get(); // Cache pointer
         systems.push_back(std::move(audioSys));
         std::cout << "[Game] Audio system enabled" << std::endl;
     } else {
