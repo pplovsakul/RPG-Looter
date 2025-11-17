@@ -44,8 +44,13 @@ Render state diagnostics showing OpenGL state, font atlas info, and input state.
 3. Font atlas uses readable 5x7 patterns
 4. UVs fixed to (0.5, 0.5) for solid colors
 5. Window titles render correctly
+6. **UV Y-coordinates flipped** for proper OpenGL texture mapping (fixes garbled text)
 
 Check Debug UI window for real-time diagnostics.
+
+### Garbled/Upside-down Text
+
+If text appears garbled or incorrect, this was caused by UV coordinate mismatch between bitmap creation (Y=0 at top) and OpenGL texture coordinates (Y=0 at bottom). This has been fixed in `FontAtlas.cpp` by properly flipping Y-coordinates using the formula `1.0 - y` during glyph UV calculation.
 
 ## License
 
