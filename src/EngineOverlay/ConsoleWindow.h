@@ -31,7 +31,7 @@ class ConsoleWindow {
 public:
     ConsoleWindow();
     
-    void render(bool* p_open = nullptr);
+    void render(bool* p_open = nullptr, const Rect* customRect = nullptr);
     
     // Add log messages
     void addLog(const std::string& message, LogEntry::Level level = LogEntry::Level::Info);

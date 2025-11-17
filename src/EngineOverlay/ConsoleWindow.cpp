@@ -10,11 +10,11 @@ ConsoleWindow::ConsoleWindow() {
     addLog("Console initialized", LogEntry::Level::Info);
 }
 
-void ConsoleWindow::render(bool* p_open) {
+void ConsoleWindow::render(bool* p_open, const Rect* customRect) {
     UIContext* ctx = GetContext();
     if (!ctx) return;
     
-    Rect initialRect(50, 400, 800, 300);
+    Rect initialRect = customRect ? *customRect : Rect(50, 400, 800, 300);
     if (!ctx->beginWindow("Console", p_open, &initialRect)) {
         return;
     }

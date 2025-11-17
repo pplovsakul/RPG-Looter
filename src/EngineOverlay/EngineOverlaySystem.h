@@ -33,9 +33,11 @@ private:
     void handleInput();
     void renderUI(EntityManager& em, float deltaTime);
     void renderMenuBar(int screenWidth);
-    void renderDemoWindow();
-    void renderEntityInspector(EntityManager& em);
-    void renderProfiler(float deltaTime);
+    void renderToolbar(int screenWidth);
+    void renderHierarchyWindow(EntityManager& em);
+    void renderInspectorWindow(EntityManager& em);
+    void renderSceneStatsWindow(float deltaTime);
+    void renderConsoleWindowProfessional(bool* p_open);
     
     GLFWwindow* m_window = nullptr;
     EngineUI::UIContext* m_uiContext = nullptr;
@@ -44,11 +46,13 @@ private:
     bool m_initialized = false;
     
     // Window visibility
-    bool m_showDemo = true;
     bool m_showEntityInspector = true;
     bool m_showProfiler = true;
     bool m_showConsole = true;
-    bool m_showDebugUI = true;
+    bool m_showDebugUI = false; // Hidden by default
+    
+    // Selected entity for inspector
+    Entity* m_selectedEntity = nullptr;
     
     // Profiler data
     float m_frameTimeMs = 0.0f;
