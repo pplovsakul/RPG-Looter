@@ -39,6 +39,11 @@ private:
     std::vector<std::string> activeContexts;
     std::unordered_map<std::string, InputAction> actions;
     std::unordered_map<int, bool> keyState;
+    
+    // Mouse state tracking
+    glm::vec2 mousePosition{0.0f, 0.0f};
+    std::unordered_map<int, bool> mouseButtonState;
+    bool mouseOverUI = false;
 
 public:
     // Constructor
@@ -66,4 +71,12 @@ public:
     bool isKeyPressedOnce(int key);
 
     void loadConfig(const std::string& path);
+    
+    // === Mouse Support ===
+    glm::vec2 GetMousePosition() const;
+    bool IsMouseButtonPressed(int button) const;
+    
+    // === UI Input Consumption ===
+    void SetMouseOverUI(bool overUI);
+    bool IsMouseOverUI() const;
 };

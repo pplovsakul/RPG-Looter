@@ -8,6 +8,8 @@
 class CollisionSystem;
 class RenderSystem;
 class AudioSystem;
+class UISystem;
+class UIRenderer;
 
 class Game {
 private:
@@ -20,6 +22,8 @@ private:
 	CollisionSystem* collisionSystem = nullptr;
 	RenderSystem* renderSystem = nullptr;
 	AudioSystem* audioSystem = nullptr;
+	UISystem* uiSystem = nullptr;
+	std::unique_ptr<UIRenderer> uiRenderer;
     bool audioAvailable = false; // flag to control optional audio system
 	
 	GLFWwindow* gameWindow = nullptr; // Store window for VSync control
