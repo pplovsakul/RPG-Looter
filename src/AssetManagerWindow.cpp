@@ -4,8 +4,18 @@
 #include <sstream>
 
 void AssetManagerWindow::update(EntityManager& em, float /*deltaTime*/) {
+    auto& settings = GlobalSettings::getInstance();
+    
+    // Only show if the window is visible
+    if (!settings.windowVisibility.showAssetManager) {
+        return;
+    }
+    
     ImGui::SetNextWindowSize(ImVec2(700, 600), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Asset Manager");
+    if (!ImGui::Begin("Asset Manager", &settings.windowVisibility.showAssetManager)) {
+        ImGui::End();
+        return;
+    }
     
     // Tabs for better organization
     if (ImGui::BeginTabBar("AssetTabs")) {

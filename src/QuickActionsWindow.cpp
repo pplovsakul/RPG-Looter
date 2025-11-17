@@ -3,6 +3,8 @@
 #include "Components.h"
 
 void QuickActionsWindow::update(EntityManager& em, float deltaTime) {
+    auto& settings = GlobalSettings::getInstance();
+    
     // Main menu bar
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
@@ -69,24 +71,31 @@ void QuickActionsWindow::update(EntityManager& em, float deltaTime) {
         }
         
         if (ImGui::BeginMenu("View")) {
-            if (ImGui::MenuItem("Performance Monitor", "F1")) {
-                ConsoleWindow::Info("Toggle Performance Monitor - Not yet implemented");
+            if (ImGui::MenuItem("Performance Monitor", "F1", settings.windowVisibility.showPerformanceWindow)) {
+                settings.windowVisibility.showPerformanceWindow = !settings.windowVisibility.showPerformanceWindow;
             }
-            if (ImGui::MenuItem("Console", "F2")) {
-                ConsoleWindow::Info("Toggle Console - Not yet implemented");
+            if (ImGui::MenuItem("Console", "F2", settings.windowVisibility.showConsoleWindow)) {
+                settings.windowVisibility.showConsoleWindow = !settings.windowVisibility.showConsoleWindow;
             }
-            if (ImGui::MenuItem("Scene Hierarchy", "F3")) {
-                ConsoleWindow::Info("Toggle Scene Hierarchy - Not yet implemented");
+            if (ImGui::MenuItem("Scene Hierarchy", "F3", settings.windowVisibility.showSceneHierarchy)) {
+                settings.windowVisibility.showSceneHierarchy = !settings.windowVisibility.showSceneHierarchy;
             }
-            if (ImGui::MenuItem("Entity Editor", "F4")) {
-                ConsoleWindow::Info("Toggle Entity Editor - Not yet implemented");
+            if (ImGui::MenuItem("Entity Editor", "F4", settings.windowVisibility.showEntityEditor)) {
+                settings.windowVisibility.showEntityEditor = !settings.windowVisibility.showEntityEditor;
             }
             ImGui::Separator();
-            if (ImGui::MenuItem("Asset Manager", "F5")) {
-                ConsoleWindow::Info("Toggle Asset Manager - Not yet implemented");
+            if (ImGui::MenuItem("Asset Manager", "F5", settings.windowVisibility.showAssetManager)) {
+                settings.windowVisibility.showAssetManager = !settings.windowVisibility.showAssetManager;
             }
-            if (ImGui::MenuItem("Model Editor", "F6")) {
-                ConsoleWindow::Info("Toggle Model Editor - Not yet implemented");
+            if (ImGui::MenuItem("Model Editor", "F6", settings.windowVisibility.showModelEditor)) {
+                settings.windowVisibility.showModelEditor = !settings.windowVisibility.showModelEditor;
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Settings", nullptr, settings.windowVisibility.showSettingsWindow)) {
+                settings.windowVisibility.showSettingsWindow = !settings.windowVisibility.showSettingsWindow;
+            }
+            if (ImGui::MenuItem("Quick Actions", nullptr, settings.windowVisibility.showQuickActions)) {
+                settings.windowVisibility.showQuickActions = !settings.windowVisibility.showQuickActions;
             }
             ImGui::EndMenu();
         }
@@ -115,10 +124,18 @@ void QuickActionsWindow::update(EntityManager& em, float deltaTime) {
         drawHelpWindow();
     }
     
+    // Only show Quick Actions window if visible in settings
+    if (!settings.windowVisibility.showQuickActions) {
+        return;
+    }
+    
     // Quick actions floating window (optional)
     ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x - 220, 30), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(200, 0), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Quick Actions", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    if (!ImGui::Begin("Quick Actions", &settings.windowVisibility.showQuickActions, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::End();
+        return;
+    }
     drawQuickActions(em);
     ImGui::End();
 }

@@ -20,6 +20,8 @@
 #include "Components.h"
 
 #include "Game.h"
+#include "GlobalSettings.h"
+
 GLFWwindow* InitWindow()
 {
     // Initialise GLFW
@@ -104,6 +106,9 @@ int main(void) {
 
     float lastTime = glfwGetTime();
     float deltaTime = 0.0f;
+    
+    // VSync tracking
+    static bool lastVSyncState = true;
 
     // Resize Callback registrieren
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
@@ -115,6 +120,28 @@ int main(void) {
         
         float currentTime = glfwGetTime();
         deltaTime = currentTime - lastTime;
+        
+        // Apply VSync if it changed
+        auto& settings = GlobalSettings::getInstance();
+        if (settings.renderingSettings.vsyncEnabled != lastVSyncState) {
+            game.applyVSync();
+            lastVSyncState = settings.renderingSettings.vsyncEnabled;
+        }
+        
+        // FPS limiting (when VSync is off)
+        if (!settings.renderingSettings.vsyncEnabled && settings.renderingSettings.targetFPS > 0) {
+            float targetFrameTime = 1.0f / settings.renderingSettings.targetFPS;
+            if (deltaTime < targetFrameTime) {
+                float sleepTime = targetFrameTime - deltaTime;
+                // Busy wait for more precise timing
+                while (glfwGetTime() - currentTime < targetFrameTime) {
+                    // Spin
+                }
+                currentTime = glfwGetTime();
+                deltaTime = currentTime - lastTime;
+            }
+        }
+        
         lastTime = currentTime;
 
         ImGui_ImplOpenGL3_NewFrame();

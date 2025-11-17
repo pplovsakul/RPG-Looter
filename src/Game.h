@@ -1,10 +1,13 @@
 #include "Entitymanager.h"
 #include "System.h"
+#include "GlobalSettings.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 // Forward declarations to avoid including heavy headers
 class CollisionSystem;
+class RenderSystem;
+class AudioSystem;
 
 class Game {
 private:
@@ -15,7 +18,11 @@ private:
 	
 	// Cache pointers to avoid repeated dynamic_cast
 	CollisionSystem* collisionSystem = nullptr;
+	RenderSystem* renderSystem = nullptr;
+	AudioSystem* audioSystem = nullptr;
     bool audioAvailable = false; // flag to control optional audio system
+	
+	GLFWwindow* gameWindow = nullptr; // Store window for VSync control
 
 	void setupSystems(GLFWwindow* window);
 	void setupEntities();
@@ -27,4 +34,6 @@ public:
 	EntityManager& getEntityManager() { return entityManager; }
 	void onWindowResize(GLFWwindow* window, int width, int height);
     void setAudioAvailable(bool available); // setter
+	void applyVSync(); // Apply VSync settings
+	GLFWwindow* getWindow() { return gameWindow; }
 };
