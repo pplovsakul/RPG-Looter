@@ -1,5 +1,6 @@
 #include "UIRenderer.h"
 #include "../VertexBufferLayout.h"
+#include "../vendor/glm/gtc/matrix_transform.hpp"
 #include <glad/glad.h>
 #include <iostream>
 
@@ -8,6 +9,10 @@ UIRenderer::UIRenderer() {
 }
 
 UIRenderer::~UIRenderer() {
+    if (shaderProgramID != 0) {
+        glDeleteProgram(shaderProgramID);
+        shaderProgramID = 0;
+    }
     std::cout << "[UIRenderer] Destroyed" << std::endl;
 }
 
@@ -91,13 +96,10 @@ void UIRenderer::createShader() {
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
-    // Create a Shader wrapper (we'll need to adapt this to work with raw GL program)
-    // For now, store the program ID directly
-    // Note: The existing Shader class might need adaptation, or we create a minimal wrapper
-    uiShader = std::make_unique<Shader>();
-    // We'll directly use the shader program ID in the render function
+    // Store the program ID for use in rendering
+    shaderProgramID = shaderProgram;
     
-    std::cout << "[UIRenderer] UI Shader created (Program ID: " << shaderProgram << ")" << std::endl;
+    std::cout << "[UIRenderer] UI Shader created (Program ID: " << shaderProgramID << ")" << std::endl;
 }
 
 void UIRenderer::createQuadGeometry() {
@@ -146,7 +148,7 @@ void UIRenderer::render(const std::vector<UIDrawCommand>& commands) {
 }
 
 void UIRenderer::drawRectangle(const UIRect& rect, const glm::vec4& color) {
-    if (!uiShader || !quadVA || !quadIB) {
+    if (shaderProgramID == 0 || !quadVA || !quadIB) {
         return;
     }
 
@@ -155,22 +157,32 @@ void UIRenderer::drawRectangle(const UIRect& rect, const glm::vec4& color) {
     model = glm::translate(model, glm::vec3(rect.x, rect.y, 0.0f));
     model = glm::scale(model, glm::vec3(rect.width, rect.height, 1.0f));
 
-    // Note: Since we created the shader manually, we need to use it directly
-    // This is a simplified approach - ideally we'd integrate with the existing Shader class
-    // For now, this serves as a placeholder showing the architecture
+    // Use the shader program
+    glUseProgram(shaderProgramID);
     
-    // Bind shader, set uniforms, and draw
-    // This would use uiShader->Bind() and uiShader->SetUniform...() in a full implementation
+    // Set uniforms
+    GLint projLoc = glGetUniformLocation(shaderProgramID, "u_Projection");
+    GLint modelLoc = glGetUniformLocation(shaderProgramID, "u_Model");
+    GLint colorLoc = glGetUniformLocation(shaderProgramID, "u_Color");
     
+    if (projLoc != -1) {
+        glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projectionMatrix[0][0]);
+    }
+    if (modelLoc != -1) {
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
+    }
+    if (colorLoc != -1) {
+        glUniform4f(colorLoc, color.r, color.g, color.b, color.a);
+    }
+    
+    // Bind and draw
     quadVA->Bind();
     quadIB->Bind();
     
-    // In a complete implementation, we'd set uniforms here:
-    // uiShader->SetUniformMat4f("u_Projection", projectionMatrix);
-    // uiShader->SetUniformMat4f("u_Model", model);
-    // uiShader->SetUniform4f("u_Color", color.r, color.g, color.b, color.a);
-    
     glDrawElements(GL_TRIANGLES, quadIB->GetCount(), GL_UNSIGNED_INT, nullptr);
+    
+    // Unbind
+    glUseProgram(0);
 }
 
 void UIRenderer::setProjectionMatrix(const glm::mat4& proj) {

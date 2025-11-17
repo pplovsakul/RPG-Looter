@@ -5,6 +5,7 @@
 #include "../VertexBuffer.h"
 #include "../IndexBuffer.h"
 #include "../vendor/glm/glm.hpp"
+#include <glad/glad.h>
 #include <memory>
 #include <vector>
 
@@ -15,6 +16,7 @@ private:
     std::unique_ptr<VertexBuffer> quadVB;
     std::unique_ptr<IndexBuffer> quadIB;
     
+    GLuint shaderProgramID = 0;
     glm::mat4 projectionMatrix;
     int windowWidth = 1920;
     int windowHeight = 1080;
