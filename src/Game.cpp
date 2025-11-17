@@ -119,7 +119,7 @@ void Game::setupSystems(GLFWwindow* window) {
     panel->setVisible(true);
 
     auto label = std::make_unique<UILabel>();
-    label->setRect(UIRect(120, 120, 0, 0)); // Position (width/height not used for labels)
+    label->setRect(UIRect(10, 10, 0, 0)); // Position relative to panel
     label->setText("Hello, World!");
     label->setFont(font); // Use the loaded font
     label->setTextColor(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)); // White text
@@ -127,7 +127,7 @@ void Game::setupSystems(GLFWwindow* window) {
     label->setVisible(true);
 
     auto button = std::make_unique<UIButton>();
-    button->setRect(UIRect(150, 250, 200, 50)); // x, y, width, height
+    button->setRect(UIRect(50, 150, 200, 40)); // Position relative to panel, x, y, width, height
     button->setNormalColor(glm::vec4(0.3f, 0.3f, 0.3f, 1.0f));
     button->setHoverColor(glm::vec4(0.4f, 0.4f, 0.4f, 1.0f));
     button->setPressedColor(glm::vec4(0.2f, 0.2f, 0.2f, 1.0f));
