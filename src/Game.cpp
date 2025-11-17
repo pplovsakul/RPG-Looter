@@ -12,6 +12,8 @@
 #include "SceneHierarchyWindow.h"
 #include "SettingsWindow.h"
 #include "QuickActionsWindow.h"
+#include "UI/UISystem.h"
+#include "UI/UIRenderer.h"
 
 #include "Components.h"
 
@@ -86,13 +88,29 @@ void Game::setupSystems(GLFWwindow* window) {
     // Input System
     systems.push_back(std::make_unique<InputSystem>(window));
 
+    // UI System - should be updated after InputSystem but before game actions
+    auto uiSys = std::make_unique<UISystem>();
+    uiSystem = uiSys.get();
+    systems.push_back(std::move(uiSys));
+
+    // UI Renderer
+    uiRenderer = std::make_unique<UIRenderer>();
+    uiRenderer->init();
+    
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+    uiRenderer->updateWindowSize(width, height);
+    
+    // Connect UIRenderer to UISystem
+    if (uiSystem) {
+        uiSystem->setRenderer(uiRenderer.get());
+    }
+
     // Render System
     auto renderSys = std::make_unique<RenderSystem>();
     renderSys->init();
     renderSys->setViewMatrix(glm::mat4(1.0f));
 
-    int width, height;
-    glfwGetWindowSize(window, &width, &height);
     renderSys->setProjectionMatrix(glm::ortho(0.0f, (float)width, 0.0f, (float)height, -1.0f, 1.0f));
     renderSystem = renderSys.get(); // Cache pointer
     systems.push_back(std::move(renderSys));
@@ -164,11 +182,18 @@ void Game::setupConfigs() {
 
 void Game::onWindowResize(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
+    
+    // Update RenderSystem projection
     for (auto& system : systems) {
         if (auto* renderSystem = dynamic_cast<RenderSystem*>(system.get())) {
             renderSystem->setProjectionMatrix(glm::ortho(0.0f, (float)width, 0.0f, (float)height, -1.0f, 1.0f));
             break;
         }
+    }
+    
+    // Update UIRenderer window size
+    if (uiRenderer) {
+        uiRenderer->updateWindowSize(width, height);
     }
 }
 

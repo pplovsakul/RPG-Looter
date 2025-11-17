@@ -102,7 +102,16 @@ add_executable(RPG-Looter
     # Collision system files
     "src/CollisionUtils.h"
     "src/CollisionSystem.h"
-    "src/CollisionSystem.cpp")
+    "src/CollisionSystem.cpp"
+    
+    # UI System files
+    "src/UI/UIEvent.h"
+    "src/UI/UIWidget.h"
+    "src/UI/UIWidget.cpp"
+    "src/UI/UISystem.h"
+    "src/UI/UISystem.cpp"
+    "src/UI/UIRenderer.h"
+    "src/UI/UIRenderer.cpp")
     
     
 # Includes

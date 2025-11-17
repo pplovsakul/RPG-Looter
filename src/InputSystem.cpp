@@ -268,6 +268,11 @@ bool InputSystem::isKeyPressedOnce(int key) {
 void InputSystem::update(EntityManager& em, float deltaTime) {
     if (!window) return;
 
+    // Update mouse position
+    double xpos, ypos;
+    glfwGetCursorPos(window, &xpos, &ypos);
+    mousePosition = glm::vec2(static_cast<float>(xpos), static_cast<float>(ypos));
+
     for (auto& ctxName : activeContexts) {
         auto it = contexts.find(ctxName);
         if (it == contexts.end()) continue;
@@ -297,4 +302,21 @@ void InputSystem::update(EntityManager& em, float deltaTime) {
             else if (isAnyKeyDown) action.callback(InputState::Held, em, deltaTime);
         }
     }
+}
+
+glm::vec2 InputSystem::GetMousePosition() const {
+    return mousePosition;
+}
+
+bool InputSystem::IsMouseButtonPressed(int button) const {
+    if (!window) return false;
+    return glfwGetMouseButton(window, button) == GLFW_PRESS;
+}
+
+void InputSystem::SetMouseOverUI(bool overUI) {
+    mouseOverUI = overUI;
+}
+
+bool InputSystem::IsMouseOverUI() const {
+    return mouseOverUI;
 }
