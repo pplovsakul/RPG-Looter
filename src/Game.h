@@ -38,6 +38,7 @@ public:
 	
 	void setup(GLFWwindow* window);
 	void update(float deltaTime);
+	void renderUI();  // Render the UI system
 	EntityManager& getEntityManager() { return entityManager; }
 	void onWindowResize(GLFWwindow* window, int width, int height);
     void setAudioAvailable(bool available); // setter

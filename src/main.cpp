@@ -151,6 +151,9 @@ int main(void) {
         ImGui::NewFrame();
         
 		game.update(deltaTime);
+		
+		// Render the in-game UI (after update, before ImGui editor UI)
+		game.renderUI();
 
         // Note: Debug/Performance window is now handled by PerformanceWindow system
         // which is part of the game's systems

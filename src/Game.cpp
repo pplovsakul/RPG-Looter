@@ -72,6 +72,14 @@ void Game::update(float deltaTime) {
     }
 };
 
+void Game::renderUI() {
+    // Render the UI system
+    if (uiSystem && uiRenderer) {
+        const auto& drawCommands = uiSystem->getDrawCommands();
+        uiRenderer->render(drawCommands);
+    }
+}
+
 void Game::setAudioAvailable(bool available) {
     audioAvailable = available;
 }
@@ -135,6 +143,15 @@ void Game::setupSystems(GLFWwindow* window) {
 
     button->setVisible(true);
     button->setEnabled(true);
+    
+    // Add label and button as children of the panel (hierarchical structure)
+    panel->addChild(std::move(label));
+    panel->addChild(std::move(button));
+    
+    // Register the panel with UISystem so it persists
+    if (uiSystem) {
+        uiSystem->setRootWidget(std::move(panel));
+    }
 
     // UI Renderer
     uiRenderer = std::make_unique<UIRenderer>();
