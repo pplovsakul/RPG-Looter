@@ -167,10 +167,27 @@ The project is under active development. Future enhancements may include:
 
 The project includes several editor tools accessible through ImGui:
 
-- **Debug Window**: Shows FPS, frame time, and delta time
-- **Asset Manager**: Manage textures, sounds, and other assets
-- **Model Editor**: Edit and configure game models
-- **Entity Editor**: Modify entity components at runtime
+### Core Editor Windows
+- **Performance Monitor**: Real-time FPS, frame time graphs, and entity statistics
+- **Console**: Centralized logging system with color-coded messages and filtering
+- **Scene Hierarchy**: Tree view of all entities with search and grouping
+- **Entity Editor**: Advanced entity and component management with templates and batch operations
+- **Asset Manager**: Comprehensive asset management with preview, search, and statistics
+- **Model Editor**: Visual model creation with grid, snap, and layer support
+- **Settings**: Global application settings and UI customization
+- **Quick Actions**: Menu bar with shortcuts and help system
+
+For detailed information about the editor features, see [IMGUI_IMPROVEMENTS.md](IMGUI_IMPROVEMENTS.md).
+
+### Editor Features
+- Component-based entity system with visual editing
+- Real-time performance monitoring and optimization tools
+- Asset management with texture preview and memory statistics
+- Visual model editor with shape composition
+- Template system for quick entity creation
+- Batch operations for efficient workflow
+- Comprehensive logging and debugging tools
+- Keyboard shortcuts and help system
 
 ## Dependencies
 
