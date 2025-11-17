@@ -14,6 +14,9 @@
 #include "QuickActionsWindow.h"
 #include "UI/UISystem.h"
 #include "UI/UIRenderer.h"
+#include "UI/UIPanel.h"
+#include "UI/UILabel.h"
+#include "UI/UIButton.h"
 
 #include "Components.h"
 
@@ -94,6 +97,44 @@ void Game::setupSystems(GLFWwindow* window) {
     auto uiSys = std::make_unique<UISystem>();
     uiSystem = uiSys.get();
     systems.push_back(std::move(uiSys));
+
+    AssetManager* assetMgr = AssetManager::getInstance();
+    Font* font = assetMgr->loadFont(
+        "PublicSans",
+        "res/fonts/public-sans.json",
+        "res/fonts/public-sans.png"
+    );
+
+    auto panel = std::make_unique<UIPanel>();
+    panel->setRect(UIRect(100, 100, 300, 200)); // x, y, width, height
+    panel->setBackgroundColor(glm::vec4(0.2f, 0.3f, 0.4f, 1.0f)); // RGBA
+    panel->setVisible(true);
+
+    auto label = std::make_unique<UILabel>();
+    label->setRect(UIRect(120, 120, 0, 0)); // Position (width/height not used for labels)
+    label->setText("Hello, World!");
+    label->setFont(font); // Use the loaded font
+    label->setTextColor(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)); // White text
+    label->setTextScale(1.0f);
+    label->setVisible(true);
+
+    auto button = std::make_unique<UIButton>();
+    button->setRect(UIRect(150, 250, 200, 50)); // x, y, width, height
+    button->setNormalColor(glm::vec4(0.3f, 0.3f, 0.3f, 1.0f));
+    button->setHoverColor(glm::vec4(0.4f, 0.4f, 0.4f, 1.0f));
+    button->setPressedColor(glm::vec4(0.2f, 0.2f, 0.2f, 1.0f));
+
+    // Set callback for click event
+    button->setOnClick([]() {
+        std::cout << "Button clicked!" << std::endl;
+        });
+
+    button->setOnHover([]() {
+        std::cout << "Button hovered!" << std::endl;
+        });
+
+    button->setVisible(true);
+    button->setEnabled(true);
 
     // UI Renderer
     uiRenderer = std::make_unique<UIRenderer>();
