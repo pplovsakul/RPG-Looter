@@ -91,25 +91,7 @@ add_executable(RPG-Looter
     # Collision system files
     "src/CollisionUtils.h"
     "src/CollisionSystem.h"
-    "src/CollisionSystem.cpp"
-
-    # Engine Overlay custom UI system
-    "src/EngineOverlay/DrawList.h"
-    "src/EngineOverlay/DrawList.cpp"
-    "src/EngineOverlay/UIRenderer.h"
-    "src/EngineOverlay/UIRenderer.cpp"
-    "src/EngineOverlay/UIContext.h"
-    "src/EngineOverlay/UIContext.cpp"
-    "src/EngineOverlay/FontAtlas.h"
-    "src/EngineOverlay/FontAtlas.cpp"
-    "src/EngineOverlay/Widgets.h"
-    "src/EngineOverlay/Widgets.cpp"
-    "src/EngineOverlay/EngineOverlaySystem.h"
-    "src/EngineOverlay/EngineOverlaySystem.cpp"
-    "src/EngineOverlay/ConsoleWindow.h"
-    "src/EngineOverlay/ConsoleWindow.cpp"
-    "src/EngineOverlay/DebugUIWindow.h"
-    "src/EngineOverlay/DebugUIWindow.cpp")
+    "src/CollisionSystem.cpp")
     
     
 # Includes
