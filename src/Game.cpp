@@ -7,7 +7,6 @@
 #include "AssetManagerWindow.h"
 #include "ModelEditorSystem.h"
 #include "CollisionSystem.h" // added
-#include "EngineOverlay/EngineOverlaySystem.h"
 
 #include "Components.h"
 
@@ -74,9 +73,6 @@ void Game::setupSystems(GLFWwindow* window) {
     auto cs = std::make_unique<CollisionSystem>();
     collisionSystem = cs.get();
     systems.push_back(std::move(cs));
-
-    // Engine Overlay System (custom UI)
-    systems.push_back(std::make_unique<EngineOverlaySystem>(window));
 
     std::cout << "ECS Systeme initialisiert" << std::endl;
 }
