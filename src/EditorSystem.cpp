@@ -159,7 +159,6 @@ void EditorSystem::drawEntityEditingTab(EntityManager& em) {
     Entity* selected = (selectedEntityId >= 0) ? em.getEntityByID((unsigned int)selectedEntityId) : nullptr;
     if (!selected) {
         ImGui::TextColored(ImVec4(1,0.5f,0,1), "No entity selected");
-        ImGui::End();
         return;
     }
 
@@ -390,11 +389,6 @@ void EditorSystem::pasteComponentsFromClipboard(Entity* e) {
         }
         *e->getComponent<AudioComponent>() = clipboard.audio;
     }
-
-    // New: Model assignment UI
-    drawModelEditor(selected);
-
-    ImGui::End();
 }
 
 void EditorSystem::drawTransformEditor(Entity* e) {

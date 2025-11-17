@@ -520,4 +520,3 @@ void ModelEditorSystem::drawToolbar() {
         ImGui::TextColored(ImVec4(0.4f, 0.8f, 0.4f, 1.0f), "| Selected: %d", selectedShapeIndex);
     }
 }
-}

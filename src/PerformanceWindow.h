@@ -1,5 +1,6 @@
 #pragma once
 #include "System.h"
+#include "Components.h"
 #include "Entitymanager.h"
 #include "vendor/imgui/imgui.h"
 #include <vector>
