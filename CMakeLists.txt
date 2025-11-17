@@ -104,6 +104,10 @@ add_executable(RPG-Looter
     "src/CollisionSystem.h"
     "src/CollisionSystem.cpp"
     
+    # Font system files
+    "src/Font.h"
+    "src/Font.cpp"
+    
     # UI System files
     "src/UI/UIEvent.h"
     "src/UI/UIWidget.h"
@@ -111,7 +115,13 @@ add_executable(RPG-Looter
     "src/UI/UISystem.h"
     "src/UI/UISystem.cpp"
     "src/UI/UIRenderer.h"
-    "src/UI/UIRenderer.cpp")
+    "src/UI/UIRenderer.cpp"
+    "src/UI/UIPanel.h"
+    "src/UI/UIPanel.cpp"
+    "src/UI/UILabel.h"
+    "src/UI/UILabel.cpp"
+    "src/UI/UIButton.h"
+    "src/UI/UIButton.cpp")
     
     
 # Includes
@@ -207,6 +217,34 @@ add_custom_target(copy_sounds ALL DEPENDS ${COPIED_SOUNDS})
 add_dependencies(RPG-Looter copy_sounds)
 
 target_compile_definitions(RPG-Looter PRIVATE SOUND_DIR="${SOUND_BUILD_DIR}")
+
+# === Fonts kopieren (res/fonts -> build/res/fonts) ===
+set(FONT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/res/fonts")
+set(FONT_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/res/fonts")
+
+file(GLOB FONT_FILES "${FONT_SOURCE_DIR}/*.*")
+
+set(COPIED_FONTS "")
+foreach(FONT_FILE ${FONT_FILES})
+    get_filename_component(FONT_NAME ${FONT_FILE} NAME)
+    set(FONT_OUT "${FONT_BUILD_DIR}/${FONT_NAME}")
+
+    add_custom_command(
+        OUTPUT ${FONT_OUT}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${FONT_BUILD_DIR}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${FONT_FILE} ${FONT_OUT}
+        DEPENDS ${FONT_FILE}
+        COMMENT "Kopiere Font: ${FONT_NAME}"
+        VERBATIM
+    )
+
+    list(APPEND COPIED_FONTS ${FONT_OUT})
+endforeach()
+
+add_custom_target(copy_fonts ALL DEPENDS ${COPIED_FONTS})
+add_dependencies(RPG-Looter copy_fonts)
+
+target_compile_definitions(RPG-Looter PRIVATE FONT_DIR="${FONT_BUILD_DIR}")
 
 # === OpenAL DLLs kopieren ===
 set(OPENAL_DLL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/extern/openal-soft")

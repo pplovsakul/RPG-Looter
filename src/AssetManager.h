@@ -13,6 +13,7 @@ class IndexBuffer;
 class VertexBufferLayout;
 class ECSSound;
 class ModelComponent;
+class Font;
 
 class AssetManager {
 public:
@@ -28,10 +29,15 @@ public:
     Texture* getTexture(const std::string& name);
     std::vector<std::string> getTextureNames() const;
 
-	// 🔹 Sound
+    // 🔹 Sound
     ECSSound* loadSound(const std::string& name, const std::string& filepath);
 	ECSSound* getSound(const std::string& name);
     std::vector<std::string> getSoundNames() const;
+
+    // 🔹 Font
+    Font* loadFont(const std::string& name, const std::string& jsonPath, const std::string& atlasPath);
+    Font* getFont(const std::string& name);
+    std::vector<std::string> getFontNames() const;
 
     // 🔹 Model (Model assets)
     bool addModel(const std::string& name, const ModelComponent& model);                 // register model in memory
@@ -61,6 +67,7 @@ private:
     std::unordered_map<std::string, std::unique_ptr<Shader>> shaders;
     std::unordered_map<std::string, std::unique_ptr<Texture>> textures;
     std::unordered_map<std::string, std::unique_ptr<ECSSound>> sounds;
+    std::unordered_map<std::string, std::unique_ptr<Font>> fonts;
     std::unordered_map<std::string, MeshData> meshes;
 
     // models stored as ModelComponent instances

@@ -6,6 +6,7 @@
 #include "IndexBuffer.h"
 #include "VertexBufferLayout.h"
 #include "ESCSound.h"
+#include "Font.h"
 #include "Components.h"
 #include "ModelSerializer.h"
 
@@ -26,6 +27,7 @@ void AssetManager::clear() {
     textures.clear();
     meshes.clear();
     sounds.clear();
+    fonts.clear();
     models.clear();
     std::cout << "[AssetManager] Cleared all assets.\n";
 }
@@ -141,6 +143,43 @@ std::vector<std::string> AssetManager::getSoundNames() const {
     std::vector<std::string> names;
     names.reserve(sounds.size());
     for (const auto& kv : sounds) names.push_back(kv.first);
+    return names;
+}
+
+// === FONTS ===================================================================
+
+Font* AssetManager::loadFont(const std::string& name, const std::string& jsonPath, const std::string& atlasPath) {
+    if (fonts.find(name) != fonts.end()) {
+        std::cout << "[AssetManager] Font already loaded: " << name << "\n";
+        return fonts[name].get();
+    }
+
+    try {
+        auto font = std::make_unique<Font>(name, jsonPath, atlasPath);
+        Font* ptr = font.get();
+        fonts[name] = std::move(font);
+        std::cout << "[AssetManager] Loaded font: " << name << "\n";
+        return ptr;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[AssetManager][Error] Failed to load font " << name << ": " << e.what() << "\n";
+        return nullptr;
+    }
+}
+
+Font* AssetManager::getFont(const std::string& name) {
+    auto it = fonts.find(name);
+    if (it == fonts.end()) {
+        std::cerr << "[AssetManager][Warning] Font not found: " << name << "\n";
+        return nullptr;
+    }
+    return it->second.get();
+}
+
+std::vector<std::string> AssetManager::getFontNames() const {
+    std::vector<std::string> names;
+    names.reserve(fonts.size());
+    for (const auto& kv : fonts) names.push_back(kv.first);
     return names;
 }
 

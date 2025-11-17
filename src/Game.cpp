@@ -19,6 +19,8 @@
 
 #include "vendor/glm/gtc/matrix_transform.hpp"
 
+Game::~Game() = default;  // Defined here where UIRenderer is complete
+
 void Game::update(float deltaTime) {
     auto& settings = GlobalSettings::getInstance();
     
