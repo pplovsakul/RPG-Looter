@@ -8,62 +8,149 @@ static char savePathBuf[256] = "res/entities/entities.json";
 static char loadPathBuf[256] = "res/entities/entities.json";
 
 void EditorSystem::update(EntityManager& em, float /*deltaTime*/) {
+    ImGui::SetNextWindowSize(ImVec2(500, 700), ImGuiCond_FirstUseEver);
     ImGui::Begin("Entity Editor");
 
-    // --- Save / Load UI ---
-    ImGui::InputText("Save Path", savePathBuf, sizeof(savePathBuf));
-    if (ImGui::Button("Save Entities")) {
-        bool ok = EntitySerializer::saveEntities(em, std::string(savePathBuf));
-        if (ok) ImGui::SameLine(), ImGui::TextColored(ImVec4(0,1,0,1), "Saved");
-        else ImGui::SameLine(), ImGui::TextColored(ImVec4(1,0,0,1), "Save failed");
+    // Tabs for better organization
+    if (ImGui::BeginTabBar("EditorTabs")) {
+        // Main editing tab
+        if (ImGui::BeginTabItem("Edit")) {
+            drawEntityEditingTab(em);
+            ImGui::EndTabItem();
+        }
+        
+        // Templates tab
+        if (ImGui::BeginTabItem("Templates")) {
+            drawComponentTemplates(em);
+            ImGui::EndTabItem();
+        }
+        
+        // Batch operations tab
+        if (ImGui::BeginTabItem("Batch")) {
+            drawBatchOperations(em);
+            ImGui::EndTabItem();
+        }
+        
+        // Save/Load tab
+        if (ImGui::BeginTabItem("Save/Load")) {
+            drawSaveLoadTab(em);
+            ImGui::EndTabItem();
+        }
+        
+        ImGui::EndTabBar();
     }
-    ImGui::SameLine();
-    ImGui::InputText("Load Path", loadPathBuf, sizeof(loadPathBuf));
-    if (ImGui::Button("Load Entities")) {
-        bool ok = EntitySerializer::loadEntities(em, std::string(loadPathBuf));
-        if (ok) ImGui::SameLine(), ImGui::TextColored(ImVec4(0,1,0,1), "Loaded");
-        else ImGui::SameLine(), ImGui::TextColored(ImVec4(1,0,0,1), "Load failed");
-    }
+    
+    ImGui::End();
+}
 
+void EditorSystem::drawEntityEditingTab(EntityManager& em) {
+    // Search bar
+    ImGui::InputTextWithHint("##search", "Search entities...", searchBuffer, sizeof(searchBuffer));
     ImGui::Separator();
 
-    // --- existing Editor UI follows ---
-    // Create entity UI
+    // Create entity UI with templates
+    ImGui::Text("Create New Entity:");
     ImGui::InputText("Name", newEntityName, sizeof(newEntityName));
-    if (ImGui::Button("Create Entity")) {
+    if (ImGui::Button("Create Empty")) {
         Entity* e = em.createEntity();
         e->tag = std::string(newEntityName);
-        // Optionally add default components (commented)
-        // e->addComponent<TransformComponent>();
-        // e->addComponent<RenderComponent>();
         selectedEntityId = e->id;
     }
+    ImGui::SameLine();
+    if (ImGui::Button("Create with Transform")) {
+        Entity* e = em.createEntity();
+        e->tag = std::string(newEntityName);
+        e->addComponent<TransformComponent>();
+        selectedEntityId = e->id;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Create Sprite")) {
+        Entity* e = em.createEntity();
+        e->tag = std::string(newEntityName);
+        auto* t = e->addComponent<TransformComponent>();
+        t->position = glm::vec2(960.0f, 540.0f);
+        t->scale = glm::vec2(100.0f, 100.0f);
+        auto* r = e->addComponent<RenderComponent>();
+        r->meshName = "quad";
+        r->shaderName = "default";
+        selectedEntityId = e->id;
+    }
+    
     ImGui::Separator();
 
-    // Entity list
-    ImGui::Text("Entities:");
-    ImGui::BeginChild("EntityList", ImVec2(250, 300), true);
+    // Entity list with search
+    ImGui::Text("Entities (%zu):", em.getAllEntities().size());
+    ImGui::BeginChild("EntityList", ImVec2(0, 250), true);
+    
     for (auto* e : em.getAllEntities()) {
+        // Search filter
+        if (searchBuffer[0] != '\0') {
+            std::string tag = e->tag;
+            std::string search = searchBuffer;
+            std::transform(tag.begin(), tag.end(), tag.begin(), ::tolower);
+            std::transform(search.begin(), search.end(), search.begin(), ::tolower);
+            if (tag.find(search) == std::string::npos) continue;
+        }
+        
         char buf[128];
-        snprintf(buf, sizeof(buf), "[%u] %s", e->id, e->tag.c_str());
+        // Add component indicators
+        std::string indicators = "";
+        if (e->hasComponent<TransformComponent>()) indicators += "[T]";
+        if (e->hasComponent<RenderComponent>()) indicators += "[R]";
+        if (e->hasComponent<AudioComponent>()) indicators += "[A]";
+        if (e->hasComponent<ModelComponent>()) indicators += "[M]";
+        
+        snprintf(buf, sizeof(buf), "%s [%u] %s", indicators.c_str(), e->id, e->tag.c_str());
         bool sel = (selectedEntityId == (int)e->id);
         if (ImGui::Selectable(buf, sel)) {
             selectedEntityId = (int)e->id;
         }
+        
+        // Right-click context menu
+        if (ImGui::BeginPopupContextItem()) {
+            if (ImGui::MenuItem("Duplicate")) {
+                Entity* newE = em.createEntity();
+                newE->tag = e->tag + "_copy";
+                if (e->hasComponent<TransformComponent>()) {
+                    auto* src = e->getComponent<TransformComponent>();
+                    auto* dst = newE->addComponent<TransformComponent>();
+                    *dst = *src;
+                }
+                if (e->hasComponent<RenderComponent>()) {
+                    auto* src = e->getComponent<RenderComponent>();
+                    auto* dst = newE->addComponent<RenderComponent>();
+                    *dst = *src;
+                }
+            }
+            if (ImGui::MenuItem("Copy Components")) {
+                copyComponentsToClipboard(e);
+            }
+            if (ImGui::MenuItem("Delete")) {
+                em.destroyEntity(e->id);
+                if (selectedEntityId == (int)e->id) selectedEntityId = -1;
+            }
+            ImGui::EndPopup();
+        }
     }
     ImGui::EndChild();
 
-    // Destroy selected entity
+    // Quick actions
     if (selectedEntityId >= 0) {
         if (ImGui::Button("Destroy Selected")) {
             em.destroyEntity((unsigned int)selectedEntityId);
             selectedEntityId = -1;
         }
-    }
-
-    ImGui::SameLine();
-    if (ImGui::Button("Refresh")) {
-        // noop - list is built each frame
+        ImGui::SameLine();
+        Entity* selected = em.getEntityByID((unsigned int)selectedEntityId);
+        if (selected) {
+            if (ImGui::Button("Copy Components")) {
+                copyComponentsToClipboard(selected);
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Paste Components")) {
+                pasteComponentsFromClipboard(selected);
+            }
+        }
     }
 
     ImGui::Separator();
@@ -111,6 +198,198 @@ void EditorSystem::update(EntityManager& em, float /*deltaTime*/) {
     if (selected->hasComponent<TransformComponent>()) drawTransformEditor(selected);
     if (selected->hasComponent<RenderComponent>()) drawRenderEditor(selected);
     if (selected->hasComponent<AudioComponent>()) drawAudioEditor(selected);
+
+    // New: Model assignment UI
+    drawModelEditor(selected);
+}
+
+void EditorSystem::drawSaveLoadTab(EntityManager& em) {
+    ImGui::Text("Save/Load Entities");
+    ImGui::Separator();
+    
+    ImGui::InputText("Save Path", savePathBuf, sizeof(savePathBuf));
+    if (ImGui::Button("Save Entities", ImVec2(200, 0))) {
+        bool ok = EntitySerializer::saveEntities(em, std::string(savePathBuf));
+        if (ok) ImGui::SameLine(), ImGui::TextColored(ImVec4(0,1,0,1), "Saved!");
+        else ImGui::SameLine(), ImGui::TextColored(ImVec4(1,0,0,1), "Save failed");
+    }
+    
+    ImGui::Spacing();
+    ImGui::InputText("Load Path", loadPathBuf, sizeof(loadPathBuf));
+    if (ImGui::Button("Load Entities", ImVec2(200, 0))) {
+        bool ok = EntitySerializer::loadEntities(em, std::string(loadPathBuf));
+        if (ok) ImGui::SameLine(), ImGui::TextColored(ImVec4(0,1,0,1), "Loaded!");
+        else ImGui::SameLine(), ImGui::TextColored(ImVec4(1,0,0,1), "Load failed");
+    }
+    
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Tip: Use res/entities/ for entity files");
+}
+
+void EditorSystem::drawComponentTemplates(EntityManager& em) {
+    ImGui::Text("Quick Entity Templates");
+    ImGui::Separator();
+    
+    static char templateName[64] = "TemplateEntity";
+    ImGui::InputText("Entity Name", templateName, sizeof(templateName));
+    
+    ImGui::Spacing();
+    
+    if (ImGui::Button("Empty Entity", ImVec2(200, 0))) {
+        Entity* e = em.createEntity();
+        e->tag = std::string(templateName);
+        selectedEntityId = e->id;
+    }
+    ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "No components");
+    
+    ImGui::Spacing();
+    
+    if (ImGui::Button("Sprite Entity", ImVec2(200, 0))) {
+        Entity* e = em.createEntity();
+        e->tag = std::string(templateName);
+        auto* t = e->addComponent<TransformComponent>();
+        t->position = glm::vec2(960.0f, 540.0f);
+        t->scale = glm::vec2(100.0f, 100.0f);
+        auto* r = e->addComponent<RenderComponent>();
+        r->meshName = "quad";
+        r->shaderName = "default";
+        r->color = glm::vec3(1.0f, 1.0f, 1.0f);
+        selectedEntityId = e->id;
+    }
+    ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Transform + Render");
+    
+    ImGui::Spacing();
+    
+    if (ImGui::Button("Audio Source", ImVec2(200, 0))) {
+        Entity* e = em.createEntity();
+        e->tag = std::string(templateName);
+        e->addComponent<TransformComponent>();
+        auto* a = e->addComponent<AudioComponent>();
+        a->volume = 1.0f;
+        a->pitch = 1.0f;
+        selectedEntityId = e->id;
+    }
+    ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Transform + Audio");
+    
+    ImGui::Spacing();
+    
+    if (ImGui::Button("Complete Entity", ImVec2(200, 0))) {
+        Entity* e = em.createEntity();
+        e->tag = std::string(templateName);
+        auto* t = e->addComponent<TransformComponent>();
+        t->position = glm::vec2(960.0f, 540.0f);
+        t->scale = glm::vec2(100.0f, 100.0f);
+        auto* r = e->addComponent<RenderComponent>();
+        r->meshName = "quad";
+        r->shaderName = "default";
+        auto* a = e->addComponent<AudioComponent>();
+        a->volume = 1.0f;
+        selectedEntityId = e->id;
+    }
+    ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Transform + Render + Audio");
+}
+
+void EditorSystem::drawBatchOperations(EntityManager& em) {
+    ImGui::Text("Batch Operations");
+    ImGui::Separator();
+    
+    static bool selectAll = false;
+    if (ImGui::Checkbox("Select All Entities", &selectAll)) {
+        // Placeholder - would need to track multiple selections
+    }
+    
+    ImGui::Spacing();
+    
+    ImGui::Text("Delete Operations:");
+    if (ImGui::Button("Delete All Entities", ImVec2(200, 0))) {
+        ImGui::OpenPopup("ConfirmDeleteAll");
+    }
+    
+    if (ImGui::BeginPopupModal("ConfirmDeleteAll", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Are you sure you want to delete ALL entities?");
+        ImGui::Text("This cannot be undone!");
+        ImGui::Separator();
+        
+        if (ImGui::Button("Yes, Delete All", ImVec2(120, 0))) {
+            auto entities = em.getAllEntities();
+            for (auto* e : entities) {
+                em.destroyEntity(e->id);
+            }
+            selectedEntityId = -1;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+    
+    ImGui::Spacing();
+    
+    if (ImGui::Button("Delete Entities Without Transform", ImVec2(250, 0))) {
+        auto entities = em.getAllEntities();
+        for (auto* e : entities) {
+            if (!e->hasComponent<TransformComponent>()) {
+                em.destroyEntity(e->id);
+            }
+        }
+    }
+    
+    ImGui::Spacing();
+    ImGui::Separator();
+    
+    ImGui::Text("Component Operations:");
+    if (ImGui::Button("Add Transform to All", ImVec2(200, 0))) {
+        auto entities = em.getAllEntities();
+        for (auto* e : entities) {
+            if (!e->hasComponent<TransformComponent>()) {
+                e->addComponent<TransformComponent>();
+            }
+        }
+    }
+}
+
+void EditorSystem::copyComponentsToClipboard(Entity* e) {
+    if (!e) return;
+    
+    clipboard.hasTransform = e->hasComponent<TransformComponent>();
+    clipboard.hasRender = e->hasComponent<RenderComponent>();
+    clipboard.hasAudio = e->hasComponent<AudioComponent>();
+    
+    if (clipboard.hasTransform) {
+        clipboard.transform = *e->getComponent<TransformComponent>();
+    }
+    if (clipboard.hasRender) {
+        clipboard.render = *e->getComponent<RenderComponent>();
+    }
+    if (clipboard.hasAudio) {
+        clipboard.audio = *e->getComponent<AudioComponent>();
+    }
+}
+
+void EditorSystem::pasteComponentsFromClipboard(Entity* e) {
+    if (!e) return;
+    
+    if (clipboard.hasTransform) {
+        if (!e->hasComponent<TransformComponent>()) {
+            e->addComponent<TransformComponent>();
+        }
+        *e->getComponent<TransformComponent>() = clipboard.transform;
+    }
+    if (clipboard.hasRender) {
+        if (!e->hasComponent<RenderComponent>()) {
+            e->addComponent<RenderComponent>();
+        }
+        *e->getComponent<RenderComponent>() = clipboard.render;
+    }
+    if (clipboard.hasAudio) {
+        if (!e->hasComponent<AudioComponent>()) {
+            e->addComponent<AudioComponent>();
+        }
+        *e->getComponent<AudioComponent>() = clipboard.audio;
+    }
 
     // New: Model assignment UI
     drawModelEditor(selected);

@@ -123,18 +123,9 @@ int main(void) {
         
 		game.update(deltaTime);
 
-    
-    
-        ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(300, 200), ImGuiCond_FirstUseEver);
-        ImGui::Begin("RPG-Looter - Debug");
-        ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
-        ImGui::Text("Frame Time: %.3f ms", 1000.0f / ImGui::GetIO().Framerate);
-        ImGui::Text("DeltaTime: %.4f s", deltaTime);
-        ImGui::Separator();
-        ImGui::End();
+        // Note: Debug/Performance window is now handled by PerformanceWindow system
+        // which is part of the game's systems
         
-
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
      
