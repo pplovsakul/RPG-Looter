@@ -91,6 +91,10 @@ add_executable(RPG-Looter
     "src/ConsoleWindow.cpp"
     "src/SceneHierarchyWindow.h"
     "src/SceneHierarchyWindow.cpp"
+    "src/SettingsWindow.h"
+    "src/SettingsWindow.cpp"
+    "src/QuickActionsWindow.h"
+    "src/QuickActionsWindow.cpp"
     
     "src/main.cpp" "src/Game.cpp"  "src/JsonParser.h" "src/ModelSerializer.h" "src/ModelSerializer.cpp"
 
