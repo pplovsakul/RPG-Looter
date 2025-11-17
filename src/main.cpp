@@ -19,6 +19,8 @@
 
 #include "Components.h"
 
+// Include UIRenderer before Game to ensure complete type for unique_ptr destructor
+#include "UI/UIRenderer.h"
 #include "Game.h"
 #include "GlobalSettings.h"
 

@@ -33,6 +33,9 @@ private:
 	void setupConfigs();
 
 public:
+	Game() = default;
+	~Game();  // Explicit destructor needed for unique_ptr with forward-declared types
+	
 	void setup(GLFWwindow* window);
 	void update(float deltaTime);
 	EntityManager& getEntityManager() { return entityManager; }

@@ -120,7 +120,7 @@ void UIRenderer::createQuadGeometry() {
     quadVB = std::make_unique<VertexBuffer>(vertices, sizeof(vertices));
     
     VertexBufferLayout layout;
-    layout.Push<float>(2); // position (x, y)
+    layout.AddFloat(2); // position (x, y)
     quadVA->AddBuffer(*quadVB, layout);
     
     quadIB = std::make_unique<IndexBuffer>(indices, 6);
