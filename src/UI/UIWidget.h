@@ -5,6 +5,8 @@
 #include <memory>
 #include <string>
 
+class Font;
+
 // Represents a rectangular area for layout
 struct UIRect {
     float x = 0.0f;
@@ -32,6 +34,8 @@ struct UIDrawCommand {
     UIRect rect;
     glm::vec4 color{1.0f, 1.0f, 1.0f, 1.0f};
     std::string text;
+    Font* font = nullptr;
+    float textScale = 1.0f;
 };
 
 class UIWidget {
