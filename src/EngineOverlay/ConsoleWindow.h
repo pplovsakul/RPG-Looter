@@ -6,6 +6,9 @@
 
 namespace EngineUI {
 
+// Forward declaration
+struct Rect;
+
 /**
  * Log entry for the console
  */
