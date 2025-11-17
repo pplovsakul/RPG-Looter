@@ -6,7 +6,12 @@
 #include "EditorSystem.h"
 #include "AssetManagerWindow.h"
 #include "ModelEditorSystem.h"
-#include "CollisionSystem.h" // added
+#include "CollisionSystem.h"
+#include "PerformanceWindow.h"
+#include "ConsoleWindow.h"
+#include "SceneHierarchyWindow.h"
+#include "SettingsWindow.h"
+#include "QuickActionsWindow.h"
 
 #include "Components.h"
 
@@ -69,6 +74,13 @@ void Game::setupSystems(GLFWwindow* window) {
     systems.push_back(std::make_unique<EditorSystem>());
     systems.push_back(std::make_unique<AssetManagerWindow>());
     systems.push_back(std::make_unique<ModelEditorSystem>());
+
+    // New ImGui windows - QuickActionsWindow should be first to draw menu bar
+    systems.push_back(std::make_unique<QuickActionsWindow>());
+    systems.push_back(std::make_unique<PerformanceWindow>());
+    systems.push_back(std::make_unique<ConsoleWindow>());
+    systems.push_back(std::make_unique<SceneHierarchyWindow>());
+    systems.push_back(std::make_unique<SettingsWindow>());
 
     auto cs = std::make_unique<CollisionSystem>();
     collisionSystem = cs.get();

@@ -48,7 +48,12 @@ static bool pointInConvexPoly(const ImVec2& p, const ImVec2* pts, int n) {
 }
 
 void ModelEditorSystem::update(EntityManager& em, float /*deltaTime*/) {
+    ImGui::SetNextWindowSize(ImVec2(900, 700), ImGuiCond_FirstUseEver);
     ImGui::Begin("Model Editor");
+    
+    // Toolbar at the top
+    drawToolbar();
+    ImGui::Separator();
 
     // left column: make it larger (was 320)
     if (ImGui::BeginChild("LeftPane", ImVec2(420, 0), true)) {
@@ -175,7 +180,17 @@ void ModelEditorSystem::update(EntityManager& em, float /*deltaTime*/) {
 
     // right column: preview + assign panel
     if (ImGui::BeginChild("RightPane", ImVec2(0, 0), true)) {
-        ImGui::Text("Preview (click to select, drag to move) - rotation and scale editable in Properties (left)");
+        // View controls
+        ImGui::Checkbox("Show Grid", &showGrid);
+        ImGui::SameLine();
+        ImGui::Checkbox("Snap to Grid", &snapToGrid);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(80);
+        ImGui::DragFloat("Grid Size", &gridSize, 1.0f, 5.0f, 100.0f);
+        
+        ImGui::Text("Preview (click to select, drag to move)");
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Zoom: %.1fx", zoomLevel);
 
         // Preview canvas
         ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -187,8 +202,18 @@ void ModelEditorSystem::update(EntityManager& em, float /*deltaTime*/) {
 
         // Background
         dl->AddRectFilled(canvasPos, ImVec2(canvasPos.x + canvasSize.x, canvasPos.y + canvasSize.y), IM_COL32(30,30,30,255));
+        
         // center in canvas
-        ImVec2 center = ImVec2(canvasPos.x + canvasSize.x*0.5f, canvasPos.y + canvasSize.y*0.5f);
+        ImVec2 center = ImVec2(canvasPos.x + canvasSize.x*0.5f + panOffset.x, canvasPos.y + canvasSize.y*0.5f + panOffset.y);
+        
+        // Draw grid if enabled
+        if (showGrid) {
+            drawGrid(dl, canvasPos, canvasSize, center);
+        }
+        
+        // Draw center crosshair
+        dl->AddLine(ImVec2(center.x - 10, center.y), ImVec2(center.x + 10, center.y), IM_COL32(100, 100, 100, 255));
+        dl->AddLine(ImVec2(center.x, center.y - 10), ImVec2(center.x, center.y + 10), IM_COL32(100, 100, 100, 255));
 
         // Build index order sorted by layer then insertion order
         std::vector<int> indices(workingShapes.size());
@@ -408,6 +433,91 @@ int ModelEditorSystem::hitTestShapeAt(const ImVec2& canvasCenter, const ImVec2& 
 
 void ModelEditorSystem::moveShapeBy(int idx, float dx, float dy) {
     if (idx < 0 || idx >= (int)workingShapes.size()) return;
-    workingShapes[idx].position.x += dx;
-    workingShapes[idx].position.y += dy;
+    
+    if (snapToGrid) {
+        // Snap the new position to grid
+        float newX = workingShapes[idx].position.x + dx;
+        float newY = workingShapes[idx].position.y + dy;
+        workingShapes[idx].position.x = snapToGridValue(newX);
+        workingShapes[idx].position.y = snapToGridValue(newY);
+    } else {
+        workingShapes[idx].position.x += dx;
+        workingShapes[idx].position.y += dy;
+    }
+}
+
+float ModelEditorSystem::snapToGridValue(float value) {
+    return std::round(value / gridSize) * gridSize;
+}
+
+void ModelEditorSystem::drawGrid(ImDrawList* dl, const ImVec2& canvasPos, const ImVec2& canvasSize, const ImVec2& center) {
+    // Draw grid lines
+    ImU32 gridColor = IM_COL32(60, 60, 60, 255);
+    ImU32 gridColorStrong = IM_COL32(80, 80, 80, 255);
+    
+    // Vertical lines
+    float startX = center.x - (int)(canvasSize.x * 0.5f / gridSize) * gridSize;
+    float endX = center.x + (int)(canvasSize.x * 0.5f / gridSize) * gridSize;
+    for (float x = startX; x <= endX; x += gridSize) {
+        if (x < canvasPos.x || x > canvasPos.x + canvasSize.x) continue;
+        
+        // Stronger line at every 10th grid or at center
+        bool isStrong = (std::abs(x - center.x) < 0.1f) || 
+                       (std::abs(std::fmod(x - center.x, gridSize * 10.0f)) < 0.1f);
+        ImU32 color = isStrong ? gridColorStrong : gridColor;
+        
+        dl->AddLine(ImVec2(x, canvasPos.y), ImVec2(x, canvasPos.y + canvasSize.y), color);
+    }
+    
+    // Horizontal lines
+    float startY = center.y - (int)(canvasSize.y * 0.5f / gridSize) * gridSize;
+    float endY = center.y + (int)(canvasSize.y * 0.5f / gridSize) * gridSize;
+    for (float y = startY; y <= endY; y += gridSize) {
+        if (y < canvasPos.y || y > canvasPos.y + canvasSize.y) continue;
+        
+        bool isStrong = (std::abs(y - center.y) < 0.1f) || 
+                       (std::abs(std::fmod(y - center.y, gridSize * 10.0f)) < 0.1f);
+        ImU32 color = isStrong ? gridColorStrong : gridColor;
+        
+        dl->AddLine(ImVec2(canvasPos.x, y), ImVec2(canvasPos.x + canvasSize.x, y), color);
+    }
+}
+
+void ModelEditorSystem::drawToolbar() {
+    ImGui::Text("Model Editor Toolbar");
+    ImGui::SameLine(200);
+    
+    if (ImGui::Button("New Model")) {
+        workingShapes.clear();
+        selectedShapeIndex = -1;
+    }
+    
+    ImGui::SameLine();
+    if (ImGui::Button("Clear All")) {
+        ImGui::OpenPopup("ClearAllConfirm");
+    }
+    
+    if (ImGui::BeginPopupModal("ClearAllConfirm", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Clear all shapes?");
+        ImGui::Separator();
+        if (ImGui::Button("Yes", ImVec2(120, 0))) {
+            workingShapes.clear();
+            selectedShapeIndex = -1;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("No", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+    
+    ImGui::SameLine();
+    ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "| Shapes: %zu", workingShapes.size());
+    
+    ImGui::SameLine();
+    if (selectedShapeIndex >= 0) {
+        ImGui::TextColored(ImVec4(0.4f, 0.8f, 0.4f, 1.0f), "| Selected: %d", selectedShapeIndex);
+    }
+}
 }
