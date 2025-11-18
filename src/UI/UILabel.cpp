@@ -11,9 +11,11 @@ void UILabel::GenerateDrawCommands(std::vector<UIDrawCommand>& commands) {
     }
     
     // Generate draw command for the text
+    // Use absolute position for proper rendering in hierarchy
+    glm::vec2 absPos = getAbsolutePosition();
     UIDrawCommand cmd;
     cmd.type = UIDrawCommand::Type::Text;
-    cmd.rect = rect;
+    cmd.rect = UIRect(absPos.x, absPos.y, rect.width, rect.height);
     cmd.text = text;
     cmd.font = font;
     cmd.color = textColor;

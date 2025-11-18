@@ -51,12 +51,29 @@ class JsonParser {
     }
 
     JsonValue parseString() {
-        get(); // skip "
+        get(); // skip opening "
         std::string result;
         while (pos < text.size() && peek() != '"') {
-            result += get();
+            char c = get();
+            if (c == '\\' && pos < text.size()) {
+                // Handle escape sequences
+                char next = get();
+                switch (next) {
+                    case '"':  result += '"'; break;
+                    case '\\': result += '\\'; break;
+                    case '/':  result += '/'; break;
+                    case 'b':  result += '\b'; break;
+                    case 'f':  result += '\f'; break;
+                    case 'n':  result += '\n'; break;
+                    case 'r':  result += '\r'; break;
+                    case 't':  result += '\t'; break;
+                    default:   result += next; break; // Fallback for unknown escapes
+                }
+            } else {
+                result += c;
+            }
         }
-        get(); // skip "
+        get(); // skip closing "
         return JsonValue{ result };
     }
 

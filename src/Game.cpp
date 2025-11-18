@@ -72,6 +72,14 @@ void Game::update(float deltaTime) {
     }
 };
 
+void Game::renderUI() {
+    // Render the UI system
+    if (uiSystem && uiRenderer) {
+        const auto& drawCommands = uiSystem->getDrawCommands();
+        uiRenderer->render(drawCommands);
+    }
+}
+
 void Game::setAudioAvailable(bool available) {
     audioAvailable = available;
 }
@@ -111,15 +119,15 @@ void Game::setupSystems(GLFWwindow* window) {
     panel->setVisible(true);
 
     auto label = std::make_unique<UILabel>();
-    label->setRect(UIRect(120, 120, 0, 0)); // Position (width/height not used for labels)
-    label->setText("Hello, World!");
+    label->setRect(UIRect(100, 500, 0, 0)); // Position relative to panel
+    label->setText("HELLO WORLD!");
     label->setFont(font); // Use the loaded font
     label->setTextColor(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)); // White text
     label->setTextScale(1.0f);
     label->setVisible(true);
 
     auto button = std::make_unique<UIButton>();
-    button->setRect(UIRect(150, 250, 200, 50)); // x, y, width, height
+    button->setRect(UIRect(500, 100, 200, 40)); // Position relative to panel, x, y, width, height
     button->setNormalColor(glm::vec4(0.3f, 0.3f, 0.3f, 1.0f));
     button->setHoverColor(glm::vec4(0.4f, 0.4f, 0.4f, 1.0f));
     button->setPressedColor(glm::vec4(0.2f, 0.2f, 0.2f, 1.0f));
@@ -135,6 +143,15 @@ void Game::setupSystems(GLFWwindow* window) {
 
     button->setVisible(true);
     button->setEnabled(true);
+    
+    // Add label and button as children of the panel (hierarchical structure)
+    panel->addChild(std::move(label));
+    panel->addChild(std::move(button));
+    
+    // Register the panel with UISystem so it persists
+    if (uiSystem) {
+        uiSystem->setRootWidget(std::move(panel));
+    }
 
     // UI Renderer
     uiRenderer = std::make_unique<UIRenderer>();

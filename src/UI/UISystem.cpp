@@ -24,11 +24,9 @@ void UISystem::update(EntityManager& em, float deltaTime) {
 
     // Generate draw commands
     generateDrawCommands();
-
-    // If we have a renderer, tell it to render
-    if (renderer) {
-        renderer->render(drawCommands);
-    }
+    
+    // Note: Rendering is now done separately via Game::renderUI()
+    // to allow precise control over render order in the main loop
 }
 
 void UISystem::setRootWidget(std::unique_ptr<UIWidget> root) {
