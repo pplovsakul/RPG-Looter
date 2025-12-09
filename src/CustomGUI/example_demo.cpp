@@ -138,7 +138,9 @@ int main() {
         CustomGUI::endFrame();
         CustomGUI::render();
         
-        // Render to OpenGL
+        // Render to OpenGL (get window size from your window system)
+        int windowWidth = 1920;  // Example - get from glfwGetFramebufferSize() in real app
+        int windowHeight = 1080; // Example - get from glfwGetFramebufferSize() in real app
         renderer.setDisplaySize(windowWidth, windowHeight);
         renderer.render(ctx->getDrawList());
         

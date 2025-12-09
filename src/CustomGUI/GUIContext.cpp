@@ -160,7 +160,10 @@ void GUIContext::setKeyDown(GUIKey key, bool down) {
 }
 
 void GUIContext::addInputCharacter(unsigned int c) {
-    if (c > 0 && c < 0x10000) {
+    // Note: This is a simplified ASCII-only implementation.
+    // For full Unicode support, this should be converted to UTF-8 encoding.
+    // Currently only supports ASCII characters (0-127).
+    if (c > 0 && c < 128) {
         input.inputCharacters += static_cast<char>(c);
     }
 }

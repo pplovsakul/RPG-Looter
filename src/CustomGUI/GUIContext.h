@@ -197,6 +197,12 @@ public:
     Vec2 getWindowSize() const;
     Vec2 getContentRegionAvail() const;
     
+    // Input queries
+    Vec2 getMousePos() const { return input.mousePos; }
+    bool isMouseDown(int button) const { 
+        return (button >= 0 && button < GUIMouseButton_COUNT) ? input.mouseDown[button] : false; 
+    }
+    
     // Collision detection
     bool isMouseHoveringRect(const Vec2& min, const Vec2& max) const;
     

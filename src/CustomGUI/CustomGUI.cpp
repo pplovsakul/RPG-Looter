@@ -364,8 +364,8 @@ bool sliderFloat(const char* label, float* v, float vMin, float vMax, const char
     bool valueChanged = false;
     
     if (held && ctx->isMouseHoveringRect(bb.min, bb.max)) {
-        // Get mouse position relative to slider
-        Vec2 mousePos = ctx->getCursorScreenPos();  // Would need actual mouse pos from context
+        // Get actual mouse position from input state
+        Vec2 mousePos = ctx->getMousePos();
         float t = (mousePos.x - bb.min.x) / bb.getWidth();
         t = std::max(0.0f, std::min(1.0f, t));
         
