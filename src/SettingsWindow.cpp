@@ -52,6 +52,7 @@ void SettingsWindow::drawWindowSettings() {
     ImGui::Checkbox("Scene Hierarchy", &settings.windowVisibility.showSceneHierarchy);
     ImGui::Checkbox("Entity Editor", &settings.windowVisibility.showEntityEditor);
     ImGui::Checkbox("Asset Manager", &settings.windowVisibility.showAssetManager);
+    ImGui::Checkbox("Model Editor", &settings.windowVisibility.showModelEditor);
     ImGui::Checkbox("Quick Actions", &settings.windowVisibility.showQuickActions);
     
     ImGui::Spacing();

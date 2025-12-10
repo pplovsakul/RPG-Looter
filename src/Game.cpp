@@ -11,6 +11,7 @@
 #include "SceneHierarchyWindow.h"
 #include "SettingsWindow.h"
 #include "QuickActionsWindow.h"
+#include "ModelEditorWindow.h"
 
 #include "Components.h"
 
@@ -116,6 +117,7 @@ void Game::setupSystems(GLFWwindow* window) {
     systems.push_back(std::make_unique<ConsoleWindow>());
     systems.push_back(std::make_unique<SceneHierarchyWindow>());
     systems.push_back(std::make_unique<SettingsWindow>());
+    systems.push_back(std::make_unique<ModelEditorWindow>());
 
     auto cs = std::make_unique<CollisionSystem>();
     collisionSystem = cs.get();
@@ -167,13 +169,13 @@ void Game::setupEntities() {
     auto* player1 = entityManager.createEntity();
     player1->tag = "Player1";
 
-    // Transform hinzufügen (Position vor der Kamera)
+    // Transform hinzufï¿½gen (Position vor der Kamera)
     player1->addComponent<TransformComponent>();
     player1->getComponent<TransformComponent>()->position = glm::vec3(0.0f, 0.0f, 0.0f);
     player1->getComponent<TransformComponent>()->rotation = glm::vec3(0.0f, 0.0f, 0.0f);
     player1->getComponent<TransformComponent>()->scale = glm::vec3(1.0f, 1.0f, 1.0f);
 
-    // ModelComponent hinzufügen und Mesh-Daten zuweisen
+    // ModelComponent hinzufï¿½gen und Mesh-Daten zuweisen
     auto* modelComp = player1->addComponent<ModelComponent>();
     auto* loadedModel = AssetManager::getInstance()->getModel("meinWuerfel");
     if (loadedModel) {

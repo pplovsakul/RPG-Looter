@@ -148,6 +148,47 @@ int main(void) {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         
+        // Handle F-key shortcuts for window toggles
+        static bool f1WasPressed = false;
+        static bool f2WasPressed = false;
+        static bool f3WasPressed = false;
+        static bool f4WasPressed = false;
+        static bool f5WasPressed = false;
+        static bool f6WasPressed = false;
+        
+        bool f1Pressed = glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS;
+        bool f2Pressed = glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS;
+        bool f3Pressed = glfwGetKey(window, GLFW_KEY_F3) == GLFW_PRESS;
+        bool f4Pressed = glfwGetKey(window, GLFW_KEY_F4) == GLFW_PRESS;
+        bool f5Pressed = glfwGetKey(window, GLFW_KEY_F5) == GLFW_PRESS;
+        bool f6Pressed = glfwGetKey(window, GLFW_KEY_F6) == GLFW_PRESS;
+        
+        if (f1Pressed && !f1WasPressed) {
+            settings.windowVisibility.showPerformanceWindow = !settings.windowVisibility.showPerformanceWindow;
+        }
+        if (f2Pressed && !f2WasPressed) {
+            settings.windowVisibility.showConsoleWindow = !settings.windowVisibility.showConsoleWindow;
+        }
+        if (f3Pressed && !f3WasPressed) {
+            settings.windowVisibility.showSceneHierarchy = !settings.windowVisibility.showSceneHierarchy;
+        }
+        if (f4Pressed && !f4WasPressed) {
+            settings.windowVisibility.showEntityEditor = !settings.windowVisibility.showEntityEditor;
+        }
+        if (f5Pressed && !f5WasPressed) {
+            settings.windowVisibility.showAssetManager = !settings.windowVisibility.showAssetManager;
+        }
+        if (f6Pressed && !f6WasPressed) {
+            settings.windowVisibility.showModelEditor = !settings.windowVisibility.showModelEditor;
+        }
+        
+        f1WasPressed = f1Pressed;
+        f2WasPressed = f2Pressed;
+        f3WasPressed = f3Pressed;
+        f4WasPressed = f4Pressed;
+        f5WasPressed = f5Pressed;
+        f6WasPressed = f6Pressed;
+        
 		game.update(deltaTime);
 
         // Note: Debug/Performance window is now handled by PerformanceWindow system

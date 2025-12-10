@@ -31,7 +31,7 @@ void RenderSystem::init() {
     glEnable(GL_CULL_FACE);            // Enable backface culling
     glCullFace(GL_BACK);               // Cull back faces
     glFrontFace(GL_CCW);               // Counter-clockwise winding is front
-    glClearColor(0.1f, 0.1f, 0.15f, 1.0f);  // Dark blue background
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);  // White background for better model visibility
     viewMatrix = glm::mat4(1.0f);
 }
 
@@ -135,6 +135,21 @@ void RenderSystem::update(EntityManager& em, float dt) {
     
     // Render all entities with ModelComponent
     auto modelEntities = em.getEntitiesWith<ModelComponent>();
+    
+    // Debug output (only once per second)
+    static float debugTimer = 0.0f;
+    debugTimer += dt;
+    if (debugTimer >= 1.0f && !modelEntities.empty()) {
+        std::cout << "[RenderSystem] Rendering " << modelEntities.size() << " entities with ModelComponent\n";
+        for (Entity* e : modelEntities) {
+            auto model = e->getComponent<ModelComponent>();
+            if (model) {
+                std::cout << "  - Entity [" << e->id << "] " << e->tag 
+                          << ": " << model->meshes.size() << " meshes\n";
+            }
+        }
+        debugTimer = 0.0f;
+    }
     
     for (Entity* e : modelEntities) {
         if (!e || !e->active) continue;

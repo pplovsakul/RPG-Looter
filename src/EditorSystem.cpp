@@ -2,6 +2,7 @@
 #include "EntitySerializer.h"   // <- neu
 #include "AssetManager.h"
 #include <cstring> // for strncpy
+#include <cmath> // for atan2, asin
 
 // temporary path buffers for the UI
 static char savePathBuf[256] = "res/entities/entities.json";
@@ -161,6 +162,10 @@ void EditorSystem::drawEntityEditingTab(EntityManager& em) {
             ImGui::SameLine();
             if (ImGui::Button("Paste Components")) {
                 pasteComponentsFromClipboard(selected);
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Focus Camera")) {
+                focusOnEntity(selected, em);
             }
         }
     }
@@ -501,9 +506,48 @@ void EditorSystem::drawCameraEditor(Entity* e) {
 void EditorSystem::drawModelEditor(Entity* e) {
     if (!ImGui::CollapsingHeader("Model")) return;
 
-    // If entity already has a ModelComponent, show its name and allow removal
+    // If entity already has a ModelComponent, show its information
     if (e->hasComponent<ModelComponent>()) {
-        ImGui::Text("Entity has ModelComponent assigned");
+        auto* mc = e->getComponent<ModelComponent>();
+        ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "Entity has ModelComponent assigned");
+        
+        // Show model statistics
+        ImGui::Indent();
+        ImGui::Text("Number of Meshes: %zu", mc->meshes.size());
+        
+        size_t totalVertices = 0;
+        size_t totalIndices = 0;
+        for (const auto& mesh : mc->meshes) {
+            totalVertices += mesh.vertices.size();
+            totalIndices += mesh.indices.size();
+        }
+        
+        ImGui::Text("Total Vertices: %zu", totalVertices);
+        ImGui::Text("Total Triangles: %zu", totalIndices / 3);
+        
+        // Show individual mesh info
+        if (ImGui::TreeNode("Mesh Details")) {
+            for (size_t i = 0; i < mc->meshes.size(); ++i) {
+                const auto& mesh = mc->meshes[i];
+                ImGui::PushID((int)i);
+                if (ImGui::TreeNode("Mesh", "Mesh %zu", i)) {
+                    ImGui::Text("Vertices: %zu", mesh.vertices.size());
+                    ImGui::Text("Triangles: %zu", mesh.indices.size() / 3);
+                    if (!mesh.materialName.empty()) {
+                        ImGui::Text("Material: %s", mesh.materialName.c_str());
+                    }
+                    if (!mesh.textureName.empty()) {
+                        ImGui::Text("Texture: %s", mesh.textureName.c_str());
+                    }
+                    ImGui::ColorEdit3("Color", &const_cast<glm::vec3&>(mesh.color).x);
+                    ImGui::TreePop();
+                }
+                ImGui::PopID();
+            }
+            ImGui::TreePop();
+        }
+        ImGui::Unindent();
+        
         if (ImGui::Button("Remove ModelComponent")) {
             e->removeComponent<ModelComponent>();
         }
@@ -532,5 +576,55 @@ void EditorSystem::drawModelEditor(Entity* e) {
                 mc->meshes = m->meshes;  // Copy 3D mesh data
             }
         }
+    }
+}
+
+void EditorSystem::focusOnEntity(Entity* entity, EntityManager& em) {
+    if (!entity) return;
+    
+    // Find the main camera
+    Entity* camera = em.getEntityByTag("MainCamera");
+    if (!camera) {
+        // Try to find any active camera
+        auto cameras = em.getEntitiesWith<CameraComponent>();
+        for (auto* cam : cameras) {
+            auto* camComp = cam->getComponent<CameraComponent>();
+            if (camComp && camComp->isActive) {
+                camera = cam;
+                break;
+            }
+        }
+    }
+    
+    if (!camera) return;
+    
+    auto* camTransform = camera->getComponent<TransformComponent>();
+    auto* entityTransform = entity->getComponent<TransformComponent>();
+    
+    if (!camTransform || !entityTransform) return;
+    
+    // Calculate appropriate camera distance based on entity scale
+    glm::vec3 entityScale = entityTransform->scale;
+    float maxScale = glm::max(glm::max(entityScale.x, entityScale.y), entityScale.z);
+    float distance = maxScale * 3.0f; // Place camera 3x the max scale away
+    
+    // Minimum distance to ensure we don't get too close
+    if (distance < 5.0f) distance = 5.0f;
+    
+    // Position camera behind and above the entity
+    glm::vec3 offset = glm::vec3(0.0f, distance * 0.5f, distance);
+    camTransform->position = entityTransform->position + offset;
+    
+    // Point camera at the entity by adjusting rotation
+    glm::vec3 direction = glm::normalize(entityTransform->position - camTransform->position);
+    float pitch = asin(-direction.y);
+    float yaw = atan2(direction.x, direction.z);
+    
+    camTransform->rotation = glm::vec3(pitch, yaw, 0.0f);
+    
+    // Update camera component's direction vectors
+    auto* camComp = camera->getComponent<CameraComponent>();
+    if (camComp) {
+        camComp->updateVectors(camTransform->rotation);
     }
 }

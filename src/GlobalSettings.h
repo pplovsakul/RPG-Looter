@@ -17,6 +17,7 @@ public:
         bool showAssetManager = true;
         bool showSettingsWindow = true;
         bool showQuickActions = true;
+        bool showModelEditor = false;  // F6 - Model Editor (new feature)
     } windowVisibility;
 
     // System control flags
