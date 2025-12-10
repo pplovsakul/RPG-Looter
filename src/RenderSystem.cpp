@@ -259,7 +259,7 @@ void RenderSystem::update(EntityManager& em, float dt) {
 
         try {
             mesh->Bind();
-            glDrawElements(GL_TRIANGLES, mesh->getIndexCount(), GL_UNSIGNED_INT, nullptr);
+            glDrawElements(GL_TRIANGLES, mesh->GetIndexCount(), GL_UNSIGNED_INT, nullptr);
         }
         catch (...) {
             // Falls OpenGL error, nicht crashen
@@ -355,7 +355,7 @@ void RenderSystem::update(EntityManager& em, float dt) {
             // Draw
             try {
                 mesh->Bind();
-                glDrawElements(GL_TRIANGLES, mesh->getIndexCount(), GL_UNSIGNED_INT, nullptr);
+                glDrawElements(GL_TRIANGLES, mesh->GetIndexCount(), GL_UNSIGNED_INT, nullptr);
             } catch (...) {
                 std::cerr << "[RenderSystem] OpenGL error during model draw\n";
             }

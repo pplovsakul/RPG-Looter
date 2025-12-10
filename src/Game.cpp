@@ -12,17 +12,10 @@
 #include "SceneHierarchyWindow.h"
 #include "SettingsWindow.h"
 #include "QuickActionsWindow.h"
-#include "UI/UISystem.h"
-#include "UI/UIRenderer.h"
-#include "UI/UIPanel.h"
-#include "UI/UILabel.h"
-#include "UI/UIButton.h"
 
 #include "Components.h"
 
 #include "vendor/glm/gtc/matrix_transform.hpp"
-
-Game::~Game() = default;  // Defined here where UIRenderer is complete
 
 void Game::update(float deltaTime) {
     auto& settings = GlobalSettings::getInstance();
@@ -72,14 +65,6 @@ void Game::update(float deltaTime) {
     }
 };
 
-void Game::renderUI() {
-    // Render the UI system
-    if (uiSystem && uiRenderer) {
-        const auto& drawCommands = uiSystem->getDrawCommands();
-        uiRenderer->render(drawCommands);
-    }
-}
-
 void Game::setAudioAvailable(bool available) {
     audioAvailable = available;
 }
@@ -101,76 +86,13 @@ void Game::setupSystems(GLFWwindow* window) {
     // Input System
     systems.push_back(std::make_unique<InputSystem>(window));
 
-    // UI System - should be updated after InputSystem but before game actions
-    auto uiSys = std::make_unique<UISystem>();
-    uiSystem = uiSys.get();
-    systems.push_back(std::move(uiSys));
-
-    AssetManager* assetMgr = AssetManager::getInstance();
-    Font* font = assetMgr->loadFont(
-        "PublicSans",
-        "res/fonts/public-sans.json",
-        "res/fonts/public-sans.png"
-    );
-
-    auto panel = std::make_unique<UIPanel>();
-    panel->setRect(UIRect(100, 100, 300, 200)); // x, y, width, height
-    panel->setBackgroundColor(glm::vec4(0.2f, 0.3f, 0.4f, 1.0f)); // RGBA
-    panel->setVisible(true);
-
-    auto label = std::make_unique<UILabel>();
-    label->setRect(UIRect(100, 500, 0, 0)); // Position relative to panel
-    label->setText("HELLO WORLD!");
-    label->setFont(font); // Use the loaded font
-    label->setTextColor(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)); // White text
-    label->setTextScale(1.0f);
-    label->setVisible(true);
-
-    auto button = std::make_unique<UIButton>();
-    button->setRect(UIRect(500, 100, 200, 40)); // Position relative to panel, x, y, width, height
-    button->setNormalColor(glm::vec4(0.3f, 0.3f, 0.3f, 1.0f));
-    button->setHoverColor(glm::vec4(0.4f, 0.4f, 0.4f, 1.0f));
-    button->setPressedColor(glm::vec4(0.2f, 0.2f, 0.2f, 1.0f));
-
-    // Set callback for click event
-    button->setOnClick([]() {
-        std::cout << "Button clicked!" << std::endl;
-        });
-
-    button->setOnHover([]() {
-        std::cout << "Button hovered!" << std::endl;
-        });
-
-    button->setVisible(true);
-    button->setEnabled(true);
-    
-    // Add label and button as children of the panel (hierarchical structure)
-    panel->addChild(std::move(label));
-    panel->addChild(std::move(button));
-    
-    // Register the panel with UISystem so it persists
-    if (uiSystem) {
-        uiSystem->setRootWidget(std::move(panel));
-    }
-
-    // UI Renderer
-    uiRenderer = std::make_unique<UIRenderer>();
-    uiRenderer->init();
-    
-    int width, height;
-    glfwGetWindowSize(window, &width, &height);
-    uiRenderer->updateWindowSize(width, height);
-    
-    // Connect UIRenderer to UISystem
-    if (uiSystem) {
-        uiSystem->setRenderer(uiRenderer.get());
-    }
-
     // Render System
     auto renderSys = std::make_unique<RenderSystem>();
     renderSys->init();
     renderSys->setViewMatrix(glm::mat4(1.0f));
 
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
     renderSys->setProjectionMatrix(glm::ortho(0.0f, (float)width, 0.0f, (float)height, -1.0f, 1.0f));
     renderSystem = renderSys.get(); // Cache pointer
     systems.push_back(std::move(renderSys));
@@ -249,11 +171,6 @@ void Game::onWindowResize(GLFWwindow* window, int width, int height) {
             renderSystem->setProjectionMatrix(glm::ortho(0.0f, (float)width, 0.0f, (float)height, -1.0f, 1.0f));
             break;
         }
-    }
-    
-    // Update UIRenderer window size
-    if (uiRenderer) {
-        uiRenderer->updateWindowSize(width, height);
     }
 }
 
