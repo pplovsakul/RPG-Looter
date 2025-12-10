@@ -149,15 +149,15 @@ int main(void) {
         ImGui::NewFrame();
         
         // Handle F-key shortcuts for window toggles
+        static constexpr size_t NUM_SHORTCUTS = 6;
+        static bool keyStates[NUM_SHORTCUTS] = {false, false, false, false, false, false};
+        
         struct KeyBinding {
             int key;
             bool* windowFlag;
         };
         
-        static constexpr size_t NUM_SHORTCUTS = 6;
-        static bool keyStates[NUM_SHORTCUTS] = {false, false, false, false, false, false};
-        
-        KeyBinding bindings[] = {
+        static KeyBinding bindings[] = {
             {GLFW_KEY_F1, &settings.windowVisibility.showPerformanceWindow},
             {GLFW_KEY_F2, &settings.windowVisibility.showConsoleWindow},
             {GLFW_KEY_F3, &settings.windowVisibility.showSceneHierarchy},
