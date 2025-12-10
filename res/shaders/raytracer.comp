@@ -1,0 +1,314 @@
+#version 430 core
+
+// Ray Tracer Compute Shader
+// Führt GPU-basiertes Ray Tracing mit PBR-Materialien, MSAA und Reflexionen durch
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+layout(rgba8, binding = 0) uniform writeonly image2D outputImage;
+
+// Material-Struktur
+struct Material {
+    vec3 albedo;
+    float roughness;
+    vec3 emission;
+    float metallic;
+};
+
+// Sphere-Struktur
+struct Sphere {
+    vec3 center;
+    float radius;
+    int materialIndex;
+    float _pad0, _pad1, _pad2; // Padding für Alignment
+};
+
+// Box-Struktur (AABB)
+struct Box {
+    vec3 minBounds;
+    float _pad0;
+    vec3 maxBounds;
+    int materialIndex;
+};
+
+// Hit-Record
+struct HitRecord {
+    float t;
+    vec3 point;
+    vec3 normal;
+    bool frontFace;
+    int materialIndex;
+};
+
+// Shader Storage Buffer Objects (SSBOs)
+layout(std430, binding = 1) buffer SphereBuffer {
+    Sphere spheres[];
+};
+
+layout(std430, binding = 2) buffer BoxBuffer {
+    Box boxes[];
+};
+
+layout(std430, binding = 3) buffer MaterialBuffer {
+    Material materials[];
+};
+
+// Uniforms
+uniform int numSpheres;
+uniform int numBoxes;
+uniform int samplesPerPixel;
+uniform int maxBounces;
+uniform vec3 cameraPos;
+uniform vec3 cameraTarget;
+uniform vec3 cameraUp;
+uniform float cameraVFov;
+uniform float cameraAspect;
+uniform vec3 lightDir;
+uniform uint frameCount; // Für unterschiedliche Random Seeds pro Frame
+
+// Kamera-Basis-Vektoren (werden in CPU berechnet und übergeben)
+uniform vec3 cameraU;
+uniform vec3 cameraV;
+uniform vec3 cameraW;
+uniform vec3 cameraLowerLeft;
+uniform vec3 cameraHorizontal;
+uniform vec3 cameraVertical;
+
+// ===== RANDOM NUMBER GENERATION =====
+// PCG Hash für Pseudo-Zufallszahlen
+uint pcg_hash(uint seed) {
+    uint state = seed * 747796405u + 2891336453u;
+    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    return (word >> 22u) ^ word;
+}
+
+// Random [0,1]
+float random01(inout uint seed) {
+    seed = pcg_hash(seed);
+    return float(seed) / 4294967296.0;
+}
+
+// Random in Hemisphere um Normal
+vec3 randomInHemisphere(vec3 normal, inout uint seed) {
+    float z = random01(seed) * 2.0 - 1.0;
+    float a = random01(seed) * 2.0 * 3.14159265;
+    float r = sqrt(1.0 - z * z);
+    vec3 dir = vec3(r * cos(a), r * sin(a), z);
+    
+    if (dot(dir, normal) < 0.0) {
+        dir = -dir;
+    }
+    return normalize(dir);
+}
+
+// ===== RAY INTERSECTION TESTS =====
+
+// Ray-Sphere Intersection
+bool hitSphere(vec3 rayOrigin, vec3 rayDir, Sphere sphere, float tMin, float tMax, inout HitRecord rec) {
+    vec3 oc = rayOrigin - sphere.center;
+    float a = dot(rayDir, rayDir);
+    float half_b = dot(oc, rayDir);
+    float c = dot(oc, oc) - sphere.radius * sphere.radius;
+    float discriminant = half_b * half_b - a * c;
+    
+    if (discriminant < 0.0) return false;
+    
+    float sqrtD = sqrt(discriminant);
+    float root = (-half_b - sqrtD) / a;
+    
+    if (root < tMin || root > tMax) {
+        root = (-half_b + sqrtD) / a;
+        if (root < tMin || root > tMax) return false;
+    }
+    
+    rec.t = root;
+    rec.point = rayOrigin + rec.t * rayDir;
+    vec3 outwardNormal = (rec.point - sphere.center) / sphere.radius;
+    rec.frontFace = dot(rayDir, outwardNormal) < 0.0;
+    rec.normal = rec.frontFace ? outwardNormal : -outwardNormal;
+    rec.materialIndex = sphere.materialIndex;
+    
+    return true;
+}
+
+// Ray-Box Intersection (AABB Slab Method)
+bool hitBox(vec3 rayOrigin, vec3 rayDir, Box box, float tMin, float tMax, inout HitRecord rec) {
+    float t0 = tMin;
+    float t1 = tMax;
+    
+    // Teste jede Achse
+    for (int axis = 0; axis < 3; ++axis) {
+        float invD = 1.0 / rayDir[axis];
+        float tNear = (box.minBounds[axis] - rayOrigin[axis]) * invD;
+        float tFar = (box.maxBounds[axis] - rayOrigin[axis]) * invD;
+        
+        if (tNear > tFar) {
+            float temp = tNear;
+            tNear = tFar;
+            tFar = temp;
+        }
+        
+        t0 = max(tNear, t0);
+        t1 = min(tFar, t1);
+        
+        if (t0 > t1) return false;
+    }
+    
+    rec.t = t0;
+    rec.point = rayOrigin + rec.t * rayDir;
+    
+    // Berechne Normal
+    vec3 center = (box.minBounds + box.maxBounds) * 0.5;
+    vec3 localHit = rec.point - center;
+    vec3 halfSize = (box.maxBounds - box.minBounds) * 0.5;
+    
+    vec3 normal = vec3(0.0);
+    float maxComponent = 0.0;
+    for (int i = 0; i < 3; ++i) {
+        float component = abs(localHit[i] / halfSize[i]);
+        if (component > maxComponent) {
+            maxComponent = component;
+            normal = vec3(0.0);
+            normal[i] = localHit[i] > 0.0 ? 1.0 : -1.0;
+        }
+    }
+    
+    rec.frontFace = dot(rayDir, normal) < 0.0;
+    rec.normal = rec.frontFace ? normal : -normal;
+    rec.materialIndex = box.materialIndex;
+    
+    return true;
+}
+
+// Teste alle Objekte
+bool hitWorld(vec3 rayOrigin, vec3 rayDir, float tMin, float tMax, inout HitRecord rec) {
+    bool hitAnything = false;
+    float closest = tMax;
+    HitRecord tempRec;
+    
+    // Teste Spheres
+    for (int i = 0; i < numSpheres; ++i) {
+        if (hitSphere(rayOrigin, rayDir, spheres[i], tMin, closest, tempRec)) {
+            hitAnything = true;
+            closest = tempRec.t;
+            rec = tempRec;
+        }
+    }
+    
+    // Teste Boxes
+    for (int i = 0; i < numBoxes; ++i) {
+        if (hitBox(rayOrigin, rayDir, boxes[i], tMin, closest, tempRec)) {
+            hitAnything = true;
+            closest = tempRec.t;
+            rec = tempRec;
+        }
+    }
+    
+    return hitAnything;
+}
+
+// Hintergrundfarbe
+vec3 background(vec3 rayDir) {
+    return vec3(0.1, 0.1, 0.1); // Gleiche Farbe wie CPU-Version
+}
+
+// Reflexion
+vec3 reflect_vec(vec3 incident, vec3 normal) {
+    return incident - 2.0 * dot(incident, normal) * normal;
+}
+
+// Ray Tracing Shading mit Reflexionen
+vec3 shade(vec3 rayOrigin, vec3 rayDir, inout uint seed) {
+    vec3 color = vec3(0.0);
+    vec3 throughput = vec3(1.0); // Wie viel Licht noch "durchgelassen" wird
+    
+    for (int bounce = 0; bounce < maxBounces; ++bounce) {
+        HitRecord rec;
+        
+        if (!hitWorld(rayOrigin, rayDir, 0.001, 1e30, rec)) {
+            // Kein Treffer - füge Hintergrund hinzu
+            color += throughput * background(rayDir);
+            break;
+        }
+        
+        Material mat = materials[rec.materialIndex];
+        
+        // Emission
+        color += throughput * mat.emission;
+        
+        // Direkte Beleuchtung
+        float NdotL = max(0.0, dot(rec.normal, -lightDir));
+        vec3 directLight = mat.albedo * NdotL;
+        vec3 ambient = mat.albedo * 0.1;
+        
+        // Berechne neue Strahlrichtung
+        vec3 perfectReflection = reflect_vec(rayDir, rec.normal);
+        vec3 diffuseReflection = randomInHemisphere(rec.normal, seed);
+        
+        // Interpoliere basierend auf Roughness
+        vec3 reflectionDir = normalize(mix(perfectReflection, diffuseReflection, mat.roughness));
+        
+        // Metallic bestimmt Reflexionsfarbe
+        vec3 reflectionTint = mix(vec3(1.0), mat.albedo, mat.metallic);
+        
+        // Reflektivität basierend auf Roughness
+        float reflectivity = (1.0 - mat.roughness) * 0.8;
+        
+        // Aktualisiere Farbe mit direkter Beleuchtung
+        color += throughput * (ambient + directLight * (1.0 - reflectivity));
+        
+        // Aktualisiere Throughput für nächsten Bounce
+        throughput *= reflectionTint * reflectivity;
+        
+        // Russisches Roulette für frühe Terminierung
+        if (bounce > 3) {
+            float p = max(throughput.r, max(throughput.g, throughput.b));
+            if (random01(seed) > p) break;
+            throughput /= p;
+        }
+        
+        // Setup für nächsten Bounce
+        rayOrigin = rec.point;
+        rayDir = reflectionDir;
+    }
+    
+    return color;
+}
+
+void main() {
+    ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 imageDims = imageSize(outputImage);
+    
+    // Prüfe Bounds
+    if (pixelCoords.x >= imageDims.x || pixelCoords.y >= imageDims.y) {
+        return;
+    }
+    
+    // Initialisiere Random Seed basierend auf Pixel-Position und Frame
+    uint seed = pixelCoords.x + pixelCoords.y * imageDims.x + frameCount * imageDims.x * imageDims.y;
+    seed = pcg_hash(seed);
+    
+    vec3 pixelColor = vec3(0.0);
+    
+    // Multi-Sample Anti-Aliasing
+    for (int s = 0; s < samplesPerPixel; ++s) {
+        // Zufälliges Sub-Pixel Offset
+        float offsetX = samplesPerPixel > 1 ? random01(seed) : 0.5;
+        float offsetY = samplesPerPixel > 1 ? random01(seed) : 0.5;
+        
+        float u = (float(pixelCoords.x) + offsetX) / float(imageDims.x - 1);
+        float v = (float(pixelCoords.y) + offsetY) / float(imageDims.y - 1);
+        
+        // Erzeuge Strahl
+        vec3 rayOrigin = cameraPos;
+        vec3 rayDir = normalize(cameraLowerLeft + u * cameraHorizontal + v * cameraVertical - cameraPos);
+        
+        // Trace Ray
+        pixelColor += shade(rayOrigin, rayDir, seed);
+    }
+    
+    // Mittelwertbildung
+    pixelColor /= float(samplesPerPixel);
+    
+    // Schreibe in Output-Image
+    imageStore(outputImage, pixelCoords, vec4(pixelColor, 1.0));
+}

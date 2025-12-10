@@ -1,14 +1,17 @@
 #pragma once
 #include "Ray.h"
 #include "Hit.h"
+#include "Material.h"
 #include "vendor/glm/glm.hpp"
 
 class Sphere {
 public:
     glm::vec3 center;
     float radius;
+    Material material;
 
-    Sphere(const glm::vec3& c, float r) : center(c), radius(r) {}
+    Sphere(const glm::vec3& c, float r, const Material& mat = Material()) 
+        : center(c), radius(r), material(mat) {}
 
     bool hit(const Ray& r, float tMin, float tMax, HitRecord& rec) const {
         glm::vec3 oc = r.origin - center;
@@ -30,6 +33,7 @@ public:
         rec.point = r.at(rec.t);
         glm::vec3 outwardNormal = (rec.point - center) / radius;
         rec.setFaceNormal(r, outwardNormal);
+        rec.material = material;
         return true;
     }
 };

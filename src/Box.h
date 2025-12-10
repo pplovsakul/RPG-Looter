@@ -1,6 +1,7 @@
 #pragma once
 #include "Ray.h"
 #include "Hit.h"
+#include "Material.h"
 #include "vendor/glm/glm.hpp"
 
 // Axis-Aligned Bounding Box (AABB) for ray tracing
@@ -8,14 +9,15 @@ class Box {
 public:
     glm::vec3 minBounds; // Minimum corner of the box
     glm::vec3 maxBounds; // Maximum corner of the box
+    Material material;
 
-    Box(const glm::vec3& min, const glm::vec3& max) 
-        : minBounds(min), maxBounds(max) {}
+    Box(const glm::vec3& min, const glm::vec3& max, const Material& mat = Material()) 
+        : minBounds(min), maxBounds(max), material(mat) {}
 
     // Convenience constructor: center and size
-    static Box fromCenterSize(const glm::vec3& center, const glm::vec3& size) {
+    static Box fromCenterSize(const glm::vec3& center, const glm::vec3& size, const Material& mat = Material()) {
         glm::vec3 halfSize = size * 0.5f;
-        return Box(center - halfSize, center + halfSize);
+        return Box(center - halfSize, center + halfSize, mat);
     }
 
     // Ray-Box intersection using slab method
@@ -66,6 +68,7 @@ public:
         }
 
         rec.setFaceNormal(r, normal);
+        rec.material = material;
         return true;
     }
 };
