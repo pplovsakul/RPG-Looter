@@ -7,9 +7,9 @@
 
 class TransformComponent : public Component {
 public:
-    glm::vec2 position = glm::vec2(0.0f);
-    float rotation = 0.0f;
-    glm::vec2 scale = glm::vec2(1.0f);
+    glm::vec3 position = glm::vec3(0.0f);      // 3D position in world space
+    glm::vec3 rotation = glm::vec3(0.0f);      // Euler angles in radians: (pitch/X, yaw/Y, roll/Z)
+    glm::vec3 scale = glm::vec3(1.0f);         // 3D scale factors
 };
 
 class RenderComponent : public Component {
@@ -55,6 +55,38 @@ public:
     bool isPlaying = false;      // Aktueller Status
 };
 
+// --- CameraComponent: 3D camera for perspective rendering ---
+class CameraComponent : public Component {
+public:
+    float fov = 60.0f;                         // Field of view in degrees
+    float nearPlane = 0.1f;                    // Near clipping plane
+    float farPlane = 1000.0f;                  // Far clipping plane
+    bool isActive = true;                      // Whether this is the active camera
+    
+    glm::vec3 front = glm::vec3(0.0f, 0.0f, -1.0f);  // Camera forward direction
+    glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);      // Camera up direction
+    glm::vec3 right = glm::vec3(1.0f, 0.0f, 0.0f);   // Camera right direction
+    
+    // Calculate view matrix from transform
+    glm::mat4 getViewMatrix(const TransformComponent* transform) const {
+        if (!transform) return glm::mat4(1.0f);
+        return glm::lookAt(transform->position, 
+                          transform->position + front, 
+                          up);
+    }
+    
+    // Update camera direction vectors from rotation
+    void updateVectors(const glm::vec3& rotation) {
+        glm::vec3 newFront;
+        newFront.x = cos(rotation.y) * cos(rotation.x);
+        newFront.y = sin(rotation.x);
+        newFront.z = sin(rotation.y) * cos(rotation.x);
+        front = glm::normalize(newFront);
+        right = glm::normalize(glm::cross(front, glm::vec3(0.0f, 1.0f, 0.0f)));
+        up = glm::normalize(glm::cross(right, front));
+    }
+};
+
 
 class UIComponent : public Component {
 public:
@@ -75,23 +107,36 @@ public:
     bool isHovered = false;
 };
 
-// --- ModelComponent: holds simple shape primitives to build a 2D model ---
+// --- ModelComponent: holds 3D mesh data from OBJ files ---
 class ModelComponent : public Component {
 public:
-    enum class ShapeType { Rectangle = 0, Triangle = 1, Circle = 2, TexturedQuad = 3 };
-
-    struct Shape {
-        ShapeType type = ShapeType::Rectangle;
-        glm::vec2 position{0.0f, 0.0f}; // local position in model space (x right, y up)
-        float rotation = 0.0f;          // degrees
-        glm::vec2 size{50.0f, 50.0f};   // width/height or diameter for circle
-        glm::vec2 scale{1.0f, 1.0f};    // additional scale multiplier
-        glm::vec3 color{1.0f,1.0f,1.0f};
-        std::string textureName;        // optional texture (works for all shapes; rendered as image inside bbox)
-        bool filled = true;
-        int layer = 0;                  // layer ordering (higher -> rendered later / on top)
+    struct Mesh {
+        std::vector<glm::vec3> vertices;
+        std::vector<glm::vec3> normals;
+        std::vector<glm::vec2> uvs;
+        std::vector<unsigned int> indices;
+        std::string materialName;
+        glm::vec3 color{1.0f, 1.0f, 1.0f};
+        std::string textureName;
+        
+        // Cached OpenGL buffers (initialized on first render)
+        mutable unsigned int VAO = 0;
+        mutable unsigned int VBO = 0;
+        mutable unsigned int EBO = 0;
+        mutable bool buffersInitialized = false;
     };
 
-    std::vector<Shape> shapes;
+    std::vector<Mesh> meshes;
+    
+    ~ModelComponent() {
+        // Clean up OpenGL buffers
+        for (auto& mesh : meshes) {
+            if (mesh.buffersInitialized) {
+                glDeleteVertexArrays(1, &mesh.VAO);
+                glDeleteBuffers(1, &mesh.VBO);
+                glDeleteBuffers(1, &mesh.EBO);
+            }
+        }
+    }
 };
 
