@@ -201,9 +201,10 @@ void AssetManagerWindow::drawModelSection(EntityManager& em) {
             continue; 
         }
         
+        // Check if any mesh has a texture
         bool hasTexture = false;
-        for (const auto& s : m->shapes) {
-            if (!s.textureName.empty()) { 
+        for (const auto& mesh : m->meshes) {
+            if (!mesh.textureName.empty()) { 
                 hasTexture = true; 
                 break; 
             }
@@ -232,7 +233,7 @@ void AssetManagerWindow::drawModelSection(EntityManager& em) {
                 ModelComponent* m = AssetManager::getInstance()->getModel(name);
                 if (m) {
                     ImGui::Indent();
-                    ImGui::Text("Shapes: %zu", m->shapes.size());
+                    ImGui::Text("Meshes: %zu", m->meshes.size());
                     ImGui::Unindent();
                 }
             }
@@ -246,7 +247,7 @@ void AssetManagerWindow::drawModelSection(EntityManager& em) {
                 ModelComponent* m = AssetManager::getInstance()->getModel(name);
                 if (m) {
                     ImGui::Indent();
-                    ImGui::Text("Shapes: %zu", m->shapes.size());
+                    ImGui::Text("Meshes: %zu", m->meshes.size());
                     ImGui::Unindent();
                 }
             }
@@ -294,16 +295,23 @@ void AssetManagerWindow::drawAssetStatistics() {
     
     // Model details
     if (ImGui::CollapsingHeader("Model Details")) {
-        size_t totalShapes = 0;
+        size_t totalMeshes = 0;
+        size_t totalVertices = 0;
         for (const auto& name : modelNames) {
             ModelComponent* m = AssetManager::getInstance()->getModel(name);
             if (m) {
-                totalShapes += m->shapes.size();
-                ImGui::Text("%s: %zu shapes", name.c_str(), m->shapes.size());
+                totalMeshes += m->meshes.size();
+                size_t verts = 0;
+                for (const auto& mesh : m->meshes) {
+                    verts += mesh.vertices.size();
+                }
+                totalVertices += verts;
+                ImGui::Text("%s: %zu meshes, %zu vertices", name.c_str(), m->meshes.size(), verts);
             }
         }
         ImGui::Separator();
-        ImGui::Text("Total Shapes: %zu", totalShapes);
+        ImGui::Text("Total Meshes: %zu", totalMeshes);
+        ImGui::Text("Total Vertices: %zu", totalVertices);
     }
 }
 
@@ -325,8 +333,8 @@ void AssetManagerWindow::drawStressTestSection(EntityManager& em) {
             ent->tag = "CPUTest";
             ent->addComponent<TransformComponent>();
             auto tc = ent->getComponent<TransformComponent>();
-            tc->position = glm::vec2(rand() % 1920, rand() % 1080);
-            tc->scale = glm::vec2(10.0f, 10.0f);
+            tc->position = glm::vec3(rand() % 1920, rand() % 1080, 0.0f);
+            tc->scale = glm::vec3(10.0f, 10.0f, 1.0f);
             ent->addComponent<RenderComponent>();
             auto rc = ent->getComponent<RenderComponent>();
             rc->meshName = "quad";
@@ -361,8 +369,8 @@ void AssetManagerWindow::drawStressTestSection(EntityManager& em) {
             ent->tag = "GPUTest";
             ent->addComponent<TransformComponent>();
             auto tc = ent->getComponent<TransformComponent>();
-            tc->position = glm::vec2(rand() % 1920, rand() % 1080);
-            tc->scale = glm::vec2(64.0f, 64.0f);
+            tc->position = glm::vec3(rand() % 1920, rand() % 1080, 0.0f);
+            tc->scale = glm::vec3(64.0f, 64.0f, 1.0f);
             ent->addComponent<RenderComponent>();
             auto rc = ent->getComponent<RenderComponent>();
             rc->meshName = "quad";

@@ -9,6 +9,7 @@
 #include "Font.h"
 #include "Components.h"
 #include "OBJLoader.h"
+#include <algorithm>
 
 AssetManager* AssetManager::instance = nullptr;
 
@@ -232,8 +233,7 @@ bool AssetManager::addModel(const std::string& name, const ModelComponent& model
         return false;
     }
     auto m = std::make_unique<ModelComponent>();
-    m->shapes = model.shapes;
-    ModelComponent* ptr = m.get();
+    m->meshes = model.meshes;  // Copy mesh data
     models[name] = std::move(m);
     std::cout << "[AssetManager] Registered model: " << name << "\n";
     return true;

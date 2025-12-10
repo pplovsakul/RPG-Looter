@@ -51,8 +51,8 @@ void QuickActionsWindow::update(EntityManager& em, float deltaTime) {
                 Entity* e = em.createEntity();
                 e->tag = "Sprite";
                 auto* t = e->addComponent<TransformComponent>();
-                t->position = glm::vec2(960.0f, 540.0f);
-                t->scale = glm::vec2(100.0f, 100.0f);
+                t->position = glm::vec3(960.0f, 540.0f, 0.0f);
+                t->scale = glm::vec3(100.0f, 100.0f, 1.0f);
                 auto* r = e->addComponent<RenderComponent>();
                 r->meshName = "quad";
                 r->shaderName = "default";
@@ -154,8 +154,8 @@ void QuickActionsWindow::drawQuickActions(EntityManager& em) {
         Entity* e = em.createEntity();
         e->tag = "Sprite";
         auto* t = e->addComponent<TransformComponent>();
-        t->position = glm::vec2(960.0f, 540.0f);
-        t->scale = glm::vec2(100.0f, 100.0f);
+        t->position = glm::vec3(960.0f, 540.0f, 0.0f);
+        t->scale = glm::vec3(100.0f, 100.0f, 1.0f);
         auto* r = e->addComponent<RenderComponent>();
         r->meshName = "quad";
         r->shaderName = "default";

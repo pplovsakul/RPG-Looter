@@ -78,8 +78,8 @@ void EditorSystem::drawEntityEditingTab(EntityManager& em) {
         Entity* e = em.createEntity();
         e->tag = std::string(newEntityName);
         auto* t = e->addComponent<TransformComponent>();
-        t->position = glm::vec2(960.0f, 540.0f);
-        t->scale = glm::vec2(100.0f, 100.0f);
+        t->position = glm::vec3(960.0f, 540.0f, 0.0f);
+        t->scale = glm::vec3(100.0f, 100.0f, 1.0f);
         auto* r = e->addComponent<RenderComponent>();
         r->meshName = "quad";
         r->shaderName = "default";
@@ -258,8 +258,8 @@ void EditorSystem::drawComponentTemplates(EntityManager& em) {
         Entity* e = em.createEntity();
         e->tag = std::string(templateName);
         auto* t = e->addComponent<TransformComponent>();
-        t->position = glm::vec2(960.0f, 540.0f);
-        t->scale = glm::vec2(100.0f, 100.0f);
+        t->position = glm::vec3(960.0f, 540.0f, 0.0f);
+        t->scale = glm::vec3(100.0f, 100.0f, 1.0f);
         auto* r = e->addComponent<RenderComponent>();
         r->meshName = "quad";
         r->shaderName = "default";
@@ -287,8 +287,8 @@ void EditorSystem::drawComponentTemplates(EntityManager& em) {
         Entity* e = em.createEntity();
         e->tag = std::string(templateName);
         auto* t = e->addComponent<TransformComponent>();
-        t->position = glm::vec2(960.0f, 540.0f);
-        t->scale = glm::vec2(100.0f, 100.0f);
+        t->position = glm::vec3(960.0f, 540.0f, 0.0f);
+        t->scale = glm::vec3(100.0f, 100.0f, 1.0f);
         auto* r = e->addComponent<RenderComponent>();
         r->meshName = "quad";
         r->shaderName = "default";
@@ -405,9 +405,9 @@ void EditorSystem::drawTransformEditor(Entity* e) {
     auto* t = e->getComponent<TransformComponent>();
     if (!t) return;
     if (ImGui::CollapsingHeader("Transform")) {
-        ImGui::DragFloat2("Position", &t->position.x, 1.0f);
-        ImGui::DragFloat("Rotation", &t->rotation, 1.0f);
-        ImGui::DragFloat2("Scale", &t->scale.x, 0.1f);
+        ImGui::DragFloat3("Position", &t->position.x, 1.0f);
+        ImGui::DragFloat3("Rotation", &t->rotation.x, 0.01f);
+        ImGui::DragFloat3("Scale", &t->scale.x, 0.1f);
     }
 }
 
@@ -475,7 +475,7 @@ void EditorSystem::drawModelEditor(Entity* e) {
             if (m) {
                 if (e->hasComponent<ModelComponent>()) e->removeComponent<ModelComponent>();
                 auto* mc = e->addComponent<ModelComponent>();
-                mc->shapes = m->shapes;
+                mc->meshes = m->meshes;  // Copy 3D mesh data
             }
         }
     }
