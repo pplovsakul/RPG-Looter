@@ -8,7 +8,7 @@
 #include "ESCSound.h"
 #include "Font.h"
 #include "Components.h"
-#include "ModelSerializer.h"
+#include "OBJLoader.h"
 
 AssetManager* AssetManager::instance = nullptr;
 
@@ -240,7 +240,20 @@ bool AssetManager::addModel(const std::string& name, const ModelComponent& model
 
 bool AssetManager::loadModelFromFile(const std::string& name, const std::string& filepath) {
     try {
-        auto model = ModelSerializer::loadModelFromFile(filepath);
+        // Check file extension to determine loader
+        std::string ext = filepath.substr(filepath.find_last_of(".") + 1);
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        
+        std::unique_ptr<ModelComponent> model;
+        
+        if (ext == "obj") {
+            // Use OBJ loader for .obj files
+            model = OBJLoader::loadOBJ(filepath);
+        } else {
+            std::cerr << "[AssetManager] Unsupported model format: " << ext << "\n";
+            return false;
+        }
+        
         if (!model) {
             std::cerr << "[AssetManager] Failed to parse model file: " << filepath << "\n";
             return false;
