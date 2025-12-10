@@ -154,7 +154,8 @@ int main(void) {
             bool* windowFlag;
         };
         
-        static bool keyStates[6] = {false, false, false, false, false, false};
+        static constexpr size_t NUM_SHORTCUTS = 6;
+        static bool keyStates[NUM_SHORTCUTS] = {false, false, false, false, false, false};
         
         KeyBinding bindings[] = {
             {GLFW_KEY_F1, &settings.windowVisibility.showPerformanceWindow},
@@ -165,7 +166,10 @@ int main(void) {
             {GLFW_KEY_F6, &settings.windowVisibility.showModelEditor}
         };
         
-        for (size_t i = 0; i < 6; ++i) {
+        static_assert(sizeof(bindings)/sizeof(bindings[0]) == NUM_SHORTCUTS, 
+                     "Number of key bindings must match NUM_SHORTCUTS");
+        
+        for (size_t i = 0; i < NUM_SHORTCUTS; ++i) {
             bool keyPressed = glfwGetKey(window, bindings[i].key) == GLFW_PRESS;
             if (keyPressed && !keyStates[i]) {
                 *bindings[i].windowFlag = !(*bindings[i].windowFlag);

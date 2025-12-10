@@ -529,7 +529,7 @@ void EditorSystem::drawModelEditor(Entity* e) {
         // Show individual mesh info
         if (ImGui::TreeNode("Mesh Details")) {
             for (size_t i = 0; i < mc->meshes.size(); ++i) {
-                const auto& mesh = mc->meshes[i];
+                auto& mesh = mc->meshes[i];  // Non-const reference
                 ImGui::PushID((int)i);
                 if (ImGui::TreeNode("Mesh", "Mesh %zu", i)) {
                     ImGui::Text("Vertices: %zu", mesh.vertices.size());
@@ -540,7 +540,7 @@ void EditorSystem::drawModelEditor(Entity* e) {
                     if (!mesh.textureName.empty()) {
                         ImGui::Text("Texture: %s", mesh.textureName.c_str());
                     }
-                    ImGui::ColorEdit3("Color", &const_cast<glm::vec3&>(mesh.color).x);
+                    ImGui::ColorEdit3("Color", &mesh.color.x);
                     ImGui::TreePop();
                 }
                 ImGui::PopID();

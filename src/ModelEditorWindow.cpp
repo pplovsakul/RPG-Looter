@@ -2,6 +2,7 @@
 #include "AssetManager.h"
 #include "Components.h"
 #include <algorithm>
+#include <cctype>
 
 void ModelEditorWindow::update(EntityManager& em, float deltaTime) {
     auto& settings = GlobalSettings::getInstance();
