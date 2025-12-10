@@ -5,7 +5,7 @@
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
 #include "VertexBufferLayout.h"
-#include "ESCSound.h"
+#include "ECSSound.h"
 #include "Font.h"
 #include "Components.h"
 #include "OBJLoader.h"
