@@ -1,6 +1,7 @@
 #pragma once
 #include "System.h"
 #include "AssetManager.h"
+#include "Components.h"
 #include "vendor/glm/glm.hpp"
 #include "vendor/glm/gtc/matrix_transform.hpp"
 

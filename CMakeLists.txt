@@ -106,7 +106,11 @@ add_executable(RPG-Looter
     
     # Font system files
     "src/Font.h"
-    "src/Font.cpp")
+    "src/Font.cpp"
+    
+    # OBJ Loader files
+    "src/OBJLoader.h"
+    "src/OBJLoader.cpp")
     
     
 # Includes

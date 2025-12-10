@@ -31,7 +31,8 @@ void CollisionSystem::update(EntityManager& em, float /*deltaTime*/) {
 
     for (Entity* e : entities) {
         if (!e || !e->active) continue;
-        if (!e->hasComponent<ModelComponent>() && !e->hasComponent<RenderComponent>()) continue;
+        // Only process entities with RenderComponent (ModelComponent is now for 3D meshes)
+        if (!e->hasComponent<RenderComponent>()) continue;
         auto* t = e->getComponent<TransformComponent>();
         if (!t) continue;
 
@@ -39,47 +40,43 @@ void CollisionSystem::update(EntityManager& em, float /*deltaTime*/) {
         ed.e = e;
         ed.t = t;
 
-        // gather shapes once per entity
-        if (e->hasComponent<ModelComponent>()) {
-            auto* m = e->getComponent<ModelComponent>();
-            if (m) {
-                for (const auto& s : m->shapes) {
-                    ShapeWorld sw;
-                    if (s.type == ModelComponent::ShapeType::Circle) {
-                        sw.isCircle = true;
-                        sw.center = s.position + t->position;
-                        sw.radius = (s.size.x * s.scale.x) * 0.5f; // same as ShapeToWorldCircle
-                    } else {
-                        sw.isCircle = false;
-                        sw.poly = CollisionUtils::ShapeToWorldPolygon(s, *t);
-                    }
-                    ed.shapes.push_back(std::move(sw));
-                }
+        // gather shapes once per entity - only from RenderComponent
+        auto* r = e->getComponent<RenderComponent>();
+        ShapeWorld sw;
+        // Use 2D projection for collision (ignore Z)
+        glm::vec2 pos2D = glm::vec2(t->position.x, t->position.y);
+        glm::vec2 scale2D = glm::vec2(t->scale.x, t->scale.y);
+        
+        // ✅ OPTIMIZATION: Use enum comparison instead of string comparison
+        if (r->meshType == RenderComponent::MeshType::Circle) {
+            sw.isCircle = true;
+            sw.center = pos2D;
+            sw.radius = (scale2D.x) * 0.5f;
+        } else {
+            sw.isCircle = false;
+            // Build a simple quad polygon for collision
+            float halfW = scale2D.x * 0.5f;
+            float halfH = scale2D.y * 0.5f;
+            float rot = t->rotation.y; // Use Y rotation for 2D
+            float cs = std::cos(rot);
+            float sn = std::sin(rot);
+            
+            glm::vec2 corners[4] = {
+                {-halfW, -halfH},
+                { halfW, -halfH},
+                { halfW,  halfH},
+                {-halfW,  halfH}
+            };
+            
+            sw.poly.reserve(4);
+            for (int i = 0; i < 4; i++) {
+                glm::vec2 rotated;
+                rotated.x = corners[i].x * cs - corners[i].y * sn;
+                rotated.y = corners[i].x * sn + corners[i].y * cs;
+                sw.poly.push_back(pos2D + rotated);
             }
-        } else if (e->hasComponent<RenderComponent>()) {
-            auto* r = e->getComponent<RenderComponent>();
-            ModelComponent::Shape s;
-            // ✅ OPTIMIZATION: Use enum comparison instead of string comparison
-            if (r->meshType == RenderComponent::MeshType::Circle) {
-                s.type = ModelComponent::ShapeType::Circle;
-                s.size = t->scale;
-            } else {
-                s.type = ModelComponent::ShapeType::Rectangle;
-                s.size = t->scale;
-            }
-            s.position = glm::vec2(0.0f);
-
-            ShapeWorld sw;
-            if (s.type == ModelComponent::ShapeType::Circle) {
-                sw.isCircle = true;
-                sw.center = s.position + t->position;
-                sw.radius = (s.size.x * s.scale.x) * 0.5f;
-            } else {
-                sw.isCircle = false;
-                sw.poly = CollisionUtils::ShapeToWorldPolygon(s, *t);
-            }
-            ed.shapes.push_back(std::move(sw));
         }
+        ed.shapes.push_back(std::move(sw));
 
         if (ed.shapes.empty()) continue;
 
@@ -174,18 +171,28 @@ void CollisionSystem::update(EntityManager& em, float /*deltaTime*/) {
                         if (sa.isCircle && sb.isCircle) {
                             hit = CollisionUtils::CircleCircleMTV(sa.center, sa.radius, sb.center, sb.radius, mtv);
                             if (hit) {
-                                // move A out of B
-                                A.t->position += mtv;
+                                // move A out of B (apply to X and Y only, leave Z unchanged)
+                                A.t->position.x += mtv.x;
+                                A.t->position.y += mtv.y;
                             }
                         } else if (sa.isCircle && !sb.isCircle) {
                             hit = CollisionUtils::PolygonCircleMTV(sb.poly, sa.center, sa.radius, mtv);
-                            if (hit) A.t->position += mtv;
+                            if (hit) {
+                                A.t->position.x += mtv.x;
+                                A.t->position.y += mtv.y;
+                            }
                         } else if (!sa.isCircle && sb.isCircle) {
                             hit = CollisionUtils::PolygonCircleMTV(sa.poly, sb.center, sb.radius, mtv);
-                            if (hit) A.t->position -= mtv;
+                            if (hit) {
+                                A.t->position.x -= mtv.x;
+                                A.t->position.y -= mtv.y;
+                            }
                         } else {
                             hit = CollisionUtils::PolygonPolygonMTV(sa.poly, sb.poly, mtv);
-                            if (hit) A.t->position += mtv;
+                            if (hit) {
+                                A.t->position.x += mtv.x;
+                                A.t->position.y += mtv.y;
+                            }
                         }
                         if (hit) { anyIntersection = true; break; }
                     }
@@ -202,71 +209,47 @@ bool CollisionSystem::wouldCollide(Entity* e, const glm::vec2& proposedPos, Enti
     if (!e || !e->active) return false;
     auto* t = e->getComponent<TransformComponent>();
     if (!t) return false;
+    
+    // Only check collision for entities with RenderComponent
+    if (!e->hasComponent<RenderComponent>()) return false;
+    auto* r = e->getComponent<RenderComponent>();
 
-    // copy transform and replace position
-    TransformComponent tempT = *t;
-    tempT.position = proposedPos;
-
-    // build shapes for the entity like in update
-    std::vector<ModelComponent::Shape> shapesE;
-    if (e->hasComponent<ModelComponent>()) {
-        auto* m = e->getComponent<ModelComponent>();
-        if (m) shapesE = m->shapes;
-    } else if (e->hasComponent<RenderComponent>()) {
-        auto* r = e->getComponent<RenderComponent>();
-        ModelComponent::Shape s;
-        // ✅ OPTIMIZATION: Use enum comparison instead of string comparison
-        if (r->meshType == RenderComponent::MeshType::Circle) { s.type = ModelComponent::ShapeType::Circle; s.size = t->scale; }
-        else { s.type = ModelComponent::ShapeType::Rectangle; s.size = t->scale; }
-        s.position = glm::vec2(0.0f);
-        shapesE.push_back(s);
-    }
-
-    if (shapesE.empty()) return false;
-
+    // Build simple shape for entity at proposed position
+    glm::vec2 scale2D = glm::vec2(t->scale.x, t->scale.y);
+    bool isCircle = (r->meshType == RenderComponent::MeshType::Circle);
+    
     // check against all other entities in em
     auto ents = em.getAllEntities();
     for (Entity* other : ents) {
         if (!other || other == e || !other->active) continue;
-        // build shapes for other similar to update
-        std::vector<ModelComponent::Shape> shapesO;
+        if (!other->hasComponent<RenderComponent>()) continue;
+        
         auto* to = other->getComponent<TransformComponent>();
         if (!to) continue;
-        if (other->hasComponent<ModelComponent>()) {
-            auto* mo = other->getComponent<ModelComponent>();
-            if (mo) shapesO = mo->shapes;
-        } else if (other->hasComponent<RenderComponent>()) {
-            auto* ro = other->getComponent<RenderComponent>();
-            ModelComponent::Shape so;
-            // ✅ OPTIMIZATION: Use enum comparison instead of string comparison
-            if (ro->meshType == RenderComponent::MeshType::Circle) { so.type = ModelComponent::ShapeType::Circle; so.size = to->scale; }
-            else { so.type = ModelComponent::ShapeType::Rectangle; so.size = to->scale; }
-            so.position = glm::vec2(0.0f);
-            shapesO.push_back(so);
-        }
-        if (shapesO.empty()) continue;
-
-        // now test shapesE (with tempT) vs shapesO (with to)
-        for (const auto& se : shapesE) {
-            glm::vec2 ce; float re;
-            bool ec = CollisionUtils::ShapeToWorldCircle(se, tempT, ce, re);
-            std::vector<glm::vec2> polyE;
-            if (!ec) polyE = CollisionUtils::ShapeToWorldPolygon(se, tempT);
-
-            for (const auto& so : shapesO) {
-                glm::vec2 co; float rof;
-                bool oc = CollisionUtils::ShapeToWorldCircle(so, *to, co, rof);
-                std::vector<glm::vec2> polyO;
-                if (!oc) polyO = CollisionUtils::ShapeToWorldPolygon(so, *to);
-
-                glm::vec2 mtv(0.0f);
-                bool hit = false;
-                if (ec && oc) hit = CollisionUtils::CircleCircleMTV(ce, re, co, rof, mtv);
-                else if (ec && !oc) hit = CollisionUtils::PolygonCircleMTV(polyO, ce, re, mtv);
-                else if (!ec && oc) hit = CollisionUtils::PolygonCircleMTV(polyE, co, rof, mtv);
-                else hit = CollisionUtils::PolygonPolygonMTV(polyE, polyO, mtv);
-
-                if (hit) return true;
+        auto* ro = other->getComponent<RenderComponent>();
+        
+        glm::vec2 otherPos2D = glm::vec2(to->position.x, to->position.y);
+        glm::vec2 otherScale2D = glm::vec2(to->scale.x, to->scale.y);
+        bool otherIsCircle = (ro->meshType == RenderComponent::MeshType::Circle);
+        
+        // Simple circle-circle or AABB collision check
+        if (isCircle && otherIsCircle) {
+            float r1 = scale2D.x * 0.5f;
+            float r2 = otherScale2D.x * 0.5f;
+            glm::vec2 diff = proposedPos - otherPos2D;
+            float dist2 = glm::dot(diff, diff);
+            float rsum = r1 + r2;
+            if (dist2 <= rsum * rsum) return true;
+        } else {
+            // AABB check (simplified)
+            float hw1 = scale2D.x * 0.5f;
+            float hh1 = scale2D.y * 0.5f;
+            float hw2 = otherScale2D.x * 0.5f;
+            float hh2 = otherScale2D.y * 0.5f;
+            
+            if (std::abs(proposedPos.x - otherPos2D.x) < (hw1 + hw2) &&
+                std::abs(proposedPos.y - otherPos2D.y) < (hh1 + hh2)) {
+                return true;
             }
         }
     }

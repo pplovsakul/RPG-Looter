@@ -51,9 +51,9 @@ bool EntitySerializer::saveEntities(const EntityManager& em, const std::string& 
             firstComp = false;
             auto* t = e->getComponent<TransformComponent>();
             out << "        \"Transform\": {\n";
-            out << "          \"position\": [" << t->position.x << ", " << t->position.y << "],\n";
-            out << "          \"rotation\": " << t->rotation << ",\n";
-            out << "          \"scale\": [" << t->scale.x << ", " << t->scale.y << "]\n";
+            out << "          \"position\": [" << t->position.x << ", " << t->position.y << ", " << t->position.z << "],\n";
+            out << "          \"rotation\": [" << t->rotation.x << ", " << t->rotation.y << ", " << t->rotation.z << "],\n";
+            out << "          \"scale\": [" << t->scale.x << ", " << t->scale.y << ", " << t->scale.z << "]\n";
             out << "        }";
         }
 
@@ -132,15 +132,34 @@ bool EntitySerializer::loadEntities(EntityManager& em, const std::string& path) 
                         tc->position.x = a[0].asNumber();
                         tc->position.y = a[1].asNumber();
                     }
+                    if (a.size() >= 3) {
+                        tc->position.z = a[2].asNumber();
+                    }
                 }
                 auto itRot = to.find("rotation");
-                if (itRot != to.end() && itRot->second.isNumber()) tc->rotation = (float)itRot->second.asNumber();
+                if (itRot != to.end()) {
+                    if (itRot->second.isNumber()) {
+                        // Old format: single number (assumes Y-axis rotation for 2D compatibility)
+                        // In the old 2D system, rotation was a single float representing rotation around Z
+                        // For 3D, we map this to Y-axis rotation (yaw) as a reasonable default
+                        tc->rotation.y = (float)itRot->second.asNumber();
+                    } else if (itRot->second.isArray()) {
+                        // New format: array [pitch, yaw, roll] = [X, Y, Z]
+                        const auto& a = itRot->second.asArray();
+                        if (a.size() >= 1) tc->rotation.x = a[0].asNumber();
+                        if (a.size() >= 2) tc->rotation.y = a[1].asNumber();
+                        if (a.size() >= 3) tc->rotation.z = a[2].asNumber();
+                    }
+                }
                 auto itScale = to.find("scale");
                 if (itScale != to.end() && itScale->second.isArray()) {
                     const auto& a = itScale->second.asArray();
                     if (a.size() >= 2) {
                         tc->scale.x = a[0].asNumber();
                         tc->scale.y = a[1].asNumber();
+                    }
+                    if (a.size() >= 3) {
+                        tc->scale.z = a[2].asNumber();
                     }
                 }
             }
