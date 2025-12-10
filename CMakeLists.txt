@@ -75,13 +75,14 @@ add_executable(RPG-Looter
     "src/InputSystem.cpp"  
     "src/AssetManager.h" 
     "src/AssetManager.cpp" 
-    "src/ESCSound.h" 
+    "src/ECSSound.h" 
     "src/ECSSound.cpp" 
 
     "src/EditorSystem.h"
     "src/EditorSystem.cpp"
     "src/AssetManagerWindow.h"
     "src/AssetManagerWindow.cpp"
+    "src/EntitySerializer.h"
     "src/EntitySerializer.cpp"
     "src/PerformanceWindow.h"
     "src/PerformanceWindow.cpp"
@@ -98,7 +99,7 @@ add_executable(RPG-Looter
     "src/GlobalSettings.h"
     "src/CameraUtils.h"
     
-    "src/main.cpp" "src/Game.cpp"  "src/JsonParser.h" "src/ModelSerializer.h" "src/ModelSerializer.cpp"
+    "src/main.cpp" "src/Game.h" "src/Game.cpp"  "src/JsonParser.h" "src/ModelSerializer.h" "src/ModelSerializer.cpp"
 
     # Collision system files
     "src/CollisionUtils.h"
@@ -108,21 +109,6 @@ add_executable(RPG-Looter
     # Font system files
     "src/Font.h"
     "src/Font.cpp"
-    
-    # UI System files
-    "src/UI/UIEvent.h"
-    "src/UI/UIWidget.h"
-    "src/UI/UIWidget.cpp"
-    "src/UI/UISystem.h"
-    "src/UI/UISystem.cpp"
-    "src/UI/UIRenderer.h"
-    "src/UI/UIRenderer.cpp"
-    "src/UI/UIPanel.h"
-    "src/UI/UIPanel.cpp"
-    "src/UI/UILabel.h"
-    "src/UI/UILabel.cpp"
-    "src/UI/UIButton.h"
-    "src/UI/UIButton.cpp"
     
     # 3D Engine Components
     "src/Mesh3D.h"
