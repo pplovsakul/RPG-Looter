@@ -88,9 +88,6 @@ void QuickActionsWindow::update(EntityManager& em, float deltaTime) {
             if (ImGui::MenuItem("Asset Manager", "F5", settings.windowVisibility.showAssetManager)) {
                 settings.windowVisibility.showAssetManager = !settings.windowVisibility.showAssetManager;
             }
-            if (ImGui::MenuItem("Model Editor", "F6", settings.windowVisibility.showModelEditor)) {
-                settings.windowVisibility.showModelEditor = !settings.windowVisibility.showModelEditor;
-            }
             ImGui::Separator();
             if (ImGui::MenuItem("Settings", nullptr, settings.windowVisibility.showSettingsWindow)) {
                 settings.windowVisibility.showSettingsWindow = !settings.windowVisibility.showSettingsWindow;
@@ -193,14 +190,14 @@ void QuickActionsWindow::drawHelpWindow() {
                 "- Entity Component System (ECS) architecture\n"
                 "- 3D rendering with perspective camera\n"
                 "- Blender model integration (.obj/.mtl)\n"
-                "- Asset management for textures, sounds, and models\n"
+                "- Asset management for sounds and 3D models\n"
                 "- Real-time performance monitoring\n"
                 "- Console logging system\n\n"
                 "To get started:\n"
                 "1. Use the Entity Editor (F4) to create entities\n"
                 "2. Add components like Transform and Model\n"
-                "3. Use the Model Editor (F6) to load 3D models\n"
-                "4. Load assets through the Asset Manager (F5)\n"
+                "3. Load 3D models (.obj/.mtl) through the Asset Manager (F5)\n"
+                "4. Assign models to entities in the Entity Editor\n"
             );
             ImGui::EndTabItem();
         }
@@ -295,9 +292,6 @@ void QuickActionsWindow::drawKeyboardShortcuts() {
     
     ImGui::Text("F5"); ImGui::NextColumn();
     ImGui::Text("Asset Manager"); ImGui::NextColumn();
-    
-    ImGui::Text("F6"); ImGui::NextColumn();
-    ImGui::Text("Model Editor"); ImGui::NextColumn();
     ImGui::Columns(1);
     
     ImGui::Spacing();

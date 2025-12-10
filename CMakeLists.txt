@@ -83,8 +83,6 @@ add_executable(RPG-Looter
     "src/AssetManagerWindow.h"
     "src/AssetManagerWindow.cpp"
     "src/EntitySerializer.cpp"
-    "src/ModelEditorSystem.h"
-    "src/ModelEditorSystem.cpp"
     "src/PerformanceWindow.h"
     "src/PerformanceWindow.cpp"
     "src/ConsoleWindow.h"
