@@ -4,6 +4,7 @@
 #include "Ray.h"
 #include "Hit.h"
 #include "Sphere.h"
+#include "Box.h"
 #include "Camera.h"
 
 struct RTColor { float r, g, b; };
@@ -15,14 +16,14 @@ public:
     Camera camera;
     glm::vec3 lightDir = glm::normalize(glm::vec3(-1.0f, -1.0f, -0.5f));
 
-    std::vector<Sphere> scene;
+    std::vector<Sphere> spheres;
+    std::vector<Box> boxes;
 
     RayTracer(int w, int h) : width(w), height(h) {
         camera.aspect = float(w) / float(h);
         camera.update();
-        // Default scene: two spheres
-        scene.emplace_back(glm::vec3(0, 0, 0), 0.5f);
-        scene.emplace_back(glm::vec3(0, -100.5f, 0), 100.0f); // ground
+        // Default scene: ground sphere
+        spheres.emplace_back(glm::vec3(0, -100.5f, 0), 100.0f); // ground
     }
 
     RTColor background(const Ray& r) const {
@@ -38,9 +39,20 @@ public:
         bool hitAnything = false;
         float closestSoFar = 1e30f;
 
-        for (const auto& s : scene) {
+        // Test spheres
+        for (const auto& s : spheres) {
             HitRecord rec;
             if (s.hit(r, 0.001f, closestSoFar, rec)) {
+                hitAnything = true;
+                closestSoFar = rec.t;
+                closestRec = rec;
+            }
+        }
+
+        // Test boxes (AABBs)
+        for (const auto& b : boxes) {
+            HitRecord rec;
+            if (b.hit(r, 0.001f, closestSoFar, rec)) {
                 hitAnything = true;
                 closestSoFar = rec.t;
                 closestRec = rec;

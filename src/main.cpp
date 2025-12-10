@@ -11,11 +11,15 @@
 #include "InputSystem.h"
 #include "RayTraceRenderer.h"
 
-// GLM für Matrizen
+// GLM fï¿½r Matrizen
 #include "vendor/glm/glm.hpp"
 #include "vendor/glm/gtc/matrix_transform.hpp"
 
 int width = 1280, height = 720;
+
+// Ray Tracer resolution (lower to avoid freezing)
+const int RT_WIDTH = 400;
+const int RT_HEIGHT = 300;
 
 // ===== KAMERA VARIABLEN =====
 // Kamera Position und Orientierung
@@ -35,6 +39,9 @@ float mouseSensitivity = 0.1f;
 float cameraSpeed = 2.5f;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
+
+// Hotkey state tracking for toggling
+bool rKeyWasPressed = false;
 
 // Maus-Callback Funktion
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
@@ -58,7 +65,7 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
     yaw   += xoffset;
     pitch += yoffset;
 
-    // Pitch begrenzen, damit Kamera nicht überkippt
+    // Pitch begrenzen, damit Kamera nicht ï¿½berkippt
     if (pitch > 89.0f)
         pitch = 89.0f;
     if (pitch < -89.0f)
@@ -78,9 +85,9 @@ void processInput(GLFWwindow* window) {
 
     // WASD Bewegung
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        cameraPos += velocity * cameraFront;  // Vorwärts
+        cameraPos += velocity * cameraFront;  // Vorwï¿½rts
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        cameraPos -= velocity * cameraFront;  // Rückwärts
+        cameraPos -= velocity * cameraFront;  // Rï¿½ckwï¿½rts
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
         cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * velocity;  // Links
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
@@ -131,6 +138,7 @@ int main(void) {
     std::cout << "Maus    - Umsehen" << std::endl;
     std::cout << "Space   - Hoch" << std::endl;
     std::cout << "Shift   - Runter" << std::endl;
+    std::cout << "R       - Toggle Ray Tracer / Rasterizer" << std::endl;
     std::cout << "ESC     - Beenden" << std::endl;
 
     // Maus einfangen und Callback setzen
@@ -185,12 +193,16 @@ int main(void) {
     va.AddBuffer(vb, layout);
 
     // Load shader
-
 	bool useRayTracer = false;
 	Shader shader("res/shaders/basic.shader");
-
     Shader rtshader("res/shaders/neuer_shader.shader");
-    RayTraceRenderer rt(width, height);
+    
+    // Create RayTraceRenderer with lower resolution to avoid freezing
+    RayTraceRenderer rt(RT_WIDTH, RT_HEIGHT);
+    
+    // Add cubes to the ray tracer scene
+    // The cube from the rasterizer is centered at origin with size 1x1x1
+    rt.tracer.boxes.emplace_back(Box::fromCenterSize(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f)));
 
     Renderer renderer;
 
@@ -215,12 +227,22 @@ int main(void) {
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
-			useRayTracer = !useRayTracer;
+        // Hotkey toggle for ray tracer (R key with debouncing)
+        bool rKeyIsPressed = (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS);
+        if (rKeyIsPressed && !rKeyWasPressed) {
+            useRayTracer = !useRayTracer;
+            std::cout << "Switched to " << (useRayTracer ? "Ray Tracer" : "Rasterizer") << " mode" << std::endl;
         }
+        rKeyWasPressed = rKeyIsPressed;
 
         // Eingabe verarbeiten
         processInput(window);
+
+        // Sync camera to ray tracer (camera controls are shared)
+        rt.tracer.camera.position = cameraPos;
+        rt.tracer.camera.target = cameraPos + cameraFront;
+        rt.tracer.camera.up = cameraUp;
+        rt.tracer.camera.vfov = 45.0f; // Match the rasterizer's FOV
 
         // Clear screen
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -231,12 +253,14 @@ int main(void) {
         // MVP Matrix berechnen
         glm::mat4 mvp = projection * view * model;
 
-        // Draw quad
-        shader.Bind();
+        // Draw based on current mode
         if (useRayTracer) {
-			rt.draw(rtshader.GetRendererID());
+            // Ray tracer mode: render CPU-traced image to fullscreen quad
+            rt.draw(rtshader.GetRendererID());
         }
         else {
+            // Rasterizer mode: standard OpenGL rendering
+            shader.Bind();
             shader.SetUniformMat4f("u_MVP", mvp);
             shader.SetUniform4f("u_Color", 1.0f, 0.5f, 0.2f, 1.0f);
             renderer.Draw(va, ib, shader);
