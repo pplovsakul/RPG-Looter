@@ -149,6 +149,12 @@ int main(void) {
         ImGui::NewFrame();
         
         // Handle F-key shortcuts for window toggles
+        struct KeyBinding {
+            int key;
+            bool* windowFlag;
+            bool* wasPressed;
+        };
+        
         static bool f1WasPressed = false;
         static bool f2WasPressed = false;
         static bool f3WasPressed = false;
@@ -156,38 +162,22 @@ int main(void) {
         static bool f5WasPressed = false;
         static bool f6WasPressed = false;
         
-        bool f1Pressed = glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS;
-        bool f2Pressed = glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS;
-        bool f3Pressed = glfwGetKey(window, GLFW_KEY_F3) == GLFW_PRESS;
-        bool f4Pressed = glfwGetKey(window, GLFW_KEY_F4) == GLFW_PRESS;
-        bool f5Pressed = glfwGetKey(window, GLFW_KEY_F5) == GLFW_PRESS;
-        bool f6Pressed = glfwGetKey(window, GLFW_KEY_F6) == GLFW_PRESS;
+        KeyBinding bindings[] = {
+            {GLFW_KEY_F1, &settings.windowVisibility.showPerformanceWindow, &f1WasPressed},
+            {GLFW_KEY_F2, &settings.windowVisibility.showConsoleWindow, &f2WasPressed},
+            {GLFW_KEY_F3, &settings.windowVisibility.showSceneHierarchy, &f3WasPressed},
+            {GLFW_KEY_F4, &settings.windowVisibility.showEntityEditor, &f4WasPressed},
+            {GLFW_KEY_F5, &settings.windowVisibility.showAssetManager, &f5WasPressed},
+            {GLFW_KEY_F6, &settings.windowVisibility.showModelEditor, &f6WasPressed}
+        };
         
-        if (f1Pressed && !f1WasPressed) {
-            settings.windowVisibility.showPerformanceWindow = !settings.windowVisibility.showPerformanceWindow;
+        for (auto& binding : bindings) {
+            bool keyPressed = glfwGetKey(window, binding.key) == GLFW_PRESS;
+            if (keyPressed && !(*binding.wasPressed)) {
+                *binding.windowFlag = !(*binding.windowFlag);
+            }
+            *binding.wasPressed = keyPressed;
         }
-        if (f2Pressed && !f2WasPressed) {
-            settings.windowVisibility.showConsoleWindow = !settings.windowVisibility.showConsoleWindow;
-        }
-        if (f3Pressed && !f3WasPressed) {
-            settings.windowVisibility.showSceneHierarchy = !settings.windowVisibility.showSceneHierarchy;
-        }
-        if (f4Pressed && !f4WasPressed) {
-            settings.windowVisibility.showEntityEditor = !settings.windowVisibility.showEntityEditor;
-        }
-        if (f5Pressed && !f5WasPressed) {
-            settings.windowVisibility.showAssetManager = !settings.windowVisibility.showAssetManager;
-        }
-        if (f6Pressed && !f6WasPressed) {
-            settings.windowVisibility.showModelEditor = !settings.windowVisibility.showModelEditor;
-        }
-        
-        f1WasPressed = f1Pressed;
-        f2WasPressed = f2Pressed;
-        f3WasPressed = f3Pressed;
-        f4WasPressed = f4Pressed;
-        f5WasPressed = f5Pressed;
-        f6WasPressed = f6Pressed;
         
 		game.update(deltaTime);
 

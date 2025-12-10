@@ -136,11 +136,11 @@ void RenderSystem::update(EntityManager& em, float dt) {
     // Render all entities with ModelComponent
     auto modelEntities = em.getEntitiesWith<ModelComponent>();
     
-    // Debug output (only once per second)
-    static float debugTimer = 0.0f;
-    debugTimer += dt;
-    if (debugTimer >= 1.0f && !modelEntities.empty()) {
-        std::cout << "[RenderSystem] Rendering " << modelEntities.size() << " entities with ModelComponent\n";
+    // Debug output (only when entity count changes)
+    static size_t lastModelEntityCount = 0;
+    if (modelEntities.size() != lastModelEntityCount) {
+        std::cout << "[RenderSystem] Now rendering " << modelEntities.size() 
+                  << " entities with ModelComponent\n";
         for (Entity* e : modelEntities) {
             auto model = e->getComponent<ModelComponent>();
             if (model) {
@@ -148,7 +148,7 @@ void RenderSystem::update(EntityManager& em, float dt) {
                           << ": " << model->meshes.size() << " meshes\n";
             }
         }
-        debugTimer = 0.0f;
+        lastModelEntityCount = modelEntities.size();
     }
     
     for (Entity* e : modelEntities) {

@@ -96,6 +96,7 @@ add_executable(RPG-Looter
     "src/ModelEditorWindow.h"
     "src/ModelEditorWindow.cpp"
     "src/GlobalSettings.h"
+    "src/CameraUtils.h"
     
     "src/main.cpp" "src/Game.cpp"  "src/JsonParser.h" "src/ModelSerializer.h" "src/ModelSerializer.cpp"
 
