@@ -121,20 +121,7 @@ add_executable(RPG-Looter
     "src/UI/UILabel.h"
     "src/UI/UILabel.cpp"
     "src/UI/UIButton.h"
-    "src/UI/UIButton.cpp"
-    
-    # Custom GUI System files
-    "src/CustomGUI/GUITypes.h"
-    "src/CustomGUI/GUIStyle.h"
-    "src/CustomGUI/GUIStyle.cpp"
-    "src/CustomGUI/GUIDrawList.h"
-    "src/CustomGUI/GUIDrawList.cpp"
-    "src/CustomGUI/GUIContext.h"
-    "src/CustomGUI/GUIContext.cpp"
-    "src/CustomGUI/GUIRenderer.h"
-    "src/CustomGUI/GUIRenderer.cpp"
-    "src/CustomGUI/CustomGUI.h"
-    "src/CustomGUI/CustomGUI.cpp")
+    "src/UI/UIButton.cpp")
     
     
 # Includes
