@@ -42,7 +42,7 @@ void RenderSystem::createDefaultAssets() {
         -0.5f,  0.5f, 0.0f,   0.0f, 1.0f
     };
 
-    unsigned int quadIndices[] = { 0, 1, 2, 2, 3, 0 };
+    unsigned int quadIndices[6] = { 0, 1, 2, 2, 3, 0 };
 
     assetManager->createMesh("quad", quadVertices, sizeof(quadVertices),
         quadIndices, 6);
