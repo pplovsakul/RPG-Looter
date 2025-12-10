@@ -21,7 +21,7 @@ void VertexArray::AddBuffer(const VertexBuffer& vb, const VertexBufferLayout& la
         const auto& element = elements[i];
         GLCall(glEnableVertexAttribArray(i));
         GLCall(glVertexAttribPointer(i, element.count, element.type, element.normalized,
-            layout.GetStride(), (const void*)(uintptr_t)offset));
+            layout.GetStride(), (const void*)(size_t)offset));
         offset += element.count * VertexBufferElement::GetSizeOfType(element.type);
     }
 }
@@ -31,6 +31,8 @@ void VertexArray::SetIndexBuffer(std::unique_ptr<IndexBuffer> ib) {
     if (ib) {
         ib->Bind();
     }
+    // IndexBuffer binding is saved as part of the VAO state in OpenGL.
+    // When this VAO is bound later, the IndexBuffer will be automatically bound.
     m_IndexBuffer = std::move(ib);
 }
 
