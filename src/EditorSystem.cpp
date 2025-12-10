@@ -1,7 +1,9 @@
 #include "EditorSystem.h"
 #include "EntitySerializer.h"   // <- neu
 #include "AssetManager.h"
+#include "CameraUtils.h"
 #include <cstring> // for strncpy
+#include <cmath> // for atan2, asin
 
 // temporary path buffers for the UI
 static char savePathBuf[256] = "res/entities/entities.json";
@@ -161,6 +163,10 @@ void EditorSystem::drawEntityEditingTab(EntityManager& em) {
             ImGui::SameLine();
             if (ImGui::Button("Paste Components")) {
                 pasteComponentsFromClipboard(selected);
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Focus Camera")) {
+                focusOnEntity(selected, em);
             }
         }
     }
@@ -501,9 +507,48 @@ void EditorSystem::drawCameraEditor(Entity* e) {
 void EditorSystem::drawModelEditor(Entity* e) {
     if (!ImGui::CollapsingHeader("Model")) return;
 
-    // If entity already has a ModelComponent, show its name and allow removal
+    // If entity already has a ModelComponent, show its information
     if (e->hasComponent<ModelComponent>()) {
-        ImGui::Text("Entity has ModelComponent assigned");
+        auto* mc = e->getComponent<ModelComponent>();
+        ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "Entity has ModelComponent assigned");
+        
+        // Show model statistics
+        ImGui::Indent();
+        ImGui::Text("Number of Meshes: %zu", mc->meshes.size());
+        
+        size_t totalVertices = 0;
+        size_t totalIndices = 0;
+        for (const auto& mesh : mc->meshes) {
+            totalVertices += mesh.vertices.size();
+            totalIndices += mesh.indices.size();
+        }
+        
+        ImGui::Text("Total Vertices: %zu", totalVertices);
+        ImGui::Text("Total Triangles: %zu", totalIndices / 3);
+        
+        // Show individual mesh info
+        if (ImGui::TreeNode("Mesh Details")) {
+            for (size_t i = 0; i < mc->meshes.size(); ++i) {
+                auto& mesh = mc->meshes[i];  // Non-const reference
+                ImGui::PushID((int)i);
+                if (ImGui::TreeNode("Mesh", "Mesh %zu", i)) {
+                    ImGui::Text("Vertices: %zu", mesh.vertices.size());
+                    ImGui::Text("Triangles: %zu", mesh.indices.size() / 3);
+                    if (!mesh.materialName.empty()) {
+                        ImGui::Text("Material: %s", mesh.materialName.c_str());
+                    }
+                    if (!mesh.textureName.empty()) {
+                        ImGui::Text("Texture: %s", mesh.textureName.c_str());
+                    }
+                    ImGui::ColorEdit3("Color", &mesh.color.x);
+                    ImGui::TreePop();
+                }
+                ImGui::PopID();
+            }
+            ImGui::TreePop();
+        }
+        ImGui::Unindent();
+        
         if (ImGui::Button("Remove ModelComponent")) {
             e->removeComponent<ModelComponent>();
         }
@@ -533,4 +578,8 @@ void EditorSystem::drawModelEditor(Entity* e) {
             }
         }
     }
+}
+
+void EditorSystem::focusOnEntity(Entity* entity, EntityManager& em) {
+    CameraUtils::focusOnEntity(entity, em);
 }

@@ -48,4 +48,5 @@ private:
     void drawBatchOperations(EntityManager& em);
     void copyComponentsToClipboard(Entity* e);
     void pasteComponentsFromClipboard(Entity* e);
+    void focusOnEntity(Entity* entity, EntityManager& em);
 };

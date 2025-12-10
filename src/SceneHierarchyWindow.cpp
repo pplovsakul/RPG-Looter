@@ -1,7 +1,9 @@
 #include "SceneHierarchyWindow.h"
 #include "Components.h"
+#include "CameraUtils.h"
 #include <algorithm>
 #include <map>
+#include <cmath>
 
 void SceneHierarchyWindow::update(EntityManager& em, float deltaTime) {
     auto& settings = GlobalSettings::getInstance();
@@ -53,6 +55,13 @@ void SceneHierarchyWindow::update(EntityManager& em, float deltaTime) {
         if (ImGui::Button("Delete Selected")) {
             em.destroyEntity((unsigned int)selectedEntityId);
             selectedEntityId = -1;
+        }
+        ImGui::SameLine();
+        Entity* selected = em.getEntityByID((unsigned int)selectedEntityId);
+        if (selected) {
+            if (ImGui::Button("Focus on Entity")) {
+                focusOnEntity(selected, em);
+            }
         }
     }
     
@@ -149,6 +158,10 @@ void SceneHierarchyWindow::drawEntityContextMenu(Entity* entity, EntityManager& 
         selectedEntityId = entity->id;
     }
     
+    if (ImGui::MenuItem("Focus on Entity")) {
+        focusOnEntity(entity, em);
+    }
+    
     if (ImGui::MenuItem("Duplicate")) {
         Entity* newEntity = em.createEntity();
         newEntity->tag = entity->tag + "_copy";
@@ -218,4 +231,8 @@ bool SceneHierarchyWindow::matchesSearch(const std::string& text) {
     std::transform(textLower.begin(), textLower.end(), textLower.begin(), ::tolower);
     
     return textLower.find(search) != std::string::npos;
+}
+
+void SceneHierarchyWindow::focusOnEntity(Entity* entity, EntityManager& em) {
+    CameraUtils::focusOnEntity(entity, em);
 }
