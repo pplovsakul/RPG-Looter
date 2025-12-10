@@ -139,10 +139,12 @@ bool EntitySerializer::loadEntities(EntityManager& em, const std::string& path) 
                 auto itRot = to.find("rotation");
                 if (itRot != to.end()) {
                     if (itRot->second.isNumber()) {
-                        // Old format: single number
+                        // Old format: single number (assumes Y-axis rotation for 2D compatibility)
+                        // In the old 2D system, rotation was a single float representing rotation around Z
+                        // For 3D, we map this to Y-axis rotation (yaw) as a reasonable default
                         tc->rotation.y = (float)itRot->second.asNumber();
                     } else if (itRot->second.isArray()) {
-                        // New format: array
+                        // New format: array [pitch, yaw, roll] = [X, Y, Z]
                         const auto& a = itRot->second.asArray();
                         if (a.size() >= 1) tc->rotation.x = a[0].asNumber();
                         if (a.size() >= 2) tc->rotation.y = a[1].asNumber();
