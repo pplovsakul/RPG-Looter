@@ -14,6 +14,7 @@ This framework includes only the core graphics infrastructure:
 - **Vertex Array Objects** - VAO management
 - **Input System** - Basic keyboard and mouse input handling
 - **Rendering Pipeline** - Clean, minimal rendering abstraction
+- **🆕 Ray Tracer** - CPU-based ray tracer as alternative rendering mode
 
 ## What Was Removed
 
@@ -60,7 +61,43 @@ make
 ./RPG-Looter
 ```
 
-The application will create a window and display a simple colored triangle. Press ESC to exit.
+The application will create a window and display a simple colored cube. 
+
+### Controls
+
+- **WASD** - Move camera
+- **Mouse** - Look around
+- **Space** - Move up
+- **Left Shift** - Move down
+- **R** - Toggle between Rasterizer (GPU) and Ray Tracer (CPU) rendering modes
+- **ESC** - Exit
+
+## Ray Tracer Integration
+
+This framework now includes a simple CPU-based ray tracer that can be toggled alongside the standard OpenGL rasterizer:
+
+### Features
+
+- **Dual Rendering Modes**: Switch between GPU rasterizer and CPU ray tracer with the R key
+- **Camera Synchronization**: Camera controls work identically in both modes
+- **Sphere and Box Rendering**: Ray tracer supports both spheres and axis-aligned bounding boxes (AABBs)
+- **Lambert Shading**: Simple diffuse lighting model with directional light
+- **Background Gradient**: Blue-white sky gradient based on ray direction
+- **Optimized Resolution**: Ray tracer runs at 400x300 to minimize CPU load and prevent freezing
+
+### Technical Details
+
+The ray tracer implementation consists of:
+
+1. **Ray.h** - Ray representation with origin and direction
+2. **Hit.h** - Hit record structure for ray-object intersections
+3. **Sphere.h** - Sphere primitive with ray intersection
+4. **Box.h** - AABB (Axis-Aligned Bounding Box) primitive with slab-method ray intersection
+5. **Camera.h** - Camera model for generating rays
+6. **RayTracer.h** - Main ray tracing logic with Lambert shading
+7. **RayTraceRenderer.h** - Uploads CPU-rendered image to OpenGL texture and displays on fullscreen quad
+
+The ray tracer renders the scene on the CPU pixel-by-pixel, then uploads the result as a texture to be displayed via OpenGL. This is much slower than GPU rasterization but demonstrates physically-based rendering concepts.
 
 ## Project Structure
 
@@ -75,12 +112,20 @@ The application will create a window and display a simple colored triangle. Pres
 │   ├── Shader.h/cpp          # Shader compilation and management
 │   ├── InputSystem.h         # Basic input handling
 │   ├── Debug.h               # OpenGL error checking macros
+│   ├── Ray.h                 # Ray structure for ray tracing
+│   ├── Hit.h                 # Hit record for ray intersections
+│   ├── Sphere.h              # Sphere primitive for ray tracing
+│   ├── Box.h                 # AABB primitive for ray tracing
+│   ├── Camera.h              # Camera for ray generation
+│   ├── RayTracer.h           # CPU-based ray tracer
+│   ├── RayTraceRenderer.h    # Ray tracer OpenGL integration
 │   └── vendor/
 │       ├── glad/             # OpenGL loader
 │       └── glm/              # Math library
 ├── res/
 │   └── shaders/
-│       └── basic.shader      # Basic vertex/fragment shader
+│       ├── basic.shader      # Basic vertex/fragment shader (rasterizer)
+│       └── neuer_shader.shader  # Texture display shader (ray tracer)
 └── CMakeLists.txt            # Build configuration
 ```
 

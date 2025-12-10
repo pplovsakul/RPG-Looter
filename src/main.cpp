@@ -11,11 +11,18 @@
 #include "InputSystem.h"
 #include "RayTraceRenderer.h"
 
-// GLM f�r Matrizen
+// GLM f�r Matrizen
 #include "vendor/glm/glm.hpp"
 #include "vendor/glm/gtc/matrix_transform.hpp"
 
 int width = 1280, height = 720;
+
+// ===== RAY TRACER KONFIGURATION =====
+// Ray Tracer Resolution: Reduziert auf 400x300, um CPU-Last zu minimieren
+// und Einfrieren während des Renderns zu vermeiden. Bei höheren Auflösungen
+// kann das Ray Tracing mehrere Sekunden pro Frame dauern.
+const int RT_WIDTH = 400;
+const int RT_HEIGHT = 300;
 
 // ===== KAMERA VARIABLEN =====
 // Kamera Position und Orientierung
@@ -35,6 +42,11 @@ float mouseSensitivity = 0.1f;
 float cameraSpeed = 2.5f;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
+
+// ===== RAY TRACER HOTKEY STATE =====
+// Tracking für R-Taste, um sauberes Toggle zwischen Rasterizer/Ray Tracer zu ermöglichen
+// Ohne Debouncing würde die Taste bei jedem Frame mehrfach erkannt werden
+bool rKeyWasPressed = false;
 
 // Maus-Callback Funktion
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
@@ -58,7 +70,7 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
     yaw   += xoffset;
     pitch += yoffset;
 
-    // Pitch begrenzen, damit Kamera nicht �berkippt
+    // Pitch begrenzen, damit Kamera nicht �berkippt
     if (pitch > 89.0f)
         pitch = 89.0f;
     if (pitch < -89.0f)
@@ -78,9 +90,9 @@ void processInput(GLFWwindow* window) {
 
     // WASD Bewegung
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        cameraPos += velocity * cameraFront;  // Vorw�rts
+        cameraPos += velocity * cameraFront;  // Vorw�rts
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        cameraPos -= velocity * cameraFront;  // R�ckw�rts
+        cameraPos -= velocity * cameraFront;  // R�ckw�rts
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
         cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * velocity;  // Links
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
@@ -131,6 +143,7 @@ int main(void) {
     std::cout << "Maus    - Umsehen" << std::endl;
     std::cout << "Space   - Hoch" << std::endl;
     std::cout << "Shift   - Runter" << std::endl;
+    std::cout << "R       - Toggle Ray Tracer / Rasterizer" << std::endl;
     std::cout << "ESC     - Beenden" << std::endl;
 
     // Maus einfangen und Callback setzen
@@ -184,13 +197,26 @@ int main(void) {
     layout.AddFloat(3); // Position attribute (3 floats: x, y, z)
     va.AddBuffer(vb, layout);
 
-    // Load shader
-
+    // ===== SHADER UND RENDERER SETUP =====
+    // useRayTracer: Flag zum Umschalten zwischen Rasterizer (OpenGL) und Ray Tracer (CPU)
 	bool useRayTracer = false;
+    
+    // basic.shader: Standard OpenGL Vertex/Fragment Shader für Rasterizer
 	Shader shader("res/shaders/basic.shader");
-
+    
+    // neuer_shader.shader: Shader zum Anzeigen der Ray-Traced Textur auf einem Fullscreen Quad
     Shader rtshader("res/shaders/neuer_shader.shader");
-    RayTraceRenderer rt(width, height);
+    
+    // RayTraceRenderer: CPU-basierter Ray Tracer mit reduzierter Auflösung (400x300)
+    // Dies verhindert Einfrieren, da Ray Tracing sehr rechenintensiv ist
+    RayTraceRenderer rt(RT_WIDTH, RT_HEIGHT);
+    
+    // ===== SZENE KONFIGURATION =====
+    // Füge Würfel aus der Rasterizer-Szene zum Ray Tracer hinzu
+    // Der Würfel hat folgende Koordinaten in den Vertices:
+    // X: -0.5 bis 0.5, Y: -0.5 bis 0.5, Z: 0.0 bis 1.0
+    // Center: (0, 0, 0.5), Size: (1.0, 1.0, 1.0)
+    rt.tracer.boxes.emplace_back(Box::fromCenterSize(glm::vec3(0.0f, 0.0f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f)));
 
     Renderer renderer;
 
@@ -215,12 +241,27 @@ int main(void) {
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
-			useRayTracer = !useRayTracer;
+        // ===== HOTKEY TOGGLE MIT DEBOUNCING =====
+        // R-Taste zum Umschalten zwischen Rasterizer und Ray Tracer
+        // Debouncing: Nur bei Tastendruck-Flanke (nicht gedrückt -> gedrückt) togglen,
+        // um mehrfaches Umschalten pro Frame zu verhindern
+        bool rKeyIsPressed = (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS);
+        if (rKeyIsPressed && !rKeyWasPressed) {
+            useRayTracer = !useRayTracer;
+            std::cout << "Switched to " << (useRayTracer ? "Ray Tracer" : "Rasterizer") << " mode" << std::endl;
         }
+        rKeyWasPressed = rKeyIsPressed;
 
         // Eingabe verarbeiten
         processInput(window);
+
+        // ===== KAMERA SYNCHRONISATION =====
+        // Die Kamera-Controls (WASD, Maus) aktualisieren globale Variablen (cameraPos, cameraFront, etc.)
+        // Diese werden hier zum Ray Tracer synchronisiert, sodass beide Renderer dieselbe Ansicht haben
+        rt.tracer.camera.position = cameraPos;
+        rt.tracer.camera.target = cameraPos + cameraFront;
+        rt.tracer.camera.up = cameraUp;
+        rt.tracer.camera.vfov = 45.0f; // FOV muss mit dem Rasterizer übereinstimmen
 
         // Clear screen
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -231,12 +272,20 @@ int main(void) {
         // MVP Matrix berechnen
         glm::mat4 mvp = projection * view * model;
 
-        // Draw quad
-        shader.Bind();
+        // ===== RENDERING BASIEREND AUF MODUS =====
         if (useRayTracer) {
-			rt.draw(rtshader.GetRendererID());
+            // RAY TRACER MODUS:
+            // 1. CPU berechnet das Bild Pixel für Pixel (siehe RayTracer::render())
+            // 2. Bild wird als OpenGL-Textur hochgeladen
+            // 3. Textur wird auf einem Fullscreen-Quad angezeigt
+            // HINWEIS: Ray Tracing ist CPU-intensiv, daher niedrigere Auflösung (400x300)
+            rt.draw(rtshader.GetRendererID());
         }
         else {
+            // RASTERIZER MODUS:
+            // Standard OpenGL GPU-Rendering mit Vertex/Fragment Shadern
+            // Viel schneller als Ray Tracing, aber weniger physikalisch korrekt
+            shader.Bind();
             shader.SetUniformMat4f("u_MVP", mvp);
             shader.SetUniform4f("u_Color", 1.0f, 0.5f, 0.2f, 1.0f);
             renderer.Draw(va, ib, shader);
