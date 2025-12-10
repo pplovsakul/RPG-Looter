@@ -127,36 +127,43 @@ void Game::setupSystems(GLFWwindow* window) {
 }
 
 void Game::setupEntities() {
+    // Create camera entity
+    auto* camera = entityManager.createEntity();
+    camera->tag = "MainCamera";
+    camera->addComponent<TransformComponent>();
+    camera->getComponent<TransformComponent>()->position = glm::vec3(0.0f, 2.0f, 5.0f);  // Camera position
+    camera->getComponent<TransformComponent>()->rotation = glm::vec3(0.0f, 0.0f, 0.0f);
+    camera->addComponent<CameraComponent>();
+    camera->getComponent<CameraComponent>()->fov = 60.0f;
+    camera->getComponent<CameraComponent>()->isActive = true;
+    
+    // Create player entity (cube)
     test_entity = entityManager.createEntity();
     test_entity->tag = "Player";
     test_entity->addComponent<TransformComponent>();
-    test_entity->getComponent<TransformComponent>()->position = glm::vec2(960.0f, 540.0f);
-    test_entity->getComponent<TransformComponent>()->scale = glm::vec2(100.0f, 100.0f);
+    test_entity->getComponent<TransformComponent>()->position = glm::vec3(0.0f, 0.0f, 0.0f);
+    test_entity->getComponent<TransformComponent>()->scale = glm::vec3(1.0f, 1.0f, 1.0f);
     test_entity->addComponent<RenderComponent>();
-    test_entity->getComponent<RenderComponent>()->setMesh("quad");
+    test_entity->getComponent<RenderComponent>()->setMesh("cube");
     test_entity->getComponent<RenderComponent>()->shaderName = "default";
-    test_entity->getComponent<RenderComponent>()->color = glm::vec3(1.0f, 1.0f, 1.0f);
+    test_entity->getComponent<RenderComponent>()->color = glm::vec3(1.0f, 0.2f, 0.2f);  // Red
     test_entity->getComponent<RenderComponent>()->alpha = 1.0f;
     test_entity->getComponent<RenderComponent>()->renderLayer = 1;
 
+    // Create second entity (cube)
     test_entity2 = entityManager.createEntity();
     test_entity2->tag = "Player2";
     test_entity2->addComponent<TransformComponent>();
-    test_entity2->getComponent<TransformComponent>()->position = glm::vec2(1260.0f, 540.0f);
-    test_entity2->getComponent<TransformComponent>()->scale = glm::vec2(100.0f, 100.0f);
+    test_entity2->getComponent<TransformComponent>()->position = glm::vec3(2.0f, 0.0f, 0.0f);
+    test_entity2->getComponent<TransformComponent>()->scale = glm::vec3(1.0f, 1.0f, 1.0f);
     test_entity2->addComponent<RenderComponent>();
-    test_entity2->getComponent<RenderComponent>()->setMesh("circle");
+    test_entity2->getComponent<RenderComponent>()->setMesh("cube");
     test_entity2->getComponent<RenderComponent>()->shaderName = "default";
-    test_entity2->getComponent<RenderComponent>()->color = glm::vec3(1.0f, 1.0f, 1.0f);
+    test_entity2->getComponent<RenderComponent>()->color = glm::vec3(0.2f, 0.2f, 1.0f);  // Blue
     test_entity2->getComponent<RenderComponent>()->alpha = 1.0f;
     test_entity2->getComponent<RenderComponent>()->renderLayer = 0;
 
-    AssetManager::getInstance()->loadTexture("playerTexture", "res/textures/rotes_paddle.png");
-    AssetManager::getInstance()->loadTexture("player2Texture", "res/textures/blaues_paddle.png");
-    test_entity->getComponent<RenderComponent>()->textureName = "playerTexture";
-    test_entity2->getComponent<RenderComponent>()->textureName = "player2Texture";
-
-    std::cout << "ECS Entities initialisiert" << std::endl;
+    std::cout << "3D ECS Entities initialized (camera + 2 cubes)" << std::endl;
 }
 
 void Game::setupConfigs() {
