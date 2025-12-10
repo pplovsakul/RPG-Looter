@@ -202,10 +202,11 @@ VertexArray* AssetManager::createMesh(const std::string& name,
     meshData.ibo = std::make_unique<IndexBuffer>(indices, indexCount);
 
     VertexBufferLayout layout;
-    layout.AddFloat(3); // Position
-    layout.AddFloat(2); // TexCoords
+    layout.AddFloat(3); // Position (x, y, z)
+    layout.AddFloat(3); // Normal (nx, ny, nz)
+    layout.AddFloat(2); // TexCoords (u, v)
     meshData.vao->AddBuffer(*meshData.vbo, layout);
-    meshData.vao->SetIndexBuffer(std::move(meshData.ibo));  // WICHTIG: IndexBuffer setzen!
+    meshData.vao->SetIndexBuffer(std::move(meshData.ibo));
 
     VertexArray* ptr = meshData.vao.get();
     meshes[name] = std::move(meshData);

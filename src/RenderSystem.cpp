@@ -100,265 +100,228 @@ void RenderSystem::createDefaultAssets() {
 }
 
 void RenderSystem::update(EntityManager& em, float dt) {
-    // ✅ FIX 1: Get entities with RenderComponent
-    auto entities = em.getEntitiesWith<RenderComponent>();
-
-    if (entities.empty()) {
-        static int warnCounter = 0;
-        if (++warnCounter % 120 == 0) {
-            std::cout << "\n[RenderSystem] No entities with RenderComponent\n";
-        }
-        // don't return early; we still want to render ModelComponent entities
-        //return;
-    }
-
-    // ✅ OPTIMIZATION: Only sort when needed instead of every frame
-    if (needsResort || sortedEntities.size() != entities.size()) {
-        sortedEntities = entities;
-        std::sort(sortedEntities.begin(), sortedEntities.end(), [](Entity* a, Entity* b) {
-            // Safety: Check if entities exist
-            if (!a || !b) return false;
-            if (!a->active || !b->active) return false;
-
-            auto ra = a->getComponent<RenderComponent>();
-            auto rb = b->getComponent<RenderComponent>();
-
-            // Safety: Check if components exist
-            if (!ra || !rb) return false;
-
-            return ra->renderLayer < rb->renderLayer;
-        });
-        needsResort = false;
-    }
-
-    // Debug output (less frequent)
-    static int frameCounter = 0;
-    if (frameCounter++ % 120 == 0) {
-        std::cout << "\r[RenderSystem] Entities: " << sortedEntities.size();
-        for (size_t i = 0; i < sortedEntities.size() && i < 3; i++) {
-            // ✅ Safety check before access
-            if (!sortedEntities[i] || !sortedEntities[i]->active) continue;
-
-            auto t = sortedEntities[i]->getComponent<TransformComponent>();
-            auto r = sortedEntities[i]->getComponent<RenderComponent>();
-            if (t && r) {
-                std::cout << " | " << r->meshName << "(" << (int)t->position.x << "," << (int)t->position.y << ")";
+    // Clear buffers
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    // Find active camera
+    Entity* activeCamera = nullptr;
+    glm::vec3 cameraPos(0.0f);
+    auto cameraEntities = em.getEntitiesWith<CameraComponent>();
+    for (Entity* e : cameraEntities) {
+        auto cam = e->getComponent<CameraComponent>();
+        if (cam && cam->isActive) {
+            activeCamera = e;
+            auto transform = e->getComponent<TransformComponent>();
+            if (transform) {
+                cameraPos = transform->position;
+                // Update camera vectors based on rotation
+                cam->updateVectors(transform->rotation);
+                // Set view matrix
+                viewMatrix = cam->getViewMatrix(transform);
             }
+            break;
         }
-        std::cout << std::flush;
     }
-
-    // --------------------------
-    // Render entities with RenderComponent, but skip if they have a ModelComponent
-    // --------------------------
-    for (Entity* e : sortedEntities) {
-        // ✅ KRITISCH: Entity könnte während Iteration gelöscht worden sein!
-        if (!e || !e->active) {
-            continue;
-        }
-
-        // If entity has a ModelComponent, we prefer rendering via Model path
-        if (e->hasComponent<ModelComponent>()) continue;
-
+    
+    // If no camera found, use default view
+    if (!activeCamera) {
+        viewMatrix = glm::lookAt(
+            glm::vec3(0.0f, 0.0f, 5.0f),  // Camera position
+            glm::vec3(0.0f, 0.0f, 0.0f),  // Look at origin
+            glm::vec3(0.0f, 1.0f, 0.0f)   // Up vector
+        );
+        cameraPos = glm::vec3(0.0f, 0.0f, 5.0f);
+    }
+    
+    // Render all entities with ModelComponent
+    auto modelEntities = em.getEntitiesWith<ModelComponent>();
+    
+    for (Entity* e : modelEntities) {
+        if (!e || !e->active) continue;
+        
+        auto model = e->getComponent<ModelComponent>();
         auto transform = e->getComponent<TransformComponent>();
+        
+        if (!model || !transform) continue;
+        
+        // Build model matrix
+        glm::mat4 modelMatrix = glm::mat4(1.0f);
+        modelMatrix = glm::translate(modelMatrix, transform->position);
+        
+        // Apply rotation (Euler angles: pitch, yaw, roll)
+        modelMatrix = glm::rotate(modelMatrix, transform->rotation.y, glm::vec3(0.0f, 1.0f, 0.0f)); // Yaw
+        modelMatrix = glm::rotate(modelMatrix, transform->rotation.x, glm::vec3(1.0f, 0.0f, 0.0f)); // Pitch
+        modelMatrix = glm::rotate(modelMatrix, transform->rotation.z, glm::vec3(0.0f, 0.0f, 1.0f)); // Roll
+        
+        modelMatrix = glm::scale(modelMatrix, transform->scale);
+        
+        // Render each mesh in the model
+        for (const auto& mesh : model->meshes) {
+            renderMesh(mesh, modelMatrix, cameraPos);
+        }
+    }
+    
+    // Also render simple RenderComponent entities (for backward compatibility with cube mesh)
+    auto renderEntities = em.getEntitiesWith<RenderComponent>();
+    for (Entity* e : renderEntities) {
+        if (!e || !e->active) continue;
+        if (e->hasComponent<ModelComponent>()) continue; // Skip if has ModelComponent
+        
         auto render = e->getComponent<RenderComponent>();
-
-        // ✅ KRITISCH: Components könnten nullptr sein!
-        if (!render || !transform || !render->enabled) {
-            continue;
-        }
-
-        // Assets abrufen
-        Shader* shader = assetManager->getShader(render->shaderName);
+        auto transform = e->getComponent<TransformComponent>();
+        
+        if (!render || !transform || !render->enabled) continue;
+        
+        // Get mesh
         VertexArray* mesh = assetManager->getMesh(render->meshName);
-        Texture* texture = render->textureName.empty() ? nullptr :
-            assetManager->getTexture(render->textureName);
-
-        // Shader handling
-        if (!shader) {
-            // Use fallback shader
-            if (fallbackShaderID != 0) {
-                glUseProgram(fallbackShaderID);
-            }
-            else {
-                continue;
-            }
-        }
-        else {
-            shader->Bind();
-        }
-
-        // Mesh check
-        if (!mesh) {
-            continue;
-        }
-
-        // Model-View-Projection Matrix
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(transform->position, 0.0f));
-        model = glm::rotate(model, transform->rotation, glm::vec3(0.0f, 0.0f, 1.0f));
-        model = glm::scale(model, glm::vec3(transform->scale, 1.0f));
-
-        glm::mat4 mvp = projectionMatrix * viewMatrix * model;
-
-        // Set uniforms
-        if (shader) {
-            shader->SetUniformMat4f("u_MVP", mvp);
-            glm::vec4 colorWithAlpha(render->color, render->alpha);
-            shader->SetUniform4f("u_color", colorWithAlpha.x, colorWithAlpha.y, colorWithAlpha.z, colorWithAlpha.w);
-        }
-        else {
-            // ✅ OPTIMIZATION: Cache program ID to avoid repeated OpenGL queries
-            if (cachedProgramID == 0) {
-                GLint currentProgram;
-                glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
-                cachedProgramID = currentProgram;
-            }
-            int mvpLocation = glGetUniformLocation(cachedProgramID, "u_MVP");
-            int colorLocation = glGetUniformLocation(cachedProgramID, "u_color");
-            if (mvpLocation != -1) {
-                glUniformMatrix4fv(mvpLocation, 1, GL_FALSE, &mvp[0][0]);
-            }
-            if (colorLocation != -1) {
-                glm::vec4 colorWithAlpha(render->color, render->alpha);
-                glUniform4f(colorLocation, colorWithAlpha.x, colorWithAlpha.y, colorWithAlpha.z, colorWithAlpha.w);
-            }
-        }
-
-        // Texture handling
-        if (texture) {
-            glActiveTexture(GL_TEXTURE0);
-            texture->Bind(0);
-            if (shader) {
-                shader->SetUniform1i("u_Texture", 0);
-                shader->SetUniform1i("u_UseTexture", 1);
-            }
-            else {
-                // ✅ OPTIMIZATION: Reuse cached program ID
-                int texLoc = glGetUniformLocation(cachedProgramID, "u_Texture");
-                int useTexLoc = glGetUniformLocation(cachedProgramID, "u_UseTexture");
-                if (texLoc != -1) glUniform1i(texLoc, 0);
-                if (useTexLoc != -1) glUniform1i(useTexLoc, 1);
-            }
-        }
-        else {
-            if (shader) {
-                shader->SetUniform1i("u_UseTexture", 0);
-            }
-            else {
-                // ✅ OPTIMIZATION: Reuse cached program ID
-                int useTexLoc = glGetUniformLocation(cachedProgramID, "u_UseTexture");
-                if (useTexLoc != -1) glUniform1i(useTexLoc, 0);
-            }
-        }
-
-        // ✅ KRITISCH: Letzte Sicherheits-Checks vor Draw
-        if (!mesh) continue;  // Nochmal prüfen
-
-        try {
+        if (!mesh) continue;
+        
+        // Build model matrix
+        glm::mat4 modelMatrix = glm::mat4(1.0f);
+        modelMatrix = glm::translate(modelMatrix, transform->position);
+        modelMatrix = glm::rotate(modelMatrix, transform->rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
+        modelMatrix = glm::rotate(modelMatrix, transform->rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
+        modelMatrix = glm::rotate(modelMatrix, transform->rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
+        modelMatrix = glm::scale(modelMatrix, transform->scale);
+        
+        // Use fallback shader
+        if (fallbackShaderID != 0) {
+            glUseProgram(fallbackShaderID);
+            
+            // Set uniforms
+            GLint modelLoc = glGetUniformLocation(fallbackShaderID, "u_Model");
+            GLint viewLoc = glGetUniformLocation(fallbackShaderID, "u_View");
+            GLint projLoc = glGetUniformLocation(fallbackShaderID, "u_Projection");
+            GLint lightPosLoc = glGetUniformLocation(fallbackShaderID, "u_LightPos");
+            GLint lightColorLoc = glGetUniformLocation(fallbackShaderID, "u_LightColor");
+            GLint ambientLoc = glGetUniformLocation(fallbackShaderID, "u_AmbientColor");
+            GLint viewPosLoc = glGetUniformLocation(fallbackShaderID, "u_ViewPos");
+            GLint objectColorLoc = glGetUniformLocation(fallbackShaderID, "u_ObjectColor");
+            GLint useTexLoc = glGetUniformLocation(fallbackShaderID, "u_UseTexture");
+            
+            if (modelLoc != -1) glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &modelMatrix[0][0]);
+            if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &viewMatrix[0][0]);
+            if (projLoc != -1) glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projectionMatrix[0][0]);
+            if (lightPosLoc != -1) glUniform3fv(lightPosLoc, 1, &lightPos[0]);
+            if (lightColorLoc != -1) glUniform3fv(lightColorLoc, 1, &lightColor[0]);
+            if (ambientLoc != -1) glUniform3fv(ambientLoc, 1, &ambientColor[0]);
+            if (viewPosLoc != -1) glUniform3fv(viewPosLoc, 1, &cameraPos[0]);
+            if (objectColorLoc != -1) glUniform3fv(objectColorLoc, 1, &render->color[0]);
+            if (useTexLoc != -1) glUniform1i(useTexLoc, 0);
+            
+            // Draw
             mesh->Bind();
             glDrawElements(GL_TRIANGLES, mesh->GetIndexCount(), GL_UNSIGNED_INT, nullptr);
         }
-        catch (...) {
-            // Falls OpenGL error, nicht crashen
-            std::cerr << "[RenderSystem] OpenGL error during draw\n";
+    }
+}
+
+void RenderSystem::renderMesh(const ModelComponent::Mesh& mesh, const glm::mat4& modelMatrix, 
+                              const glm::vec3& cameraPos) {
+    if (mesh.vertices.empty() || mesh.indices.empty()) return;
+    
+    // Create temporary buffers for this mesh
+    // Note: In a production system, you'd cache these in the ModelComponent
+    unsigned int VAO, VBO, EBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+    
+    glBindVertexArray(VAO);
+    
+    // Interleave vertex data: position (3) + normal (3) + uv (2)
+    std::vector<float> vertexData;
+    vertexData.reserve(mesh.vertices.size() * 8);
+    
+    for (size_t i = 0; i < mesh.vertices.size(); i++) {
+        // Position
+        vertexData.push_back(mesh.vertices[i].x);
+        vertexData.push_back(mesh.vertices[i].y);
+        vertexData.push_back(mesh.vertices[i].z);
+        
+        // Normal
+        if (i < mesh.normals.size()) {
+            vertexData.push_back(mesh.normals[i].x);
+            vertexData.push_back(mesh.normals[i].y);
+            vertexData.push_back(mesh.normals[i].z);
+        } else {
+            vertexData.push_back(0.0f);
+            vertexData.push_back(1.0f);
+            vertexData.push_back(0.0f);
+        }
+        
+        // UV
+        if (i < mesh.uvs.size()) {
+            vertexData.push_back(mesh.uvs[i].x);
+            vertexData.push_back(mesh.uvs[i].y);
+        } else {
+            vertexData.push_back(0.0f);
+            vertexData.push_back(0.0f);
         }
     }
-
-    // --------------------------
-    // Render entities with ModelComponent
-    // --------------------------
-    auto allEntities = em.getAllEntities();
-    for (Entity* e : allEntities) {
-        if (!e || !e->active) continue;
-        if (!e->hasComponent<ModelComponent>()) continue;
-
-        auto* t = e->getComponent<TransformComponent>();
-        auto* m = e->getComponent<ModelComponent>();
-        if (!m || !t) continue;
-
-        // Use default shader if available, otherwise fallback program
-        Shader* shader = assetManager->getShader("default");
-        if (shader) shader->Bind(); else if (fallbackShaderID != 0) glUseProgram(fallbackShaderID); else continue;
-
-        // For each shape in model, render using quad or circle mesh
-        for (const auto& s : m->shapes) {
-            VertexArray* mesh = nullptr;
-            if (s.type == ModelComponent::ShapeType::Circle) mesh = assetManager->getMesh("circle");
-            else if (s.type == ModelComponent::ShapeType::Triangle) mesh = assetManager->getMesh("triangle");
-            else mesh = assetManager->getMesh("quad"); // rectangle fallback to quad
-            if (!mesh) continue;
-
-            // Build model matrix: entity transform * shape transform
-            glm::mat4 model = glm::mat4(1.0f);
-            // entity position
-            model = glm::translate(model, glm::vec3(t->position, 0.0f));
-            // shape local offset
-            model = glm::translate(model, glm::vec3(s.position, 0.0f));
-            // combined rotation: transform->rotation is in radians, s.rotation is degrees
-            float totalRot = t->rotation + glm::radians(s.rotation);
-            model = glm::rotate(model, totalRot, glm::vec3(0.0f, 0.0f, 1.0f));
-            // scale: mesh is normalized to 1.0 -> apply shape size and scales
-            glm::vec2 totalScale = s.size * s.scale; // size in pixels
-            const float EPS = 1e-3f;
-            if (std::abs(t->scale.x - 1.0f) < 10.0f && std::abs(t->scale.y - 1.0f) < 10.0f) {
-                totalScale *= t->scale;
-            }
-            model = glm::scale(model, glm::vec3(totalScale, 1.0f));
-
-            glm::mat4 mvp = projectionMatrix * viewMatrix * model;
-
-            // Set uniforms for shader or fallback
-            if (shader) {
-                shader->SetUniformMat4f("u_MVP", mvp);
-                glm::vec4 colorWithAlpha(s.color, 1.0f);
-                shader->SetUniform4f("u_color", colorWithAlpha.x, colorWithAlpha.y, colorWithAlpha.z, colorWithAlpha.w);
-            } else {
-                int mvpLocation = glGetUniformLocation(cachedProgramID, "u_MVP");
-                int colorLocation = glGetUniformLocation(cachedProgramID, "u_color");
-                if (mvpLocation != -1) glUniformMatrix4fv(mvpLocation, 1, GL_FALSE, &mvp[0][0]);
-                if (colorLocation != -1) glUniform4f(colorLocation, s.color.r, s.color.g, s.color.b, 1.0f);
-            }
-
-            // Texture handling if shape has texture
-            if (!s.textureName.empty()) {
-                Texture* tex = assetManager->getTexture(s.textureName);
-                if (tex) {
-                    glActiveTexture(GL_TEXTURE0);
-                    tex->Bind(0);
-                    if (shader) {
-                        shader->SetUniform1i("u_Texture", 0);
-                        shader->SetUniform1i("u_UseTexture", 1);
-                    } else {
-                        int texLoc = glGetUniformLocation(cachedProgramID, "u_Texture");
-                        int useTexLoc = glGetUniformLocation(cachedProgramID, "u_UseTexture");
-                        if (texLoc != -1) glUniform1i(texLoc, 0);
-                        if (useTexLoc != -1) glUniform1i(useTexLoc, 1);
-                    }
-                } else {
-                    if (shader) shader->SetUniform1i("u_UseTexture", 0);
-                    else {
-                        int useTexLoc = glGetUniformLocation(cachedProgramID, "u_UseTexture");
-                        if (useTexLoc != -1) glUniform1i(useTexLoc, 0);
-                    }
-                }
-            } else {
-                if (shader) shader->SetUniform1i("u_UseTexture", 0);
-                else {
-                    int useTexLoc = glGetUniformLocation(cachedProgramID, "u_UseTexture");
-                    if (useTexLoc != -1) glUniform1i(useTexLoc, 0);
-                }
-            }
-
-            // Draw
-            try {
-                mesh->Bind();
-                glDrawElements(GL_TRIANGLES, mesh->GetIndexCount(), GL_UNSIGNED_INT, nullptr);
-            } catch (...) {
-                std::cerr << "[RenderSystem] OpenGL error during model draw\n";
+    
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), vertexData.data(), GL_STATIC_DRAW);
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), 
+                 mesh.indices.data(), GL_STATIC_DRAW);
+    
+    // Position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    
+    // Normal attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    
+    // UV attribute
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    
+    // Use shader
+    if (fallbackShaderID != 0) {
+        glUseProgram(fallbackShaderID);
+        
+        // Set uniforms
+        GLint modelLoc = glGetUniformLocation(fallbackShaderID, "u_Model");
+        GLint viewLoc = glGetUniformLocation(fallbackShaderID, "u_View");
+        GLint projLoc = glGetUniformLocation(fallbackShaderID, "u_Projection");
+        GLint lightPosLoc = glGetUniformLocation(fallbackShaderID, "u_LightPos");
+        GLint lightColorLoc = glGetUniformLocation(fallbackShaderID, "u_LightColor");
+        GLint ambientLoc = glGetUniformLocation(fallbackShaderID, "u_AmbientColor");
+        GLint viewPosLoc = glGetUniformLocation(fallbackShaderID, "u_ViewPos");
+        GLint objectColorLoc = glGetUniformLocation(fallbackShaderID, "u_ObjectColor");
+        GLint useTexLoc = glGetUniformLocation(fallbackShaderID, "u_UseTexture");
+        
+        if (modelLoc != -1) glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &modelMatrix[0][0]);
+        if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &viewMatrix[0][0]);
+        if (projLoc != -1) glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projectionMatrix[0][0]);
+        if (lightPosLoc != -1) glUniform3fv(lightPosLoc, 1, &lightPos[0]);
+        if (lightColorLoc != -1) glUniform3fv(lightColorLoc, 1, &lightColor[0]);
+        if (ambientLoc != -1) glUniform3fv(ambientLoc, 1, &ambientColor[0]);
+        if (viewPosLoc != -1) glUniform3fv(viewPosLoc, 1, &cameraPos[0]);
+        if (objectColorLoc != -1) glUniform3fv(objectColorLoc, 1, &mesh.color[0]);
+        if (useTexLoc != -1) glUniform1i(useTexLoc, 0);
+        
+        // Texture handling
+        if (!mesh.textureName.empty()) {
+            Texture* tex = assetManager->getTexture(mesh.textureName);
+            if (tex) {
+                glActiveTexture(GL_TEXTURE0);
+                tex->Bind(0);
+                if (useTexLoc != -1) glUniform1i(useTexLoc, 1);
             }
         }
+        
+        // Draw
+        glDrawElements(GL_TRIANGLES, (GLsizei)mesh.indices.size(), GL_UNSIGNED_INT, 0);
     }
+    
+    // Cleanup
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &EBO);
 }
 void RenderSystem::setViewMatrix(const glm::mat4& view) {
     viewMatrix = view;
