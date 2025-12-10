@@ -109,9 +109,42 @@ add_executable(RPG-Looter
     "src/Font.h"
     "src/Font.cpp"
     
-    # OBJ Loader files
+    # UI System files
+    "src/UI/UIEvent.h"
+    "src/UI/UIWidget.h"
+    "src/UI/UIWidget.cpp"
+    "src/UI/UISystem.h"
+    "src/UI/UISystem.cpp"
+    "src/UI/UIRenderer.h"
+    "src/UI/UIRenderer.cpp"
+    "src/UI/UIPanel.h"
+    "src/UI/UIPanel.cpp"
+    "src/UI/UILabel.h"
+    "src/UI/UILabel.cpp"
+    "src/UI/UIButton.h"
+    "src/UI/UIButton.cpp"
+    
+    # 3D Engine Components
+    "src/Mesh3D.h"
+    "src/Mesh3D.cpp"
+    "src/PrimitiveGenerator.h"
+    "src/PrimitiveGenerator.cpp"
     "src/OBJLoader.h"
-    "src/OBJLoader.cpp")
+    "src/OBJLoader.cpp"
+    "src/Camera.h"
+    "src/Camera.cpp"
+    "src/FPSCamera.h"
+    "src/FPSCamera.cpp"
+    "src/OrbitalCamera.h"
+    "src/OrbitalCamera.cpp"
+    "src/CameraController.h"
+    "src/CameraController.cpp"
+    "src/PlayerControllerSystem.h"
+    "src/PlayerControllerSystem.cpp"
+    "src/RenderSystem3D.h"
+    "src/RenderSystem3D.cpp"
+    "src/DebugWindow.h"
+    "src/DebugWindow.cpp")
     
     
 # Includes
