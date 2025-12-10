@@ -12,13 +12,12 @@ public:
     void update(EntityManager& em, float deltaTime) override;
 
 private:
-    char newTextureName[128] = "texture_name";
-    char newTexturePath[512] = "res/textures/";
+    char newModelName[128] = "model_name";
+    char newModelPath[512] = "res/models/";
     char newSoundName[128] = "sound_name";
     char newSoundPath[512] = "res/sounds/";
     
     // Search/filter
-    char textureSearchBuffer[128] = "";
     char soundSearchBuffer[128] = "";
     char modelSearchBuffer[128] = "";
 
@@ -31,10 +30,8 @@ private:
     std::vector<unsigned int> spawnedGPUEntities;
     
     // View options
-    int texturePreviewSize = 48;
     bool showAssetStats = true;
     
-    void drawTextureSection(EntityManager& em);
     void drawSoundSection(EntityManager& em);
     void drawModelSection(EntityManager& em);
     void drawStressTestSection(EntityManager& em);

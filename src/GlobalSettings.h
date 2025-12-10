@@ -15,7 +15,6 @@ public:
         bool showSceneHierarchy = true;
         bool showEntityEditor = true;
         bool showAssetManager = true;
-        bool showModelEditor = true;
         bool showSettingsWindow = true;
         bool showQuickActions = true;
     } windowVisibility;

@@ -5,7 +5,6 @@
 #include "AudioSystem.h"
 #include "EditorSystem.h"
 #include "AssetManagerWindow.h"
-#include "ModelEditorSystem.h"
 #include "CollisionSystem.h"
 #include "PerformanceWindow.h"
 #include "ConsoleWindow.h"
@@ -110,7 +109,6 @@ void Game::setupSystems(GLFWwindow* window) {
 
     systems.push_back(std::make_unique<EditorSystem>());
     systems.push_back(std::make_unique<AssetManagerWindow>());
-    systems.push_back(std::make_unique<ModelEditorSystem>());
 
     // New ImGui windows - QuickActionsWindow should be first to draw menu bar
     systems.push_back(std::make_unique<QuickActionsWindow>());
