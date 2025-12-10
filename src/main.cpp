@@ -17,7 +17,10 @@
 
 int width = 1280, height = 720;
 
-// Ray Tracer resolution (lower to avoid freezing)
+// ===== RAY TRACER KONFIGURATION =====
+// Ray Tracer Resolution: Reduziert auf 400x300, um CPU-Last zu minimieren
+// und Einfrieren während des Renderns zu vermeiden. Bei höheren Auflösungen
+// kann das Ray Tracing mehrere Sekunden pro Frame dauern.
 const int RT_WIDTH = 400;
 const int RT_HEIGHT = 300;
 
@@ -40,7 +43,9 @@ float cameraSpeed = 2.5f;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
-// Hotkey state tracking for toggling
+// ===== RAY TRACER HOTKEY STATE =====
+// Tracking für R-Taste, um sauberes Toggle zwischen Rasterizer/Ray Tracer zu ermöglichen
+// Ohne Debouncing würde die Taste bei jedem Frame mehrfach erkannt werden
 bool rKeyWasPressed = false;
 
 // Maus-Callback Funktion
@@ -192,16 +197,24 @@ int main(void) {
     layout.AddFloat(3); // Position attribute (3 floats: x, y, z)
     va.AddBuffer(vb, layout);
 
-    // Load shader
+    // ===== SHADER UND RENDERER SETUP =====
+    // useRayTracer: Flag zum Umschalten zwischen Rasterizer (OpenGL) und Ray Tracer (CPU)
 	bool useRayTracer = false;
+    
+    // basic.shader: Standard OpenGL Vertex/Fragment Shader für Rasterizer
 	Shader shader("res/shaders/basic.shader");
+    
+    // neuer_shader.shader: Shader zum Anzeigen der Ray-Traced Textur auf einem Fullscreen Quad
     Shader rtshader("res/shaders/neuer_shader.shader");
     
-    // Create RayTraceRenderer with lower resolution to avoid freezing
+    // RayTraceRenderer: CPU-basierter Ray Tracer mit reduzierter Auflösung (400x300)
+    // Dies verhindert Einfrieren, da Ray Tracing sehr rechenintensiv ist
     RayTraceRenderer rt(RT_WIDTH, RT_HEIGHT);
     
-    // Add cubes to the ray tracer scene
-    // The cube from the rasterizer is centered at origin with size 1x1x1
+    // ===== SZENE KONFIGURATION =====
+    // Füge Würfel aus der Rasterizer-Szene zum Ray Tracer hinzu
+    // Der Würfel ist am Ursprung (0,0,0) mit Größe 1x1x1
+    // Box::fromCenterSize erstellt eine AABB (Axis-Aligned Bounding Box) aus Zentrum und Größe
     rt.tracer.boxes.emplace_back(Box::fromCenterSize(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f)));
 
     Renderer renderer;
@@ -227,7 +240,10 @@ int main(void) {
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        // Hotkey toggle for ray tracer (R key with debouncing)
+        // ===== HOTKEY TOGGLE MIT DEBOUNCING =====
+        // R-Taste zum Umschalten zwischen Rasterizer und Ray Tracer
+        // Debouncing: Nur bei Tastendruck-Flanke (nicht gedrückt -> gedrückt) togglen,
+        // um mehrfaches Umschalten pro Frame zu verhindern
         bool rKeyIsPressed = (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS);
         if (rKeyIsPressed && !rKeyWasPressed) {
             useRayTracer = !useRayTracer;
@@ -238,11 +254,13 @@ int main(void) {
         // Eingabe verarbeiten
         processInput(window);
 
-        // Sync camera to ray tracer (camera controls are shared)
+        // ===== KAMERA SYNCHRONISATION =====
+        // Die Kamera-Controls (WASD, Maus) aktualisieren globale Variablen (cameraPos, cameraFront, etc.)
+        // Diese werden hier zum Ray Tracer synchronisiert, sodass beide Renderer dieselbe Ansicht haben
         rt.tracer.camera.position = cameraPos;
         rt.tracer.camera.target = cameraPos + cameraFront;
         rt.tracer.camera.up = cameraUp;
-        rt.tracer.camera.vfov = 45.0f; // Match the rasterizer's FOV
+        rt.tracer.camera.vfov = 45.0f; // FOV muss mit dem Rasterizer übereinstimmen
 
         // Clear screen
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -253,13 +271,19 @@ int main(void) {
         // MVP Matrix berechnen
         glm::mat4 mvp = projection * view * model;
 
-        // Draw based on current mode
+        // ===== RENDERING BASIEREND AUF MODUS =====
         if (useRayTracer) {
-            // Ray tracer mode: render CPU-traced image to fullscreen quad
+            // RAY TRACER MODUS:
+            // 1. CPU berechnet das Bild Pixel für Pixel (siehe RayTracer::render())
+            // 2. Bild wird als OpenGL-Textur hochgeladen
+            // 3. Textur wird auf einem Fullscreen-Quad angezeigt
+            // HINWEIS: Ray Tracing ist CPU-intensiv, daher niedrigere Auflösung (400x300)
             rt.draw(rtshader.GetRendererID());
         }
         else {
-            // Rasterizer mode: standard OpenGL rendering
+            // RASTERIZER MODUS:
+            // Standard OpenGL GPU-Rendering mit Vertex/Fragment Shadern
+            // Viel schneller als Ray Tracing, aber weniger physikalisch korrekt
             shader.Bind();
             shader.SetUniformMat4f("u_MVP", mvp);
             shader.SetUniform4f("u_Color", 1.0f, 0.5f, 0.2f, 1.0f);
