@@ -213,9 +213,10 @@ int main(void) {
     
     // ===== SZENE KONFIGURATION =====
     // Füge Würfel aus der Rasterizer-Szene zum Ray Tracer hinzu
-    // Der Würfel ist am Ursprung (0,0,0) mit Größe 1x1x1
-    // Box::fromCenterSize erstellt eine AABB (Axis-Aligned Bounding Box) aus Zentrum und Größe
-    rt.tracer.boxes.emplace_back(Box::fromCenterSize(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f)));
+    // Der Würfel hat folgende Koordinaten in den Vertices:
+    // X: -0.5 bis 0.5, Y: -0.5 bis 0.5, Z: 0.0 bis 1.0
+    // Center: (0, 0, 0.5), Size: (1.0, 1.0, 1.0)
+    rt.tracer.boxes.emplace_back(Box::fromCenterSize(glm::vec3(0.0f, 0.0f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f)));
 
     Renderer renderer;
 

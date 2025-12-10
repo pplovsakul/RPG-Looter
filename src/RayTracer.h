@@ -26,17 +26,13 @@ public:
     RayTracer(int w, int h) : width(w), height(h) {
         camera.aspect = float(w) / float(h);
         camera.update();
-        // Standard-Szene: Boden-Sphere (großer Radius, um eine Ebene zu simulieren)
-        spheres.emplace_back(glm::vec3(0, -100.5f, 0), 100.0f);
+        // Keine Standard-Szene: Objekte werden vom Hauptprogramm hinzugefügt
     }
 
-    // Hintergrund: Blau-Weiß Gradient basierend auf Y-Richtung des Strahls
+    // Hintergrund: Gleiche Farbe wie der Rasterizer (dunkles Grau)
     RTColor background(const Ray& r) const {
-        // Sky gradient: Interpolation zwischen Weiß (unten) und Blau (oben)
-        glm::vec3 unitDir = glm::normalize(r.direction);
-        float t = 0.5f * (unitDir.y + 1.0f); // Normalisiere Y von [-1,1] auf [0,1]
-        glm::vec3 col = (1.0f - t) * glm::vec3(1.0f) + t * glm::vec3(0.5f, 0.7f, 1.0f);
-        return { col.r, col.g, col.b };
+        // Verwende die gleiche Hintergrundfarbe wie glClearColor(0.1f, 0.1f, 0.1f, 1.0f)
+        return { 0.1f, 0.1f, 0.1f };
     }
 
     // Shading: Berechnet Farbe für einen Strahl mit Lambert-Beleuchtung
@@ -92,8 +88,8 @@ public:
                 float u = float(x) / float(width - 1); // Normalisierte X-Koordinate [0,1]
                 
                 // Erzeuge Strahl von Kamera durch Pixel
-                // Y-Flip (1.0f - v) um GL-Koordinaten anzupassen
-                Ray r = camera.getRay(u, 1.0f - v);
+                // v direkt verwenden (nicht 1.0f - v) um korrekte Orientierung zu erhalten
+                Ray r = camera.getRay(u, v);
                 
                 // Berechne Farbe für diesen Strahl
                 RTColor c = shade(r);
