@@ -153,7 +153,8 @@ public:
         updateScene();
         
         // Binde Output-Textur als Image
-        glBindImageTexture_ptr(0, outputTexture, 0, GL_FALSE, 0, 0x88B9 /* GL_WRITE_ONLY */, GL_RGBA8);
+        const GLenum GL_WRITE_ONLY_CONST = 0x88B9; // GL_WRITE_ONLY
+        glBindImageTexture_ptr(0, outputTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY_CONST, GL_RGBA8);
         
         // Binde Compute Shader
         computeShader->Bind();
@@ -224,7 +225,7 @@ private:
         // Material-Set 1: Metalle
         materials.push_back(Material::Chrome());
         materials.push_back(Material::Gold());
-        materials.push_back(Material(glm::vec3(0.95f, 0.64f, 0.54f), 0.15f, 1.0f)); // Kupfer
+        materials.push_back(Material::Copper());
         
         // Material-Set 2: Gemischt
         materials.push_back(Material::Glass());

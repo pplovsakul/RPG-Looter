@@ -43,6 +43,11 @@ struct Material {
         return Material(glm::vec3(0.2f, 0.2f, 0.2f), 0.9f, 0.0f);
     }
 
+    // Kupfer: Metallisch mit kupferner Farbe
+    static Material Copper() {
+        return Material(glm::vec3(0.95f, 0.64f, 0.54f), 0.15f, 1.0f);
+    }
+
     // Diffuses Material mit benutzerdefinierter Farbe
     static Material Diffuse(const glm::vec3& color) {
         return Material(color, 0.9f, 0.0f);

@@ -198,9 +198,7 @@ private:
 
     GLint GetUniformLocation(const std::string& name) const {
         GLCall(GLint location = glGetUniformLocation(m_RendererID, name.c_str()));
-        if (location == -1) {
-            std::cerr << "Warning: uniform '" << name << "' doesn't exist!" << std::endl;
-        }
+        // Note: Uniform location warnings disabled to avoid spam for optional uniforms
         return location;
     }
 };

@@ -260,7 +260,9 @@ vec3 shade(vec3 rayOrigin, vec3 rayDir, inout uint seed) {
         throughput *= reflectionTint * reflectivity;
         
         // Russisches Roulette für frühe Terminierung
-        if (bounce > 3) {
+        // Start nach 3 Bounces um initiale Reflexionen sicherzustellen
+        const int RR_START_BOUNCE = 3;
+        if (bounce > RR_START_BOUNCE) {
             float p = max(throughput.r, max(throughput.g, throughput.b));
             if (random01(seed) > p) break;
             throughput /= p;
