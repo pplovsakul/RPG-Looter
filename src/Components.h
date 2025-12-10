@@ -7,9 +7,9 @@
 
 class TransformComponent : public Component {
 public:
-    glm::vec3 position = glm::vec3(0.0f);      // 3D position
-    glm::vec3 rotation = glm::vec3(0.0f);      // Euler angles (pitch, yaw, roll) in radians
-    glm::vec3 scale = glm::vec3(1.0f);         // 3D scale
+    glm::vec3 position = glm::vec3(0.0f);      // 3D position in world space
+    glm::vec3 rotation = glm::vec3(0.0f);      // Euler angles in radians: (pitch/X, yaw/Y, roll/Z)
+    glm::vec3 scale = glm::vec3(1.0f);         // 3D scale factors
 };
 
 class RenderComponent : public Component {
@@ -118,8 +118,25 @@ public:
         std::string materialName;
         glm::vec3 color{1.0f, 1.0f, 1.0f};
         std::string textureName;
+        
+        // Cached OpenGL buffers (initialized on first render)
+        mutable unsigned int VAO = 0;
+        mutable unsigned int VBO = 0;
+        mutable unsigned int EBO = 0;
+        mutable bool buffersInitialized = false;
     };
 
     std::vector<Mesh> meshes;
+    
+    ~ModelComponent() {
+        // Clean up OpenGL buffers
+        for (auto& mesh : meshes) {
+            if (mesh.buffersInitialized) {
+                glDeleteVertexArrays(1, &mesh.VAO);
+                glDeleteBuffers(1, &mesh.VBO);
+                glDeleteBuffers(1, &mesh.EBO);
+            }
+        }
+    }
 };
 

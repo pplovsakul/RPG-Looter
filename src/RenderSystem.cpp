@@ -220,64 +220,63 @@ void RenderSystem::renderMesh(const ModelComponent::Mesh& mesh, const glm::mat4&
                               const glm::vec3& cameraPos) {
     if (mesh.vertices.empty() || mesh.indices.empty()) return;
     
-    // Create temporary buffers for this mesh
-    // Note: In a production system, you'd cache these in the ModelComponent
-    unsigned int VAO, VBO, EBO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-    
-    glBindVertexArray(VAO);
-    
-    // Interleave vertex data: position (3) + normal (3) + uv (2)
-    std::vector<float> vertexData;
-    vertexData.reserve(mesh.vertices.size() * 8);
-    
-    for (size_t i = 0; i < mesh.vertices.size(); i++) {
-        // Position
-        vertexData.push_back(mesh.vertices[i].x);
-        vertexData.push_back(mesh.vertices[i].y);
-        vertexData.push_back(mesh.vertices[i].z);
+    // Initialize buffers on first use (cached in the mesh)
+    if (!mesh.buffersInitialized) {
+        glGenVertexArrays(1, &mesh.VAO);
+        glGenBuffers(1, &mesh.VBO);
+        glGenBuffers(1, &mesh.EBO);
         
-        // Normal
-        if (i < mesh.normals.size()) {
-            vertexData.push_back(mesh.normals[i].x);
-            vertexData.push_back(mesh.normals[i].y);
-            vertexData.push_back(mesh.normals[i].z);
-        } else {
-            vertexData.push_back(0.0f);
-            vertexData.push_back(1.0f);
-            vertexData.push_back(0.0f);
+        glBindVertexArray(mesh.VAO);
+        
+        // Interleave vertex data: position (3) + normal (3) + uv (2)
+        std::vector<float> vertexData;
+        vertexData.reserve(mesh.vertices.size() * 8);
+        
+        const glm::vec3 DEFAULT_NORMAL(0.0f, 1.0f, 0.0f);
+        const glm::vec2 DEFAULT_UV(0.0f, 0.0f);
+        
+        for (size_t i = 0; i < mesh.vertices.size(); i++) {
+            // Position
+            vertexData.push_back(mesh.vertices[i].x);
+            vertexData.push_back(mesh.vertices[i].y);
+            vertexData.push_back(mesh.vertices[i].z);
+            
+            // Normal
+            const glm::vec3& normal = (i < mesh.normals.size()) ? mesh.normals[i] : DEFAULT_NORMAL;
+            vertexData.push_back(normal.x);
+            vertexData.push_back(normal.y);
+            vertexData.push_back(normal.z);
+            
+            // UV
+            const glm::vec2& uv = (i < mesh.uvs.size()) ? mesh.uvs[i] : DEFAULT_UV;
+            vertexData.push_back(uv.x);
+            vertexData.push_back(uv.y);
         }
         
-        // UV
-        if (i < mesh.uvs.size()) {
-            vertexData.push_back(mesh.uvs[i].x);
-            vertexData.push_back(mesh.uvs[i].y);
-        } else {
-            vertexData.push_back(0.0f);
-            vertexData.push_back(0.0f);
-        }
+        glBindBuffer(GL_ARRAY_BUFFER, mesh.VBO);
+        glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), vertexData.data(), GL_STATIC_DRAW);
+        
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), 
+                     mesh.indices.data(), GL_STATIC_DRAW);
+        
+        // Position attribute
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+        
+        // Normal attribute
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(1);
+        
+        // UV attribute
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+        
+        mesh.buffersInitialized = true;
+    } else {
+        // Use cached buffers
+        glBindVertexArray(mesh.VAO);
     }
-    
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), vertexData.data(), GL_STATIC_DRAW);
-    
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), 
-                 mesh.indices.data(), GL_STATIC_DRAW);
-    
-    // Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    
-    // Normal attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    
-    // UV attribute
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
     
     // Use shader
     if (fallbackShaderID != 0) {
@@ -317,12 +316,8 @@ void RenderSystem::renderMesh(const ModelComponent::Mesh& mesh, const glm::mat4&
         // Draw
         glDrawElements(GL_TRIANGLES, (GLsizei)mesh.indices.size(), GL_UNSIGNED_INT, 0);
     }
-    
-    // Cleanup
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
 }
+
 void RenderSystem::setViewMatrix(const glm::mat4& view) {
     viewMatrix = view;
 }
