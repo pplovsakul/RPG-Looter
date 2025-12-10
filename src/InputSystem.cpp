@@ -84,11 +84,12 @@ void InputSystem::init(GLFWwindow* win) {
 
     registerAction("move_up", [baseSpeed, isSprinting](InputState state, EntityManager& em, float dt) {
         if(state == InputState::Pressed || state == InputState::Held) {
-            if(auto* player = em.getEntityByTag("Player")) {
-                if(auto* t = player->getComponent<TransformComponent>()) {
-                    float currentSpeed = *isSprinting ? baseSpeed * 2.0f : baseSpeed;
-                    t->position.y += currentSpeed * dt;
-                    
+            if(auto* camera = em.getEntityByTag("MainCamera")) {
+                if(auto* t = camera->getComponent<TransformComponent>()) {
+                    if(auto* c = camera->getComponent<CameraComponent>()) {
+                        float currentSpeed = *isSprinting ? baseSpeed * 2.0f : baseSpeed;
+                        t->position += c->front * currentSpeed * dt;  // Move forward
+                    }
                 }
             }
         }
@@ -96,11 +97,12 @@ void InputSystem::init(GLFWwindow* win) {
 
     registerAction("move_down", [baseSpeed, isSprinting](InputState state, EntityManager& em, float dt) {
         if(state == InputState::Pressed || state == InputState::Held) {
-            if(auto* player = em.getEntityByTag("Player")) {
-                if(auto* t = player->getComponent<TransformComponent>()) {
-                    float currentSpeed = *isSprinting ? baseSpeed * 2.0f : baseSpeed;
-                    t->position.y -= currentSpeed * dt;
-                    
+            if(auto* camera = em.getEntityByTag("MainCamera")) {
+                if(auto* t = camera->getComponent<TransformComponent>()) {
+                    if(auto* c = camera->getComponent<CameraComponent>()) {
+                        float currentSpeed = *isSprinting ? baseSpeed * 2.0f : baseSpeed;
+                        t->position -= c->front * currentSpeed * dt;  // Move backward
+                    }
                 }
             }
         }
@@ -108,11 +110,12 @@ void InputSystem::init(GLFWwindow* win) {
 
     registerAction("move_left", [baseSpeed, isSprinting](InputState state, EntityManager& em, float dt) {
         if(state == InputState::Pressed || state == InputState::Held) {
-            if(auto* player = em.getEntityByTag("Player")) {
-                if(auto* t = player->getComponent<TransformComponent>()) {
-                    float currentSpeed = *isSprinting ? baseSpeed * 2.0f : baseSpeed;
-                    t->position.x -= currentSpeed * dt;
-                    
+            if(auto* camera = em.getEntityByTag("MainCamera")) {
+                if(auto* t = camera->getComponent<TransformComponent>()) {
+                    if(auto* c = camera->getComponent<CameraComponent>()) {
+                        float currentSpeed = *isSprinting ? baseSpeed * 2.0f : baseSpeed;
+                        t->position -= c->right * currentSpeed * dt;  // Strafe left
+                    }
                 }
             }
         }
@@ -120,11 +123,12 @@ void InputSystem::init(GLFWwindow* win) {
 
     registerAction("move_right", [baseSpeed, isSprinting](InputState state, EntityManager& em, float dt) {
         if(state == InputState::Pressed || state == InputState::Held) {
-            if(auto* player = em.getEntityByTag("Player")) {
-                if(auto* t = player->getComponent<TransformComponent>()) {
-                    float currentSpeed = *isSprinting ? baseSpeed * 2.0f : baseSpeed;
-                    t->position.x += currentSpeed * dt;
-                    
+            if(auto* camera = em.getEntityByTag("MainCamera")) {
+                if(auto* t = camera->getComponent<TransformComponent>()) {
+                    if(auto* c = camera->getComponent<CameraComponent>()) {
+                        float currentSpeed = *isSprinting ? baseSpeed * 2.0f : baseSpeed;
+                        t->position += c->right * currentSpeed * dt;  // Strafe right
+                    }
                 }
             }
         }

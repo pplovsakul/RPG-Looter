@@ -13,47 +13,20 @@ static inline float clampf(float v, float lo, float hi) {
     return v < lo ? lo : (v > hi ? hi : v);
 }
 
+// NOTE: The following functions (ShapeToWorldPolygon, ShapeToWorldCircle) are deprecated
+// as ModelComponent no longer uses Shape structure. They are kept here commented out
+// for reference but are not used by the collision system anymore.
+
+/*
 // Convert a shape into a world-space polygon (convex). Uses same order as renderer.
 static inline std::vector<glm::vec2> ShapeToWorldPolygon(const ModelComponent::Shape& s, const TransformComponent& t) {
-    const glm::vec2 localCorners[4] = {
-        {-0.5f, -0.5f},
-        { 0.5f, -0.5f},
-        { 0.5f,  0.5f},
-        {-0.5f,  0.5f}
-    };
-
-    glm::vec2 S = s.size * s.scale; // shape size in world units
-    float totalRot = t.rotation + glm::radians(s.rotation);
-    float cs = std::cos(totalRot), sn = std::sin(totalRot);
-
-    std::vector<glm::vec2> out;
-    if (s.type == ModelComponent::ShapeType::Triangle) {
-        int triIdx[3] = {0,1,3};
-        out.reserve(3);
-        for (int k = 0; k < 3; ++k) {
-            glm::vec2 v = localCorners[triIdx[k]] * S;
-            glm::vec2 vr = glm::vec2(v.x * cs - v.y * sn, v.x * sn + v.y * cs);
-            glm::vec2 world = vr + s.position + t.position;
-            out.push_back(world);
-        }
-    } else {
-        out.reserve(4);
-        for (int k = 0; k < 4; ++k) {
-            glm::vec2 v = localCorners[k] * S;
-            glm::vec2 vr = glm::vec2(v.x * cs - v.y * sn, v.x * sn + v.y * cs);
-            glm::vec2 world = vr + s.position + t.position;
-            out.push_back(world);
-        }
-    }
-    return out;
+    // ... implementation ...
 }
 
 static inline bool ShapeToWorldCircle(const ModelComponent::Shape& s, const TransformComponent& t, glm::vec2& outCenter, float& outRadius) {
-    if (s.type != ModelComponent::ShapeType::Circle) return false;
-    outCenter = s.position + t.position;
-    outRadius = (s.size.x * s.scale.x) * 0.5f;
-    return true;
+    // ... implementation ...
 }
+*/
 
 // Project polygon onto axis
 static inline void ProjectPolygon(const std::vector<glm::vec2>& poly, const glm::vec2& axis, float& outMin, float& outMax) {

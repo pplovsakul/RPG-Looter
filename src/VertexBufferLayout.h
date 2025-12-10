@@ -1,7 +1,6 @@
 #pragma once
 #include <vector>
 #include <glad/glad.h>
-#include "Debug.h"
 
 struct VertexBufferElement {
     unsigned int type;

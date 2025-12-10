@@ -1,5 +1,4 @@
 #pragma once
-#include "Debug.h"
 
 class IndexBuffer {
 private:
@@ -9,9 +8,8 @@ private:
 public:
     IndexBuffer(const unsigned int* indices, unsigned int count);
     ~IndexBuffer();
-	void UpdateData(const unsigned int* indices, unsigned int count);
-    unsigned int getCount() const { return m_Count; }
 
+    void UpdateData(const unsigned int* indices, unsigned int count);
     void Bind() const;
     void Unbind() const;
 

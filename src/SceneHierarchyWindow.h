@@ -23,4 +23,5 @@ private:
     void drawEntityTree(EntityManager& em);
     void drawEntityContextMenu(Entity* entity, EntityManager& em);
     bool matchesSearch(const std::string& text);
+    void focusOnEntity(Entity* entity, EntityManager& em);
 };

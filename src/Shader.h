@@ -21,15 +21,16 @@ public:
     void Bind() const;
     void Unbind() const;
 
-    // Uniforms
+    // Uniform setters
     void SetUniform1i(const std::string& name, int value);
-    void SetUniform4f(const std::string& name, float f0, float f1, float f2, float f3);
-	void SetUniform3f(const std::string& name, float v0, float v1, float v2);
-    void SetUniform2f(const std::string& name, float v0, float v1);
     void SetUniform1f(const std::string& name, float value);
+    void SetUniform2f(const std::string& name, float v0, float v1);
+    void SetUniform3f(const std::string& name, float v0, float v1, float v2);
+    void SetUniform4f(const std::string& name, float f0, float f1, float f2, float f3);
     void SetUniformMat4f(const std::string& name, const glm::mat4& matrix);
 
-    unsigned int GetRendererID() const { return m_RendererID; }
+    inline unsigned int GetRendererID() const { return m_RendererID; }
+    inline const std::string& GetFilePath() const { return m_FilePath; }
 
 private:
     ShaderProgramSource ParseShader(const std::string& filepath);

@@ -4,8 +4,6 @@
 #include "VertexBufferLayout.h"
 #include "IndexBuffer.h"
 
-class IndexBuffer;
-
 class VertexArray {
 private:
     unsigned int m_RendererID;
@@ -16,13 +14,12 @@ public:
     ~VertexArray();
 
     void AddBuffer(const VertexBuffer& vb, const VertexBufferLayout& layout);
+    void SetIndexBuffer(std::unique_ptr<IndexBuffer> ib);
+    
     void Bind() const;
     void Unbind() const;
 
-	void SetIndexBuffer(std::unique_ptr<IndexBuffer> ib) { 
-        m_IndexBuffer = std::move(ib); 
-    }
-    unsigned int getIndexCount() const {
-        return m_IndexBuffer ? m_IndexBuffer->getCount() : 0;
+    inline unsigned int GetIndexCount() const {
+        return m_IndexBuffer ? m_IndexBuffer->GetCount() : 0;
     }
 };

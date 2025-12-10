@@ -19,8 +19,6 @@
 
 #include "Components.h"
 
-// Include UIRenderer before Game to ensure complete type for unique_ptr destructor
-#include "UI/UIRenderer.h"
 #include "Game.h"
 #include "GlobalSettings.h"
 
@@ -150,10 +148,36 @@ int main(void) {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         
+        // Handle F-key shortcuts for window toggles
+        static constexpr size_t NUM_SHORTCUTS = 6;
+        static bool keyStates[NUM_SHORTCUTS] = {false, false, false, false, false, false};
+        
+        struct KeyBinding {
+            int key;
+            bool* windowFlag;
+        };
+        
+        static KeyBinding bindings[] = {
+            {GLFW_KEY_F1, &settings.windowVisibility.showPerformanceWindow},
+            {GLFW_KEY_F2, &settings.windowVisibility.showConsoleWindow},
+            {GLFW_KEY_F3, &settings.windowVisibility.showSceneHierarchy},
+            {GLFW_KEY_F4, &settings.windowVisibility.showEntityEditor},
+            {GLFW_KEY_F5, &settings.windowVisibility.showAssetManager},
+            {GLFW_KEY_F6, &settings.windowVisibility.showModelEditor}
+        };
+        
+        static_assert(sizeof(bindings)/sizeof(bindings[0]) == NUM_SHORTCUTS, 
+                     "Number of key bindings must match NUM_SHORTCUTS");
+        
+        for (size_t i = 0; i < NUM_SHORTCUTS; ++i) {
+            bool keyPressed = glfwGetKey(window, bindings[i].key) == GLFW_PRESS;
+            if (keyPressed && !keyStates[i]) {
+                *bindings[i].windowFlag = !(*bindings[i].windowFlag);
+            }
+            keyStates[i] = keyPressed;
+        }
+        
 		game.update(deltaTime);
-		
-		// Render the in-game UI (after update, before ImGui editor UI)
-		game.renderUI();
 
         // Note: Debug/Performance window is now handled by PerformanceWindow system
         // which is part of the game's systems

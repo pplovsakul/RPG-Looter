@@ -8,7 +8,8 @@
 #include "ESCSound.h"
 #include "Font.h"
 #include "Components.h"
-#include "ModelSerializer.h"
+#include "OBJLoader.h"
+#include <algorithm>
 
 AssetManager* AssetManager::instance = nullptr;
 
@@ -202,10 +203,11 @@ VertexArray* AssetManager::createMesh(const std::string& name,
     meshData.ibo = std::make_unique<IndexBuffer>(indices, indexCount);
 
     VertexBufferLayout layout;
-    layout.AddFloat(3); // Position
-    layout.AddFloat(2); // TexCoords
+    layout.AddFloat(3); // Position (x, y, z)
+    layout.AddFloat(3); // Normal (nx, ny, nz)
+    layout.AddFloat(2); // TexCoords (u, v)
     meshData.vao->AddBuffer(*meshData.vbo, layout);
-    meshData.vao->SetIndexBuffer(std::move(meshData.ibo));  // WICHTIG: IndexBuffer setzen!
+    meshData.vao->SetIndexBuffer(std::move(meshData.ibo));
 
     VertexArray* ptr = meshData.vao.get();
     meshes[name] = std::move(meshData);
@@ -231,8 +233,7 @@ bool AssetManager::addModel(const std::string& name, const ModelComponent& model
         return false;
     }
     auto m = std::make_unique<ModelComponent>();
-    m->shapes = model.shapes;
-    ModelComponent* ptr = m.get();
+    m->meshes = model.meshes;  // Copy mesh data
     models[name] = std::move(m);
     std::cout << "[AssetManager] Registered model: " << name << "\n";
     return true;
@@ -240,7 +241,20 @@ bool AssetManager::addModel(const std::string& name, const ModelComponent& model
 
 bool AssetManager::loadModelFromFile(const std::string& name, const std::string& filepath) {
     try {
-        auto model = ModelSerializer::loadModelFromFile(filepath);
+        // Check file extension to determine loader
+        std::string ext = filepath.substr(filepath.find_last_of(".") + 1);
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        
+        std::unique_ptr<ModelComponent> model;
+        
+        if (ext == "obj") {
+            // Use OBJ loader for .obj files
+            model = OBJLoader::loadOBJ(filepath);
+        } else {
+            std::cerr << "[AssetManager] Unsupported model format: " << ext << "\n";
+            return false;
+        }
+        
         if (!model) {
             std::cerr << "[AssetManager] Failed to parse model file: " << filepath << "\n";
             return false;

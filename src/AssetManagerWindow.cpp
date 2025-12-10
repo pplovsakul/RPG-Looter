@@ -1,5 +1,4 @@
 #include "AssetManagerWindow.h"
-#include "Texture.h"
 #include "Components.h"
 #include <sstream>
 
@@ -19,18 +18,13 @@ void AssetManagerWindow::update(EntityManager& em, float /*deltaTime*/) {
     
     // Tabs for better organization
     if (ImGui::BeginTabBar("AssetTabs")) {
-        if (ImGui::BeginTabItem("Textures")) {
-            drawTextureSection(em);
+        if (ImGui::BeginTabItem("Models")) {
+            drawModelSection(em);
             ImGui::EndTabItem();
         }
         
         if (ImGui::BeginTabItem("Sounds")) {
             drawSoundSection(em);
-            ImGui::EndTabItem();
-        }
-        
-        if (ImGui::BeginTabItem("Models")) {
-            drawModelSection(em);
             ImGui::EndTabItem();
         }
         
@@ -48,72 +42,6 @@ void AssetManagerWindow::update(EntityManager& em, float /*deltaTime*/) {
     }
 
     ImGui::End();
-}
-
-void AssetManagerWindow::drawTextureSection(EntityManager& em) {
-    auto texNames = AssetManager::getInstance()->getTextureNames();
-    
-    ImGui::Text("Textures (%zu loaded)", texNames.size());
-    ImGui::Separator();
-    
-    // Search bar
-    ImGui::InputTextWithHint("##texSearch", "Search textures...", textureSearchBuffer, sizeof(textureSearchBuffer));
-    
-    // Preview size slider
-    ImGui::SliderInt("Preview Size", &texturePreviewSize, 32, 128);
-    
-    ImGui::Separator();
-    
-    // Texture list with previews
-    ImGui::BeginChild("TexturesList", ImVec2(0, 300), true);
-    
-    for (const auto& name : texNames) {
-        // Search filter
-        if (textureSearchBuffer[0] != '\0') {
-            std::string nameLower = name;
-            std::string searchLower = textureSearchBuffer;
-            std::transform(nameLower.begin(), nameLower.end(), nameLower.begin(), ::tolower);
-            std::transform(searchLower.begin(), searchLower.end(), searchLower.begin(), ::tolower);
-            if (nameLower.find(searchLower) == std::string::npos) continue;
-        }
-        
-        Texture* t = AssetManager::getInstance()->getTexture(name);
-        
-        if (t) {
-            ImGui::Image((void*)(intptr_t)t->GetRendererID(), 
-                        ImVec2(texturePreviewSize, texturePreviewSize));
-            if (ImGui::IsItemHovered()) {
-                ImGui::BeginTooltip();
-                ImGui::Text("%s", name.c_str());
-                ImGui::Text("Size: %d x %d", t->GetWidth(), t->GetHeight());
-                ImGui::Image((void*)(intptr_t)t->GetRendererID(), ImVec2(128, 128));
-                ImGui::EndTooltip();
-            }
-        } else {
-            ImGui::Dummy(ImVec2(texturePreviewSize, texturePreviewSize));
-        }
-        
-        ImGui::SameLine();
-        ImGui::Text("%s", name.c_str());
-    }
-    
-    ImGui::EndChild();
-    
-    ImGui::Separator();
-    ImGui::Text("Load New Texture:");
-    ImGui::InputText("Name##tex", newTextureName, sizeof(newTextureName));
-    ImGui::InputText("Path##tex", newTexturePath, sizeof(newTexturePath));
-    if (ImGui::Button("Load Texture", ImVec2(150, 0))) {
-        std::string name(newTextureName);
-        std::string path(newTexturePath);
-        if (AssetManager::getInstance()->loadTexture(name, path)) {
-            ImGui::SameLine(); 
-            ImGui::TextColored(ImVec4(0,1,0,1), "Loaded!");
-        } else {
-            ImGui::SameLine(); 
-            ImGui::TextColored(ImVec4(1,0,0,1), "Failed");
-        }
-    }
 }
 
 void AssetManagerWindow::drawSoundSection(EntityManager& em) {
@@ -174,16 +102,15 @@ void AssetManagerWindow::drawSoundSection(EntityManager& em) {
 void AssetManagerWindow::drawModelSection(EntityManager& em) {
     auto modelNames = AssetManager::getInstance()->getModelNames();
     
-    ImGui::Text("Models (%zu loaded)", modelNames.size());
+    ImGui::Text("3D Models (OBJ/MTL) - %zu loaded", modelNames.size());
     ImGui::Separator();
     
     // Search bar
     ImGui::InputTextWithHint("##modelSearch", "Search models...", modelSearchBuffer, sizeof(modelSearchBuffer));
     ImGui::Separator();
     
-    // Separate into textured and non-textured models
-    std::vector<std::string> texturedModels;
-    std::vector<std::string> plainModels;
+    // Model list
+    ImGui::BeginChild("ModelsList", ImVec2(0, 300), true);
     
     for (const auto& name : modelNames) {
         // Search filter
@@ -197,62 +124,53 @@ void AssetManagerWindow::drawModelSection(EntityManager& em) {
         
         ModelComponent* m = AssetManager::getInstance()->getModel(name);
         if (!m) { 
-            plainModels.push_back(name); 
+            ImGui::Text("%s (invalid)", name.c_str()); 
             continue; 
         }
         
+        // Check if any mesh has a texture
         bool hasTexture = false;
-        for (const auto& s : m->shapes) {
-            if (!s.textureName.empty()) { 
+        for (const auto& mesh : m->meshes) {
+            if (!mesh.textureName.empty()) { 
                 hasTexture = true; 
                 break; 
             }
         }
         
-        if (hasTexture) texturedModels.push_back(name);
-        else plainModels.push_back(name);
+        if (hasTexture) {
+            ImGui::Text("[Textured] %s", name.c_str());
+        } else {
+            ImGui::Text("[Plain] %s", name.c_str());
+        }
+        ImGui::Indent();
+        ImGui::Text("Meshes: %zu", m->meshes.size());
+        size_t totalVerts = 0;
+        for (const auto& mesh : m->meshes) {
+            totalVerts += mesh.vertices.size();
+        }
+        ImGui::Text("Vertices: %zu", totalVerts);
+        ImGui::Unindent();
     }
     
-    // Display in columns
-    if (ImGui::BeginTable("ModelsTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
-        ImGui::TableSetupColumn("Textured Models");
-        ImGui::TableSetupColumn("Plain Models");
-        ImGui::TableHeadersRow();
-        
-        size_t maxRows = std::max(texturedModels.size(), plainModels.size());
-        for (size_t i = 0; i < maxRows; i++) {
-            ImGui::TableNextRow();
-            
-            // Textured models column
-            ImGui::TableNextColumn();
-            if (i < texturedModels.size()) {
-                const auto& name = texturedModels[i];
-                ImGui::Text("[Tex] %s", name.c_str());
-                
-                ModelComponent* m = AssetManager::getInstance()->getModel(name);
-                if (m) {
-                    ImGui::Indent();
-                    ImGui::Text("Shapes: %zu", m->shapes.size());
-                    ImGui::Unindent();
-                }
-            }
-            
-            // Plain models column
-            ImGui::TableNextColumn();
-            if (i < plainModels.size()) {
-                const auto& name = plainModels[i];
-                ImGui::Text("%s", name.c_str());
-                
-                ModelComponent* m = AssetManager::getInstance()->getModel(name);
-                if (m) {
-                    ImGui::Indent();
-                    ImGui::Text("Shapes: %zu", m->shapes.size());
-                    ImGui::Unindent();
-                }
-            }
+    ImGui::EndChild();
+    
+    ImGui::Separator();
+    ImGui::Text("Load New 3D Model (OBJ/MTL):");
+    ImGui::InputText("Name##model", newModelName, sizeof(newModelName));
+    ImGui::InputText("Path##model", newModelPath, sizeof(newModelPath));
+    ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), 
+        "Tip: Path should point to .obj file. MTL will be loaded automatically.");
+    
+    if (ImGui::Button("Load Model", ImVec2(150, 0))) {
+        std::string name(newModelName);
+        std::string path(newModelPath);
+        if (AssetManager::getInstance()->loadModelFromFile(name, path)) {
+            ImGui::SameLine(); 
+            ImGui::TextColored(ImVec4(0,1,0,1), "Loaded!");
+        } else {
+            ImGui::SameLine(); 
+            ImGui::TextColored(ImVec4(1,0,0,1), "Failed");
         }
-        
-        ImGui::EndTable();
     }
 }
 
@@ -260,50 +178,38 @@ void AssetManagerWindow::drawAssetStatistics() {
     ImGui::Text("Asset Statistics");
     ImGui::Separator();
     
-    auto texNames = AssetManager::getInstance()->getTextureNames();
     auto sndNames = AssetManager::getInstance()->getSoundNames();
     auto modelNames = AssetManager::getInstance()->getModelNames();
     
-    ImGui::Text("Total Assets: %zu", texNames.size() + sndNames.size() + modelNames.size());
+    ImGui::Text("Total Assets: %zu", sndNames.size() + modelNames.size());
     ImGui::Spacing();
     
     // Asset counts
-    ImGui::BulletText("Textures: %zu", texNames.size());
     ImGui::BulletText("Sounds: %zu", sndNames.size());
     ImGui::BulletText("Models: %zu", modelNames.size());
     
     ImGui::Spacing();
     ImGui::Separator();
     
-    // Texture details
-    if (ImGui::CollapsingHeader("Texture Details")) {
-        size_t totalPixels = 0;
-        for (const auto& name : texNames) {
-            Texture* t = AssetManager::getInstance()->getTexture(name);
-            if (t) {
-                int w = t->GetWidth();
-                int h = t->GetHeight();
-                totalPixels += w * h;
-                ImGui::Text("%s: %dx%d", name.c_str(), w, h);
-            }
-        }
-        ImGui::Separator();
-        ImGui::Text("Total Pixels: %zu", totalPixels);
-        ImGui::Text("Approx Memory: ~%.2f MB", (totalPixels * 4) / (1024.0f * 1024.0f));
-    }
-    
     // Model details
     if (ImGui::CollapsingHeader("Model Details")) {
-        size_t totalShapes = 0;
+        size_t totalMeshes = 0;
+        size_t totalVertices = 0;
         for (const auto& name : modelNames) {
             ModelComponent* m = AssetManager::getInstance()->getModel(name);
             if (m) {
-                totalShapes += m->shapes.size();
-                ImGui::Text("%s: %zu shapes", name.c_str(), m->shapes.size());
+                totalMeshes += m->meshes.size();
+                size_t verts = 0;
+                for (const auto& mesh : m->meshes) {
+                    verts += mesh.vertices.size();
+                }
+                totalVertices += verts;
+                ImGui::Text("%s: %zu meshes, %zu vertices", name.c_str(), m->meshes.size(), verts);
             }
         }
         ImGui::Separator();
-        ImGui::Text("Total Shapes: %zu", totalShapes);
+        ImGui::Text("Total Meshes: %zu", totalMeshes);
+        ImGui::Text("Total Vertices: %zu", totalVertices);
     }
 }
 
@@ -315,7 +221,7 @@ void AssetManagerWindow::drawStressTestSection(EntityManager& em) {
     ImGui::Spacing();
     
     // CPU test
-    ImGui::Text("CPU Stress Test (Simple Colored Quads):");
+    ImGui::Text("CPU Stress Test (Simple 3D Objects):");
     ImGui::InputInt("CPU spawn count", &cpuSpawnCount);
     if (cpuSpawnCount < 0) cpuSpawnCount = 0;
     if (ImGui::Button("Spawn CPU Entities", ImVec2(180, 0))) {
@@ -325,8 +231,13 @@ void AssetManagerWindow::drawStressTestSection(EntityManager& em) {
             ent->tag = "CPUTest";
             ent->addComponent<TransformComponent>();
             auto tc = ent->getComponent<TransformComponent>();
-            tc->position = glm::vec2(rand() % 1920, rand() % 1080);
-            tc->scale = glm::vec2(10.0f, 10.0f);
+            // Use 3D world coordinates instead of 2D screen space
+            tc->position = glm::vec3(
+                (rand() % 100) - 50.0f,  // X: -50 to 50
+                (rand() % 100) - 50.0f,  // Y: -50 to 50
+                (rand() % 100) - 50.0f   // Z: -50 to 50
+            );
+            tc->scale = glm::vec3(1.0f, 1.0f, 1.0f);
             ent->addComponent<RenderComponent>();
             auto rc = ent->getComponent<RenderComponent>();
             rc->meshName = "quad";
@@ -346,28 +257,44 @@ void AssetManagerWindow::drawStressTestSection(EntityManager& em) {
     ImGui::Separator();
     
     // GPU test
-    ImGui::Text("GPU Stress Test (Textured Quads):");
+    ImGui::Text("GPU Stress Test (3D Model Objects):");
     ImGui::InputInt("GPU spawn count", &gpuSpawnCount);
     if (gpuSpawnCount < 0) gpuSpawnCount = 0;
     if (ImGui::Button("Spawn GPU Entities", ImVec2(180, 0))) {
-        // Spawn many textured quads to stress GPU
-        // Choose a texture if available
-        std::string texToUse;
-        auto tnames = AssetManager::getInstance()->getTextureNames();
-        if (!tnames.empty()) texToUse = tnames[0];
+        // Spawn many 3D model objects to stress GPU
+        // Choose a model if available
+        std::string modelToUse;
+        auto modelNames = AssetManager::getInstance()->getModelNames();
+        if (!modelNames.empty()) modelToUse = modelNames[0];
 
         for (int i = 0; i < gpuSpawnCount; ++i) {
             Entity* ent = em.createEntity();
             ent->tag = "GPUTest";
             ent->addComponent<TransformComponent>();
             auto tc = ent->getComponent<TransformComponent>();
-            tc->position = glm::vec2(rand() % 1920, rand() % 1080);
-            tc->scale = glm::vec2(64.0f, 64.0f);
-            ent->addComponent<RenderComponent>();
-            auto rc = ent->getComponent<RenderComponent>();
-            rc->meshName = "quad";
-            rc->shaderName = "default";
-            rc->textureName = texToUse;
+            // Use 3D world coordinates instead of 2D screen space
+            tc->position = glm::vec3(
+                (rand() % 100) - 50.0f,  // X: -50 to 50
+                (rand() % 100) - 50.0f,  // Y: -50 to 50
+                (rand() % 100) - 50.0f   // Z: -50 to 50
+            );
+            tc->scale = glm::vec3(2.0f, 2.0f, 2.0f);
+            
+            // If we have a model, add ModelComponent
+            if (!modelToUse.empty()) {
+                auto* modelSrc = AssetManager::getInstance()->getModel(modelToUse);
+                if (modelSrc) {
+                    auto* mc = ent->addComponent<ModelComponent>();
+                    mc->meshes = modelSrc->meshes;
+                }
+            } else {
+                // Fallback to RenderComponent if no models available
+                ent->addComponent<RenderComponent>();
+                auto rc = ent->getComponent<RenderComponent>();
+                rc->meshName = "cube";
+                rc->shaderName = "default";
+                rc->color = glm::vec3(0.0f, 1.0f, 0.0f);
+            }
             spawnedGPUEntities.push_back(ent->id);
         }
     }

@@ -1,7 +1,9 @@
 #include "EditorSystem.h"
 #include "EntitySerializer.h"   // <- neu
 #include "AssetManager.h"
+#include "CameraUtils.h"
 #include <cstring> // for strncpy
+#include <cmath> // for atan2, asin
 
 // temporary path buffers for the UI
 static char savePathBuf[256] = "res/entities/entities.json";
@@ -78,8 +80,9 @@ void EditorSystem::drawEntityEditingTab(EntityManager& em) {
         Entity* e = em.createEntity();
         e->tag = std::string(newEntityName);
         auto* t = e->addComponent<TransformComponent>();
-        t->position = glm::vec2(960.0f, 540.0f);
-        t->scale = glm::vec2(100.0f, 100.0f);
+        // Use 3D world coordinates at origin instead of 2D screen center
+        t->position = glm::vec3(0.0f, 0.0f, 0.0f);
+        t->scale = glm::vec3(1.0f, 1.0f, 1.0f);
         auto* r = e->addComponent<RenderComponent>();
         r->meshName = "quad";
         r->shaderName = "default";
@@ -109,6 +112,7 @@ void EditorSystem::drawEntityEditingTab(EntityManager& em) {
         if (e->hasComponent<RenderComponent>()) indicators += "[R]";
         if (e->hasComponent<AudioComponent>()) indicators += "[A]";
         if (e->hasComponent<ModelComponent>()) indicators += "[M]";
+        if (e->hasComponent<CameraComponent>()) indicators += "[C]";
         
         snprintf(buf, sizeof(buf), "%s [%u] %s", indicators.c_str(), e->id, e->tag.c_str());
         bool sel = (selectedEntityId == (int)e->id);
@@ -160,6 +164,10 @@ void EditorSystem::drawEntityEditingTab(EntityManager& em) {
             if (ImGui::Button("Paste Components")) {
                 pasteComponentsFromClipboard(selected);
             }
+            ImGui::SameLine();
+            if (ImGui::Button("Focus Camera")) {
+                focusOnEntity(selected, em);
+            }
         }
     }
 
@@ -199,6 +207,19 @@ void EditorSystem::drawEntityEditingTab(EntityManager& em) {
     } else {
         if (ImGui::Button("Remove Audio")) selected->removeComponent<AudioComponent>();
     }
+    
+    // Add Camera component button
+    if (!selected->hasComponent<CameraComponent>()) {
+        if (ImGui::Button("Add Camera")) {
+            auto* cam = selected->addComponent<CameraComponent>();
+            cam->fov = 60.0f;
+            cam->nearPlane = 0.1f;
+            cam->farPlane = 1000.0f;
+            cam->isActive = false;  // Don't make it active by default
+        }
+    } else {
+        if (ImGui::Button("Remove Camera")) selected->removeComponent<CameraComponent>();
+    }
    
 
     ImGui::Separator();
@@ -207,6 +228,7 @@ void EditorSystem::drawEntityEditingTab(EntityManager& em) {
     if (selected->hasComponent<TransformComponent>()) drawTransformEditor(selected);
     if (selected->hasComponent<RenderComponent>()) drawRenderEditor(selected);
     if (selected->hasComponent<AudioComponent>()) drawAudioEditor(selected);
+    if (selected->hasComponent<CameraComponent>()) drawCameraEditor(selected);
 
     // New: Model assignment UI
     drawModelEditor(selected);
@@ -258,8 +280,9 @@ void EditorSystem::drawComponentTemplates(EntityManager& em) {
         Entity* e = em.createEntity();
         e->tag = std::string(templateName);
         auto* t = e->addComponent<TransformComponent>();
-        t->position = glm::vec2(960.0f, 540.0f);
-        t->scale = glm::vec2(100.0f, 100.0f);
+        // Use 3D world coordinates at origin instead of 2D screen center
+        t->position = glm::vec3(0.0f, 0.0f, 0.0f);
+        t->scale = glm::vec3(1.0f, 1.0f, 1.0f);
         auto* r = e->addComponent<RenderComponent>();
         r->meshName = "quad";
         r->shaderName = "default";
@@ -287,8 +310,9 @@ void EditorSystem::drawComponentTemplates(EntityManager& em) {
         Entity* e = em.createEntity();
         e->tag = std::string(templateName);
         auto* t = e->addComponent<TransformComponent>();
-        t->position = glm::vec2(960.0f, 540.0f);
-        t->scale = glm::vec2(100.0f, 100.0f);
+        // Use 3D world coordinates at origin instead of 2D screen center
+        t->position = glm::vec3(0.0f, 0.0f, 0.0f);
+        t->scale = glm::vec3(1.0f, 1.0f, 1.0f);
         auto* r = e->addComponent<RenderComponent>();
         r->meshName = "quad";
         r->shaderName = "default";
@@ -297,6 +321,24 @@ void EditorSystem::drawComponentTemplates(EntityManager& em) {
         selectedEntityId = e->id;
     }
     ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Transform + Render + Audio");
+    
+    ImGui::Spacing();
+    
+    if (ImGui::Button("3D Camera", ImVec2(200, 0))) {
+        Entity* e = em.createEntity();
+        e->tag = std::string(templateName);
+        auto* t = e->addComponent<TransformComponent>();
+        t->position = glm::vec3(0.0f, 2.0f, 5.0f);
+        t->rotation = glm::vec3(0.0f, 0.0f, 0.0f);
+        t->scale = glm::vec3(1.0f, 1.0f, 1.0f);
+        auto* c = e->addComponent<CameraComponent>();
+        c->fov = 60.0f;
+        c->nearPlane = 0.1f;
+        c->farPlane = 1000.0f;
+        c->isActive = true;
+        selectedEntityId = e->id;
+    }
+    ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Transform + Camera (3D)");
 }
 
 void EditorSystem::drawBatchOperations(EntityManager& em) {
@@ -405,9 +447,9 @@ void EditorSystem::drawTransformEditor(Entity* e) {
     auto* t = e->getComponent<TransformComponent>();
     if (!t) return;
     if (ImGui::CollapsingHeader("Transform")) {
-        ImGui::DragFloat2("Position", &t->position.x, 1.0f);
-        ImGui::DragFloat("Rotation", &t->rotation, 1.0f);
-        ImGui::DragFloat2("Scale", &t->scale.x, 0.1f);
+        ImGui::DragFloat3("Position", &t->position.x, 1.0f);
+        ImGui::DragFloat3("Rotation", &t->rotation.x, 0.01f);
+        ImGui::DragFloat3("Scale", &t->scale.x, 0.1f);
     }
 }
 
@@ -444,12 +486,69 @@ void EditorSystem::drawAudioEditor(Entity* e) {
     }
 }
 
+void EditorSystem::drawCameraEditor(Entity* e) {
+    auto* c = e->getComponent<CameraComponent>();
+    if (!c) return;
+    if (ImGui::CollapsingHeader("Camera")) {
+        ImGui::SliderFloat("FOV", &c->fov, 30.0f, 120.0f);
+        ImGui::DragFloat("Near Plane", &c->nearPlane, 0.01f, 0.01f, 10.0f);
+        ImGui::DragFloat("Far Plane", &c->farPlane, 1.0f, 10.0f, 10000.0f);
+        ImGui::Checkbox("Is Active", &c->isActive);
+        
+        ImGui::Separator();
+        ImGui::Text("Direction Vectors (Read-Only):");
+        ImGui::Text("Front: (%.2f, %.2f, %.2f)", c->front.x, c->front.y, c->front.z);
+        ImGui::Text("Up:    (%.2f, %.2f, %.2f)", c->up.x, c->up.y, c->up.z);
+        ImGui::Text("Right: (%.2f, %.2f, %.2f)", c->right.x, c->right.y, c->right.z);
+    }
+}
+
+
 void EditorSystem::drawModelEditor(Entity* e) {
     if (!ImGui::CollapsingHeader("Model")) return;
 
-    // If entity already has a ModelComponent, show its name and allow removal
+    // If entity already has a ModelComponent, show its information
     if (e->hasComponent<ModelComponent>()) {
-        ImGui::Text("Entity has ModelComponent assigned");
+        auto* mc = e->getComponent<ModelComponent>();
+        ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "Entity has ModelComponent assigned");
+        
+        // Show model statistics
+        ImGui::Indent();
+        ImGui::Text("Number of Meshes: %zu", mc->meshes.size());
+        
+        size_t totalVertices = 0;
+        size_t totalIndices = 0;
+        for (const auto& mesh : mc->meshes) {
+            totalVertices += mesh.vertices.size();
+            totalIndices += mesh.indices.size();
+        }
+        
+        ImGui::Text("Total Vertices: %zu", totalVertices);
+        ImGui::Text("Total Triangles: %zu", totalIndices / 3);
+        
+        // Show individual mesh info
+        if (ImGui::TreeNode("Mesh Details")) {
+            for (size_t i = 0; i < mc->meshes.size(); ++i) {
+                auto& mesh = mc->meshes[i];  // Non-const reference
+                ImGui::PushID((int)i);
+                if (ImGui::TreeNode("Mesh", "Mesh %zu", i)) {
+                    ImGui::Text("Vertices: %zu", mesh.vertices.size());
+                    ImGui::Text("Triangles: %zu", mesh.indices.size() / 3);
+                    if (!mesh.materialName.empty()) {
+                        ImGui::Text("Material: %s", mesh.materialName.c_str());
+                    }
+                    if (!mesh.textureName.empty()) {
+                        ImGui::Text("Texture: %s", mesh.textureName.c_str());
+                    }
+                    ImGui::ColorEdit3("Color", &mesh.color.x);
+                    ImGui::TreePop();
+                }
+                ImGui::PopID();
+            }
+            ImGui::TreePop();
+        }
+        ImGui::Unindent();
+        
         if (ImGui::Button("Remove ModelComponent")) {
             e->removeComponent<ModelComponent>();
         }
@@ -475,8 +574,12 @@ void EditorSystem::drawModelEditor(Entity* e) {
             if (m) {
                 if (e->hasComponent<ModelComponent>()) e->removeComponent<ModelComponent>();
                 auto* mc = e->addComponent<ModelComponent>();
-                mc->shapes = m->shapes;
+                mc->meshes = m->meshes;  // Copy 3D mesh data
             }
         }
     }
+}
+
+void EditorSystem::focusOnEntity(Entity* entity, EntityManager& em) {
+    CameraUtils::focusOnEntity(entity, em);
 }

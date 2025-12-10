@@ -1,26 +1,28 @@
 #pragma once
-
-#include "Mesh3D.h"
 #include <string>
-#include <memory>
 #include <vector>
+#include <memory>
+#include "vendor/glm/glm.hpp"
 
+class ModelComponent;
+
+// OBJ/MTL loader for 3D game models
+// Loads .obj files and their associated .mtl material files
 class OBJLoader {
 public:
-    // Load a single mesh from OBJ file
-    static std::unique_ptr<Mesh3D> loadOBJ(const std::string& filepath);
-    
-    // Load multiple meshes (for complex models)
-    static std::vector<std::unique_ptr<Mesh3D>> loadOBJMulti(const std::string& filepath);
+    struct Material {
+        std::string name;
+        glm::vec3 diffuseColor{1.0f, 1.0f, 1.0f};
+        glm::vec3 specularColor{1.0f, 1.0f, 1.0f};
+        glm::vec3 ambientColor{0.2f, 0.2f, 0.2f};
+        float shininess = 32.0f;
+        std::string diffuseTexture;
+        float opacity = 1.0f;
+    };
+
+    // Load an OBJ file and convert it to a ModelComponent for 3D rendering
+    static std::unique_ptr<ModelComponent> loadOBJ(const std::string& objPath);
 
 private:
-    static bool parseOBJFile(const std::string& filepath,
-                            std::vector<glm::vec3>& positions,
-                            std::vector<glm::vec3>& normals,
-                            std::vector<glm::vec2>& uvs,
-                            std::vector<Vertex3D>& outVertices,
-                            std::vector<unsigned int>& outIndices);
-    
-    static void calculateNormals(std::vector<Vertex3D>& vertices,
-                                const std::vector<unsigned int>& indices);
+    static std::vector<Material> loadMTL(const std::string& mtlPath);
 };
