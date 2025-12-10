@@ -323,7 +323,7 @@ void AssetManagerWindow::drawStressTestSection(EntityManager& em) {
     ImGui::Spacing();
     
     // CPU test
-    ImGui::Text("CPU Stress Test (Simple Colored Quads):");
+    ImGui::Text("CPU Stress Test (Simple 3D Objects):");
     ImGui::InputInt("CPU spawn count", &cpuSpawnCount);
     if (cpuSpawnCount < 0) cpuSpawnCount = 0;
     if (ImGui::Button("Spawn CPU Entities", ImVec2(180, 0))) {
@@ -333,8 +333,13 @@ void AssetManagerWindow::drawStressTestSection(EntityManager& em) {
             ent->tag = "CPUTest";
             ent->addComponent<TransformComponent>();
             auto tc = ent->getComponent<TransformComponent>();
-            tc->position = glm::vec3(rand() % 1920, rand() % 1080, 0.0f);
-            tc->scale = glm::vec3(10.0f, 10.0f, 1.0f);
+            // Use 3D world coordinates instead of 2D screen space
+            tc->position = glm::vec3(
+                (rand() % 100) - 50.0f,  // X: -50 to 50
+                (rand() % 100) - 50.0f,  // Y: -50 to 50
+                (rand() % 100) - 50.0f   // Z: -50 to 50
+            );
+            tc->scale = glm::vec3(1.0f, 1.0f, 1.0f);
             ent->addComponent<RenderComponent>();
             auto rc = ent->getComponent<RenderComponent>();
             rc->meshName = "quad";
@@ -354,11 +359,11 @@ void AssetManagerWindow::drawStressTestSection(EntityManager& em) {
     ImGui::Separator();
     
     // GPU test
-    ImGui::Text("GPU Stress Test (Textured Quads):");
+    ImGui::Text("GPU Stress Test (Textured 3D Objects):");
     ImGui::InputInt("GPU spawn count", &gpuSpawnCount);
     if (gpuSpawnCount < 0) gpuSpawnCount = 0;
     if (ImGui::Button("Spawn GPU Entities", ImVec2(180, 0))) {
-        // Spawn many textured quads to stress GPU
+        // Spawn many textured objects to stress GPU
         // Choose a texture if available
         std::string texToUse;
         auto tnames = AssetManager::getInstance()->getTextureNames();
@@ -369,8 +374,13 @@ void AssetManagerWindow::drawStressTestSection(EntityManager& em) {
             ent->tag = "GPUTest";
             ent->addComponent<TransformComponent>();
             auto tc = ent->getComponent<TransformComponent>();
-            tc->position = glm::vec3(rand() % 1920, rand() % 1080, 0.0f);
-            tc->scale = glm::vec3(64.0f, 64.0f, 1.0f);
+            // Use 3D world coordinates instead of 2D screen space
+            tc->position = glm::vec3(
+                (rand() % 100) - 50.0f,  // X: -50 to 50
+                (rand() % 100) - 50.0f,  // Y: -50 to 50
+                (rand() % 100) - 50.0f   // Z: -50 to 50
+            );
+            tc->scale = glm::vec3(2.0f, 2.0f, 2.0f);
             ent->addComponent<RenderComponent>();
             auto rc = ent->getComponent<RenderComponent>();
             rc->meshName = "quad";

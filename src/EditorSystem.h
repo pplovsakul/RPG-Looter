@@ -41,6 +41,7 @@ private:
     void drawTransformEditor(Entity* e);
     void drawRenderEditor(Entity* e);
     void drawAudioEditor(Entity* e);
+    void drawCameraEditor(Entity* e);
     void drawUIEditor(Entity* e);
     void drawModelEditor(Entity* e);
     void drawComponentTemplates(EntityManager& em);

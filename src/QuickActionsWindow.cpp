@@ -51,8 +51,9 @@ void QuickActionsWindow::update(EntityManager& em, float deltaTime) {
                 Entity* e = em.createEntity();
                 e->tag = "Sprite";
                 auto* t = e->addComponent<TransformComponent>();
-                t->position = glm::vec3(960.0f, 540.0f, 0.0f);
-                t->scale = glm::vec3(100.0f, 100.0f, 1.0f);
+                // Use 3D world coordinates at origin instead of 2D screen center
+                t->position = glm::vec3(0.0f, 0.0f, 0.0f);
+                t->scale = glm::vec3(1.0f, 1.0f, 1.0f);
                 auto* r = e->addComponent<RenderComponent>();
                 r->meshName = "quad";
                 r->shaderName = "default";
@@ -154,8 +155,9 @@ void QuickActionsWindow::drawQuickActions(EntityManager& em) {
         Entity* e = em.createEntity();
         e->tag = "Sprite";
         auto* t = e->addComponent<TransformComponent>();
-        t->position = glm::vec3(960.0f, 540.0f, 0.0f);
-        t->scale = glm::vec3(100.0f, 100.0f, 1.0f);
+        // Use 3D world coordinates at origin instead of 2D screen center
+        t->position = glm::vec3(0.0f, 0.0f, 0.0f);
+        t->scale = glm::vec3(1.0f, 1.0f, 1.0f);
         auto* r = e->addComponent<RenderComponent>();
         r->meshName = "quad";
         r->shaderName = "default";
@@ -185,25 +187,26 @@ void QuickActionsWindow::drawHelpWindow() {
         if (ImGui::BeginTabItem("Getting Started")) {
             ImGui::TextWrapped(
                 "Welcome to RPG-Looter Engine!\n\n"
-                "This is a 2D game engine built with OpenGL and ImGui. "
+                "This is a 3D game engine built with OpenGL and ImGui. "
                 "Use the editor windows to create entities, manage assets, and build your game.\n\n"
                 "Key Features:\n"
                 "- Entity Component System (ECS) architecture\n"
-                "- Visual model editor for creating game objects\n"
+                "- 3D rendering with perspective camera\n"
+                "- Blender model integration (.obj/.mtl)\n"
                 "- Asset management for textures, sounds, and models\n"
                 "- Real-time performance monitoring\n"
                 "- Console logging system\n\n"
                 "To get started:\n"
                 "1. Use the Entity Editor (F4) to create entities\n"
-                "2. Add components like Transform and Render\n"
-                "3. Use the Model Editor (F6) to create custom shapes\n"
+                "2. Add components like Transform and Model\n"
+                "3. Use the Model Editor (F6) to load 3D models\n"
                 "4. Load assets through the Asset Manager (F5)\n"
             );
             ImGui::EndTabItem();
         }
         
         if (ImGui::BeginTabItem("About")) {
-            ImGui::Text("RPG-Looter 2D Game Engine");
+            ImGui::Text("RPG-Looter 3D Game Engine");
             ImGui::Separator();
             ImGui::Text("Version: Development Build");
             ImGui::Text("Built with:");
@@ -216,7 +219,9 @@ void QuickActionsWindow::drawHelpWindow() {
             ImGui::Spacing();
             ImGui::Text("Features:");
             ImGui::BulletText("Entity Component System");
-            ImGui::BulletText("2D Rendering");
+            ImGui::BulletText("3D Rendering with Perspective Camera");
+            ImGui::BulletText("Blender Model Integration");
+            ImGui::BulletText("Phong Lighting");
             ImGui::BulletText("Audio System");
             ImGui::BulletText("Visual Editor Tools");
             ImGui::BulletText("Asset Management");

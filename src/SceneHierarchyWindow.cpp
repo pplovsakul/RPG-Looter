@@ -122,6 +122,7 @@ void SceneHierarchyWindow::drawEntityTree(EntityManager& em) {
             if (entity->hasComponent<TransformComponent>()) icon += "[T]";
             if (entity->hasComponent<AudioComponent>()) icon += "[A]";
             if (entity->hasComponent<ModelComponent>()) icon += "[M]";
+            if (entity->hasComponent<CameraComponent>()) icon += "[C]";
             
             std::string fullLabel = icon + " " + label;
             
@@ -192,6 +193,16 @@ void SceneHierarchyWindow::drawEntityContextMenu(Entity* entity, EntityManager& 
     } else {
         if (ImGui::MenuItem("Add Render")) {
             entity->addComponent<RenderComponent>();
+        }
+    }
+    
+    if (entity->hasComponent<ModelComponent>()) {
+        if (ImGui::MenuItem("Remove Model")) {
+            entity->removeComponent<ModelComponent>();
+        }
+    } else {
+        if (ImGui::MenuItem("Add Model")) {
+            entity->addComponent<ModelComponent>();
         }
     }
 }
