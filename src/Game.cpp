@@ -161,6 +161,28 @@ void Game::setupEntities() {
     test_entity2->getComponent<RenderComponent>()->alpha = 1.0f;
     test_entity2->getComponent<RenderComponent>()->renderLayer = 0;
 
+    AssetManager::getInstance()->loadModelFromFile("meinWuerfel", "res/models/1.obj");
+
+    // Entity erstellen
+    auto* player1 = entityManager.createEntity();
+    player1->tag = "Player1";
+
+    // Transform hinzufügen (Position vor der Kamera)
+    player1->addComponent<TransformComponent>();
+    player1->getComponent<TransformComponent>()->position = glm::vec3(0.0f, 0.0f, 0.0f);
+    player1->getComponent<TransformComponent>()->rotation = glm::vec3(0.0f, 0.0f, 0.0f);
+    player1->getComponent<TransformComponent>()->scale = glm::vec3(1.0f, 1.0f, 1.0f);
+
+    // ModelComponent hinzufügen und Mesh-Daten zuweisen
+    auto* modelComp = player1->addComponent<ModelComponent>();
+    auto* loadedModel = AssetManager::getInstance()->getModel("meinWuerfel");
+    if (loadedModel) {
+        modelComp->meshes = loadedModel->meshes;
+        std::cout << "Model erfolgreich geladen!" << std::endl;
+    }
+    else {
+        std::cerr << "FEHLER: Model konnte nicht geladen werden!" << std::endl;
+    }
     std::cout << "3D ECS Entities initialized (camera + 2 cubes)" << std::endl;
 }
 
