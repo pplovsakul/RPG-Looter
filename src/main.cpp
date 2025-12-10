@@ -152,31 +152,25 @@ int main(void) {
         struct KeyBinding {
             int key;
             bool* windowFlag;
-            bool* wasPressed;
         };
         
-        static bool f1WasPressed = false;
-        static bool f2WasPressed = false;
-        static bool f3WasPressed = false;
-        static bool f4WasPressed = false;
-        static bool f5WasPressed = false;
-        static bool f6WasPressed = false;
+        static bool keyStates[6] = {false, false, false, false, false, false};
         
         KeyBinding bindings[] = {
-            {GLFW_KEY_F1, &settings.windowVisibility.showPerformanceWindow, &f1WasPressed},
-            {GLFW_KEY_F2, &settings.windowVisibility.showConsoleWindow, &f2WasPressed},
-            {GLFW_KEY_F3, &settings.windowVisibility.showSceneHierarchy, &f3WasPressed},
-            {GLFW_KEY_F4, &settings.windowVisibility.showEntityEditor, &f4WasPressed},
-            {GLFW_KEY_F5, &settings.windowVisibility.showAssetManager, &f5WasPressed},
-            {GLFW_KEY_F6, &settings.windowVisibility.showModelEditor, &f6WasPressed}
+            {GLFW_KEY_F1, &settings.windowVisibility.showPerformanceWindow},
+            {GLFW_KEY_F2, &settings.windowVisibility.showConsoleWindow},
+            {GLFW_KEY_F3, &settings.windowVisibility.showSceneHierarchy},
+            {GLFW_KEY_F4, &settings.windowVisibility.showEntityEditor},
+            {GLFW_KEY_F5, &settings.windowVisibility.showAssetManager},
+            {GLFW_KEY_F6, &settings.windowVisibility.showModelEditor}
         };
         
-        for (auto& binding : bindings) {
-            bool keyPressed = glfwGetKey(window, binding.key) == GLFW_PRESS;
-            if (keyPressed && !(*binding.wasPressed)) {
-                *binding.windowFlag = !(*binding.windowFlag);
+        for (size_t i = 0; i < 6; ++i) {
+            bool keyPressed = glfwGetKey(window, bindings[i].key) == GLFW_PRESS;
+            if (keyPressed && !keyStates[i]) {
+                *bindings[i].windowFlag = !(*bindings[i].windowFlag);
             }
-            *binding.wasPressed = keyPressed;
+            keyStates[i] = keyPressed;
         }
         
 		game.update(deltaTime);

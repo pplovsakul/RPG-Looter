@@ -136,7 +136,8 @@ void RenderSystem::update(EntityManager& em, float dt) {
     // Render all entities with ModelComponent
     auto modelEntities = em.getEntitiesWith<ModelComponent>();
     
-    // Debug output (only when entity count changes)
+    // Debug output (only when entity count changes, can be disabled in release builds)
+    #ifndef NDEBUG
     static size_t lastModelEntityCount = 0;
     if (modelEntities.size() != lastModelEntityCount) {
         std::cout << "[RenderSystem] Now rendering " << modelEntities.size() 
@@ -150,6 +151,7 @@ void RenderSystem::update(EntityManager& em, float dt) {
         }
         lastModelEntityCount = modelEntities.size();
     }
+    #endif
     
     for (Entity* e : modelEntities) {
         if (!e || !e->active) continue;

@@ -4,10 +4,26 @@
 #include "Components.h"
 #include <cmath>
 
+/**
+ * @file CameraUtils.h
+ * @brief Camera utility functions for editor operations
+ * 
+ * Provides helper functions for common camera operations in the editor,
+ * such as focusing the camera on selected entities.
+ */
+
 // Camera utility functions for editor operations
 namespace CameraUtils {
-    // Focus camera on a specific entity
-    // Calculates optimal camera position and rotation to view the entity
+    /**
+     * @brief Focus camera on a specific entity
+     * 
+     * Automatically positions and orients the active camera to view the target entity.
+     * Calculates optimal camera distance based on entity scale and positions the camera
+     * behind and above the entity for a good viewing angle.
+     * 
+     * @param entity The entity to focus on (must have TransformComponent)
+     * @param em EntityManager to find the active camera
+     */
     inline void focusOnEntity(Entity* entity, EntityManager& em) {
         if (!entity) return;
         
@@ -46,8 +62,8 @@ namespace CameraUtils {
         
         // Point camera at the entity by adjusting rotation
         glm::vec3 direction = glm::normalize(entityTransform->position - camTransform->position);
-        float pitch = asin(-direction.y);
-        float yaw = atan2(direction.x, direction.z);
+        float pitch = std::asin(-direction.y);
+        float yaw = std::atan2(direction.x, direction.z);
         
         camTransform->rotation = glm::vec3(pitch, yaw, 0.0f);
         
