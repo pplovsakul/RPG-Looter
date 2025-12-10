@@ -1,6 +1,7 @@
 #include "Texture.h"
 
 #include "vendor/stb_image/stb_image.h"
+#include "Debug.h"
 #include <algorithm>
 #include <iostream>
 
