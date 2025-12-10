@@ -1,213 +1,95 @@
-# RPG-Looter
+# Minimal Graphics Framework
 
-RPG-Looter is a 2D game engine/framework built in C++ using OpenGL for rendering. It implements an Entity Component System (ECS) architecture and provides a foundation for creating 2D RPG-style games.
+A stripped-down, minimal OpenGL graphics framework with only the essential components needed for rendering.
 
-## What is this? (Was ist das?)
+## Features
 
-This is a game development project that combines modern OpenGL rendering with an ECS architecture pattern. The project includes:
+This framework includes only the core graphics infrastructure:
 
-- **Rendering System**: OpenGL-based 2D graphics rendering with shader support
-- **Entity Component System**: Modular game object architecture for flexible game development
-- **Audio System**: OpenAL-based sound playback
-- **Input System**: GLFW-based keyboard and mouse input handling
-- **Editor Tools**: ImGui-based in-game editor for asset management and model editing
-- **Collision Detection**: Basic collision system for game physics
-- **Asset Management**: Centralized texture, shader, and sound asset loading
+- **Window Management** - GLFW-based window creation and management
+- **OpenGL Initialization** - Core OpenGL 3.3 setup via GLAD
+- **Vertex Buffer System** - Efficient vertex data management
+- **Index Buffer System** - Indexed rendering support
+- **Shader System** - Basic vertex and fragment shader support
+- **Vertex Array Objects** - VAO management
+- **Input System** - Basic keyboard and mouse input handling
+- **Rendering Pipeline** - Clean, minimal rendering abstraction
 
-## Technologies Used
+## What Was Removed
 
-- **C++17**: Core programming language
-- **OpenGL 3.3**: Graphics rendering API
-- **GLFW 3.4**: Window creation and input handling
-- **GLAD**: OpenGL loader
-- **GLM**: OpenGL Mathematics library
-- **ImGui**: Immediate mode GUI for debug and editor interfaces
-- **OpenAL**: Audio playback
-- **stb_image**: Image loading
-- **CMake**: Build system
+This project was stripped down from a full game engine. The following features were removed:
+
+- All ImGui UI code and windows
+- Entity Component System (ECS)
+- 3D engine components (cameras, mesh loaders, OBJ loading)
+- Game logic and game-specific code
+- Audio system (OpenAL)
+- Texture and material systems
+- Asset management
+- Scene management
+- Collision detection
+- Serialization systems
+- All editor windows and tools
+
+## Building
+
+### Prerequisites
+
+- CMake 3.13 or higher
+- C++17 compatible compiler
+- OpenGL 3.3+ support
+
+### Build Instructions
+
+```bash
+mkdir build
+cd build
+cmake ..
+make
+```
+
+For systems without X11/Wayland (headless environments):
+```bash
+cmake -DGLFW_BUILD_WAYLAND=OFF -DGLFW_BUILD_X11=OFF ..
+make
+```
+
+### Running
+
+```bash
+./RPG-Looter
+```
+
+The application will create a window and display a simple colored triangle. Press ESC to exit.
 
 ## Project Structure
 
 ```
-RPG-Looter/
-├── src/                    # Source code
-│   ├── main.cpp           # Application entry point
-│   ├── Game.cpp/h         # Main game class
-│   ├── Components.h       # ECS component definitions
-│   ├── Entity.cpp/h       # Entity class
-│   ├── Entitymanager.cpp/h # Entity management
-│   ├── System.h           # Base system interface
-│   ├── RenderSystem.cpp/h # Rendering system
-│   ├── InputSystem.cpp/h  # Input handling system
-│   ├── AudioSystem.cpp/h  # Audio playback system
-│   ├── CollisionSystem.cpp/h # Collision detection
-│   ├── EditorSystem.cpp/h # In-game editor
-│   ├── AssetManager.cpp/h # Asset loading and management
-│   └── vendor/            # Third-party libraries
-├── res/                   # Resources
-│   ├── shaders/          # GLSL shader files
-│   ├── textures/         # Image assets
-│   └── sounds/           # Audio files
-├── include/              # Header files and external libraries
-├── extern/               # External dependencies (GLFW)
-└── CMakeLists.txt        # CMake build configuration
+├── src/
+│   ├── main.cpp              # Entry point and main loop
+│   ├── Renderer.h/cpp        # Rendering abstraction
+│   ├── VertexBuffer.h/cpp    # Vertex buffer management
+│   ├── IndexBuffer.h/cpp     # Index buffer management
+│   ├── VertexArray.h/cpp     # VAO management
+│   ├── VertexBufferLayout.h/cpp  # Vertex layout specification
+│   ├── Shader.h/cpp          # Shader compilation and management
+│   ├── InputSystem.h         # Basic input handling
+│   ├── Debug.h               # OpenGL error checking macros
+│   └── vendor/
+│       ├── glad/             # OpenGL loader
+│       └── glm/              # Math library
+├── res/
+│   └── shaders/
+│       └── basic.shader      # Basic vertex/fragment shader
+└── CMakeLists.txt            # Build configuration
 ```
-
-## Architecture
-
-The project uses an **Entity Component System (ECS)** pattern:
-
-- **Entities**: Game objects that are containers for components
-- **Components**: Data structures that define entity properties (Transform, Render, etc.)
-- **Systems**: Logic processors that operate on entities with specific components
-
-### Key Systems
-
-1. **RenderSystem**: Handles all OpenGL rendering, including sprites, textures, and shaders
-2. **InputSystem**: Processes keyboard and mouse input
-3. **AudioSystem**: Manages sound playback using OpenAL
-4. **CollisionSystem**: Detects and reports collisions between entities
-5. **EditorSystem**: Provides in-game editing capabilities
-6. **AssetManagerWindow**: UI for managing game assets
-
-## Building the Project
-
-### Prerequisites
-
-- **CMake** 3.13 or higher
-- **C++17 compatible compiler** (MSVC, GCC, or Clang)
-- **OpenGL 3.3+** compatible graphics driver
-- **OpenAL** libraries (included in `extern/openal-soft`)
-
-### Build Instructions (Windows)
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/pplovsakul/RPG-Looter.git
-   cd RPG-Looter
-   ```
-
-2. Create a build directory:
-   ```bash
-   mkdir build
-   cd build
-   ```
-
-3. Generate build files with CMake:
-   ```bash
-   cmake ..
-   ```
-
-4. Build the project:
-   ```bash
-   cmake --build . --config Release
-   ```
-
-### Build Instructions (Linux/macOS)
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/pplovsakul/RPG-Looter.git
-   cd RPG-Looter
-   ```
-
-2. Create a build directory:
-   ```bash
-   mkdir build
-   cd build
-   ```
-
-3. Generate build files and compile:
-   ```bash
-   cmake ..
-   make
-   ```
-
-## Running the Game
-
-After building, the executable will be located in the build directory:
-
-- **Windows**: `build/Release/RPG-Looter.exe` or `build/Debug/RPG-Looter.exe`
-- **Linux/macOS**: `build/RPG-Looter`
-
-Run the executable to start the game. A window will open showing the game with a debug overlay displaying FPS and frame time information.
-
-### Controls
-
-- **ESC**: Exit the application
-- The game currently includes two test entities (player sprites) that can be controlled through the input system
-
-## Features
-
-### Current Features
-
-- ✅ OpenGL 3.3 Core Profile rendering
-- ✅ Entity Component System architecture
-- ✅ Texture loading and rendering
-- ✅ Shader system with GLSL support
-- ✅ Audio playback with OpenAL
-- ✅ ImGui-based debug interface
-- ✅ Asset management system
-- ✅ Collision detection system
-- ✅ In-game editor tools
-- ✅ Model editor system
-- ✅ Entity serialization support
-
-### Planned Features
-
-The project is under active development. Future enhancements may include:
-- Advanced gameplay mechanics
-- More sophisticated collision responses
-- Level/scene management
-- Particle systems
-- Animation support
-- Comprehensive game loop
-
-## Development
-
-The project includes several editor tools accessible through ImGui:
-
-### Core Editor Windows
-- **Performance Monitor**: Real-time FPS, frame time graphs, and entity statistics
-- **Console**: Centralized logging system with color-coded messages and filtering
-- **Scene Hierarchy**: Tree view of all entities with search and grouping
-- **Entity Editor**: Advanced entity and component management with templates and batch operations
-- **Asset Manager**: Comprehensive asset management with preview, search, and statistics
-- **Model Editor**: Visual model creation with grid, snap, and layer support
-- **Settings**: Global application settings and UI customization
-- **Quick Actions**: Menu bar with shortcuts and help system
-
-For detailed information about the editor features, see [IMGUI_IMPROVEMENTS.md](IMGUI_IMPROVEMENTS.md).
-
-### Editor Features
-- Component-based entity system with visual editing
-- Real-time performance monitoring and optimization tools
-- Asset management with texture preview and memory statistics
-- Visual model editor with shape composition
-- Template system for quick entity creation
-- Batch operations for efficient workflow
-- Comprehensive logging and debugging tools
-- Keyboard shortcuts and help system
 
 ## Dependencies
 
-All dependencies are included in the repository:
-
-- **GLFW 3.4**: Included in `extern/glfw-3.4/`
-- **GLAD**: Included in `src/vendor/glad/`
-- **ImGui**: Included in `src/vendor/imgui/`
-- **GLM**: Included in `src/vendor/glm/`
-- **stb_image**: Included in `src/vendor/stb_image/`
-- **OpenAL**: Libraries included in `extern/openal-soft/` and `libs/`
+- **GLFW 3.4** - Window and context creation (included)
+- **GLAD** - OpenGL function loader (included)
+- **GLM** - Mathematics library (included)
 
 ## License
 
-This project's license is not specified. Please contact the repository owner for licensing information.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit issues or pull requests.
-
-## Author
-
-This project is maintained by the RPG-Looter development team.
+See the original project for license information.
