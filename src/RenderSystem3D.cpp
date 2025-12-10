@@ -4,6 +4,8 @@
 #include "Shader.h"
 #include <glad/glad.h>
 #include <iostream>
+#include "vendor/glm/glm.hpp"
+#include "vendor/glm/gtc/matrix_transform.hpp"
 
 RenderSystem3D::RenderSystem3D(AssetManager* assets, CameraController* camera)
     : assetManager(assets), cameraController(camera),
@@ -49,9 +51,12 @@ void RenderSystem3D::update(EntityManager& em, float deltaTime) {
             
             // Calculate model matrix
             glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(transform->position.x, 0.0f, transform->position.y));
-            model = glm::rotate(model, glm::radians(transform->rotation), glm::vec3(0.0f, 1.0f, 0.0f));
-            model = glm::scale(model, glm::vec3(transform->scale.x, 1.0f, transform->scale.y));
+            model = glm::translate(model, transform->position);
+            // Apply rotation for each axis (X, Y, Z)
+            model = glm::rotate(model, transform->rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
+            model = glm::rotate(model, transform->rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
+            model = glm::rotate(model, transform->rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
+            model = glm::scale(model, transform->scale);
             
             // Set matrices
             GLint modelLoc = glGetUniformLocation(shaderID, "uModel");
@@ -64,7 +69,10 @@ void RenderSystem3D::update(EntityManager& em, float deltaTime) {
             
             // Set material properties
             GLint diffuseLoc = glGetUniformLocation(shaderID, "uDiffuseColor");
-            if (diffuseLoc != -1) glUniform3fv(diffuseLoc, 1, &meshComp->diffuseColor[0]);
+            if (diffuseLoc != -1) {
+                float diffuse[3] = { meshComp->diffuseColor.x, meshComp->diffuseColor.y, meshComp->diffuseColor.z };
+                glUniform3fv(diffuseLoc, 1, diffuse);
+            }
             
             // Set lighting
             setupLighting(shaderID);
@@ -73,7 +81,8 @@ void RenderSystem3D::update(EntityManager& em, float deltaTime) {
             GLint viewPosLoc = glGetUniformLocation(shaderID, "uViewPos");
             if (viewPosLoc != -1) {
                 glm::vec3 camPos = camera->getPosition();
-                glUniform3fv(viewPosLoc, 1, &camPos[0]);
+                float camPosArr[3] = { camPos.x, camPos.y, camPos.z };
+                glUniform3fv(viewPosLoc, 1, camPosArr);
             }
             
             // Render mesh
@@ -228,7 +237,11 @@ void RenderSystem3D::setupLighting(unsigned int shaderID) {
     GLint lightColorLoc = glGetUniformLocation(shaderID, "uLightColor");
     GLint ambientColorLoc = glGetUniformLocation(shaderID, "uAmbientColor");
     
-    if (lightDirLoc != -1) glUniform3fv(lightDirLoc, 1, &lightDirection[0]);
-    if (lightColorLoc != -1) glUniform3fv(lightColorLoc, 1, &lightColor[0]);
-    if (ambientColorLoc != -1) glUniform3fv(ambientColorLoc, 1, &ambientColor[0]);
+    float lightDirArr[3] = { lightDirection.x, lightDirection.y, lightDirection.z };
+    float lightColorArr[3] = { lightColor.x, lightColor.y, lightColor.z };
+    float ambientColorArr[3] = { ambientColor.x, ambientColor.y, ambientColor.z };
+    
+    if (lightDirLoc != -1) glUniform3fv(lightDirLoc, 1, lightDirArr);
+    if (lightColorLoc != -1) glUniform3fv(lightColorLoc, 1, lightColorArr);
+    if (ambientColorLoc != -1) glUniform3fv(ambientColorLoc, 1, ambientColorArr);
 }

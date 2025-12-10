@@ -134,20 +134,24 @@ void DebugWindow::renderLightingControlsWindow() {
     glm::vec3 lightColor = renderSystem->getLightColor();
     glm::vec3 ambientColor = renderSystem->getAmbientColor();
     
+    float lightDirArr[3] = { lightDir.x, lightDir.y, lightDir.z };
+    float lightColorArr[3] = { lightColor.x, lightColor.y, lightColor.z };
+    float ambientColorArr[3] = { ambientColor.x, ambientColor.y, ambientColor.z };
+    
     ImGui::Text("Directional Light");
-    if (ImGui::SliderFloat3("Direction", &lightDir[0], -1.0f, 1.0f)) {
-        renderSystem->setDirectionalLight(lightDir, lightColor);
+    if (ImGui::SliderFloat3("Direction", lightDirArr, -1.0f, 1.0f)) {
+        renderSystem->setDirectionalLight(glm::vec3(lightDirArr[0], lightDirArr[1], lightDirArr[2]), lightColor);
     }
     
-    if (ImGui::ColorEdit3("Light Color", &lightColor[0])) {
-        renderSystem->setDirectionalLight(lightDir, lightColor);
+    if (ImGui::ColorEdit3("Light Color", lightColorArr)) {
+        renderSystem->setDirectionalLight(lightDir, glm::vec3(lightColorArr[0], lightColorArr[1], lightColorArr[2]));
     }
     
     ImGui::Separator();
     
     ImGui::Text("Ambient Light");
-    if (ImGui::ColorEdit3("Ambient Color", &ambientColor[0])) {
-        renderSystem->setAmbientLight(ambientColor);
+    if (ImGui::ColorEdit3("Ambient Color", ambientColorArr)) {
+        renderSystem->setAmbientLight(glm::vec3(ambientColorArr[0], ambientColorArr[1], ambientColorArr[2]));
     }
     
     ImGui::End();
@@ -167,9 +171,20 @@ void DebugWindow::renderEntityInspector() {
     auto* transform = selectedEntity->getComponent<TransformComponent>();
     if (transform) {
         ImGui::Text("Transform Component");
-        ImGui::DragFloat2("Position", &transform->position[0], 0.1f);
-        ImGui::DragFloat("Rotation", &transform->rotation, 1.0f);
-        ImGui::DragFloat2("Scale", &transform->scale[0], 0.1f);
+        // Create local copies to avoid issues with glm::vec3 member access
+        float pos[3] = { transform->position.x, transform->position.y, transform->position.z };
+        float rot[3] = { transform->rotation.x, transform->rotation.y, transform->rotation.z };
+        float scl[3] = { transform->scale.x, transform->scale.y, transform->scale.z };
+        
+        if (ImGui::DragFloat3("Position", pos, 0.1f)) {
+            transform->position = glm::vec3(pos[0], pos[1], pos[2]);
+        }
+        if (ImGui::DragFloat3("Rotation", rot, 0.01f)) {
+            transform->rotation = glm::vec3(rot[0], rot[1], rot[2]);
+        }
+        if (ImGui::DragFloat3("Scale", scl, 0.1f)) {
+            transform->scale = glm::vec3(scl[0], scl[1], scl[2]);
+        }
         ImGui::Separator();
     }
     
@@ -178,8 +193,16 @@ void DebugWindow::renderEntityInspector() {
     if (meshComp) {
         ImGui::Text("Mesh Component");
         ImGui::Text("Mesh: %s", meshComp->meshName.c_str());
-        ImGui::ColorEdit3("Diffuse Color", &meshComp->diffuseColor[0]);
-        ImGui::ColorEdit3("Specular Color", &meshComp->specularColor[0]);
+        
+        float diff[3] = { meshComp->diffuseColor.x, meshComp->diffuseColor.y, meshComp->diffuseColor.z };
+        float spec[3] = { meshComp->specularColor.x, meshComp->specularColor.y, meshComp->specularColor.z };
+        
+        if (ImGui::ColorEdit3("Diffuse Color", diff)) {
+            meshComp->diffuseColor = glm::vec3(diff[0], diff[1], diff[2]);
+        }
+        if (ImGui::ColorEdit3("Specular Color", spec)) {
+            meshComp->specularColor = glm::vec3(spec[0], spec[1], spec[2]);
+        }
         ImGui::SliderFloat("Shininess", &meshComp->shininess, 1.0f, 256.0f);
         ImGui::Checkbox("Visible", &meshComp->visible);
         ImGui::Checkbox("Wireframe", &meshComp->wireframe);

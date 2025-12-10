@@ -54,13 +54,14 @@ void PlayerControllerSystem::applyPhysics(TransformComponent* transform, Charact
     }
     
     // Apply velocity
-    movement += controller->velocity * deltaTime;
+    movement.x += controller->velocity.x * deltaTime;
+    movement.y += controller->velocity.y * deltaTime;
+    movement.z += controller->velocity.z * deltaTime;
     
-    // Update position
-    transform->position += glm::vec2(movement.x, movement.z);
-    
-    // For 3D, we'd also update Y position if we had 3D transform
-    // For now, keep it compatible with existing 2D system
+    // Update position (now vec3)
+    transform->position.x += movement.x;
+    transform->position.y += movement.y;
+    transform->position.z += movement.z;
 }
 
 void PlayerControllerSystem::checkGrounded(TransformComponent* transform, CharacterControllerComponent* controller) {
