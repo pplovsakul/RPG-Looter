@@ -8,8 +8,6 @@
 class CollisionSystem;
 class RenderSystem;
 class AudioSystem;
-class UISystem;
-class UIRenderer;
 
 class Game {
 private:
@@ -22,8 +20,6 @@ private:
 	CollisionSystem* collisionSystem = nullptr;
 	RenderSystem* renderSystem = nullptr;
 	AudioSystem* audioSystem = nullptr;
-	UISystem* uiSystem = nullptr;
-	std::unique_ptr<UIRenderer> uiRenderer;
     bool audioAvailable = false; // flag to control optional audio system
 	
 	GLFWwindow* gameWindow = nullptr; // Store window for VSync control
@@ -34,11 +30,10 @@ private:
 
 public:
 	Game() = default;
-	~Game();  // Explicit destructor needed for unique_ptr with forward-declared types
+	~Game() = default;
 	
 	void setup(GLFWwindow* window);
 	void update(float deltaTime);
-	void renderUI();  // Render the UI system
 	EntityManager& getEntityManager() { return entityManager; }
 	void onWindowResize(GLFWwindow* window, int width, int height);
     void setAudioAvailable(bool available); // setter

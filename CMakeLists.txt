@@ -106,22 +106,7 @@ add_executable(RPG-Looter
     
     # Font system files
     "src/Font.h"
-    "src/Font.cpp"
-    
-    # UI System files
-    "src/UI/UIEvent.h"
-    "src/UI/UIWidget.h"
-    "src/UI/UIWidget.cpp"
-    "src/UI/UISystem.h"
-    "src/UI/UISystem.cpp"
-    "src/UI/UIRenderer.h"
-    "src/UI/UIRenderer.cpp"
-    "src/UI/UIPanel.h"
-    "src/UI/UIPanel.cpp"
-    "src/UI/UILabel.h"
-    "src/UI/UILabel.cpp"
-    "src/UI/UIButton.h"
-    "src/UI/UIButton.cpp")
+    "src/Font.cpp")
     
     
 # Includes

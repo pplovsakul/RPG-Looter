@@ -19,8 +19,6 @@
 
 #include "Components.h"
 
-// Include UIRenderer before Game to ensure complete type for unique_ptr destructor
-#include "UI/UIRenderer.h"
 #include "Game.h"
 #include "GlobalSettings.h"
 
@@ -151,9 +149,6 @@ int main(void) {
         ImGui::NewFrame();
         
 		game.update(deltaTime);
-		
-		// Render the in-game UI (after update, before ImGui editor UI)
-		game.renderUI();
 
         // Note: Debug/Performance window is now handled by PerformanceWindow system
         // which is part of the game's systems
