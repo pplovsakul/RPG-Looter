@@ -4,7 +4,7 @@
 #include <fstream>
 #include <cstring>
 #include <cstdint>
-#include "ESCSound.h"
+#include "ECSSound.h"
 
 // ============================================================================
 // AUDIO SYSTEM IMPLEMENTATION
@@ -48,7 +48,7 @@ void AudioSystem::update(EntityManager& em, float dt) {
             audio->isPlaying = true;
         }
 
-        // Synchronisiere Play-Status zurück ins AudioComponent
+        // Synchronisiere Play-Status zurï¿½ck ins AudioComponent
         audio->isPlaying = sound->IsPlaying();
     }
 
