@@ -95,3 +95,52 @@ public:
     std::vector<Shape> shapes;
 };
 
+// --- MeshComponent: holds reference to 3D mesh ---
+class MeshComponent : public Component {
+public:
+    std::string meshName;  // Reference to mesh in AssetManager
+    
+    // Material properties
+    std::string materialName;
+    glm::vec3 diffuseColor{1.0f, 1.0f, 1.0f};
+    glm::vec3 specularColor{0.5f, 0.5f, 0.5f};
+    float shininess = 32.0f;
+    
+    // Rendering flags
+    bool castShadows = true;
+    bool receiveShadows = true;
+    bool visible = true;
+    int renderLayer = 0;
+    
+    // Debug
+    bool wireframe = false;
+};
+
+// --- CharacterControllerComponent: physics-based movement ---
+class CharacterControllerComponent : public Component {
+public:
+    // Movement
+    float moveSpeed = 5.0f;
+    float sprintMultiplier = 2.0f;
+    float jumpForce = 5.0f;
+    
+    // Physics
+    glm::vec3 velocity{0.0f};
+    bool isGrounded = false;
+    bool isJumping = false;
+    
+    // Input state
+    glm::vec2 moveInput{0.0f}; // x: left/right, y: forward/backward
+    bool wantsToJump = false;
+    bool isSprinting = false;
+    
+    // Configuration
+    bool useGravity = true;
+    float gravity = -9.81f;
+    float groundCheckDistance = 0.1f;
+    
+    // Collision
+    float radius = 0.5f; // Capsule radius
+    float height = 2.0f; // Capsule height
+};
+
