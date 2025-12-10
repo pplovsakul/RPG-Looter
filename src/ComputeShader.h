@@ -1,21 +1,80 @@
 #pragma once
 #include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #include <string>
 #include <fstream>
 #include <sstream>
 #include <iostream>
 #include "Debug.h"
 
+// Function pointers for OpenGL 4.3+ compute shader functions
+// These may not be available in all GLAD versions
+typedef void (*PFNGLDISPATCHCOMPUTEPROC)(GLuint num_groups_x, GLuint num_groups_y, GLuint num_groups_z);
+typedef void (*PFNGLBINDIMAGETEXTUREPROC)(GLuint unit, GLuint texture, GLint level, GLboolean layered, GLint layer, GLenum access, GLenum format);
+typedef void (*PFNGLMEMORYBARRIERPROC)(GLbitfield barriers);
+
+// Global function pointers
+static PFNGLDISPATCHCOMPUTEPROC glDispatchCompute_ptr = nullptr;
+static PFNGLBINDIMAGETEXTUREPROC glBindImageTexture_ptr = nullptr;
+static PFNGLMEMORYBARRIERPROC glMemoryBarrier_ptr = nullptr;
+
+// GL constants that might not be defined
+#ifndef GL_COMPUTE_SHADER
+#define GL_COMPUTE_SHADER 0x91B9
+#endif
+#ifndef GL_SHADER_STORAGE_BUFFER
+#define GL_SHADER_STORAGE_BUFFER 0x90D2
+#endif
+#ifndef GL_SHADER_IMAGE_ACCESS_BARRIER_BIT
+#define GL_SHADER_IMAGE_ACCESS_BARRIER_BIT 0x00000020
+#endif
+#ifndef GL_WRITE_ONLY
+#define GL_WRITE_ONLY 0x88B9
+#endif
+
 // ComputeShader: Verwaltet OpenGL Compute Shader
 // Compute Shaders ermöglichen parallele GPU-Berechnungen
 class ComputeShader {
 private:
     GLuint m_RendererID = 0;
+    bool m_Available = false;
+
+    static bool loadComputeShaderFunctions() {
+        static bool loaded = false;
+        static bool available = false;
+        
+        if (loaded) return available;
+        loaded = true;
+        
+        // Try to load OpenGL 4.3 functions
+        glDispatchCompute_ptr = (PFNGLDISPATCHCOMPUTEPROC)glfwGetProcAddress("glDispatchCompute");
+        glBindImageTexture_ptr = (PFNGLBINDIMAGETEXTUREPROC)glfwGetProcAddress("glBindImageTexture");
+        glMemoryBarrier_ptr = (PFNGLMEMORYBARRIERPROC)glfwGetProcAddress("glMemoryBarrier");
+        
+        available = (glDispatchCompute_ptr && glBindImageTexture_ptr && glMemoryBarrier_ptr);
+        
+        if (!available) {
+            std::cerr << "OpenGL 4.3 compute shader functions not available" << std::endl;
+        }
+        
+        return available;
+    }
 
 public:
     ComputeShader(const std::string& filepath) {
+        if (!loadComputeShaderFunctions()) {
+            m_Available = false;
+            return;
+        }
+        
         std::string source = readFile(filepath);
+        if (source.empty()) {
+            m_Available = false;
+            return;
+        }
+        
         m_RendererID = createShader(source);
+        m_Available = (m_RendererID != 0);
     }
 
     ~ComputeShader() {
@@ -24,8 +83,12 @@ public:
         }
     }
 
+    bool isAvailable() const { return m_Available; }
+
     void Bind() const {
-        GLCall(glUseProgram(m_RendererID));
+        if (m_Available) {
+            GLCall(glUseProgram(m_RendererID));
+        }
     }
 
     void Unbind() const {
@@ -36,12 +99,16 @@ public:
 
     // Dispatch compute shader
     void Dispatch(GLuint numGroupsX, GLuint numGroupsY, GLuint numGroupsZ) const {
-        GLCall(glDispatchCompute(numGroupsX, numGroupsY, numGroupsZ));
+        if (m_Available && glDispatchCompute_ptr) {
+            glDispatchCompute_ptr(numGroupsX, numGroupsY, numGroupsZ);
+        }
     }
 
     // Warte bis Compute Shader fertig ist
     void Wait() const {
-        GLCall(glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT));
+        if (m_Available && glMemoryBarrier_ptr) {
+            glMemoryBarrier_ptr(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        }
     }
 
     // Setze Uniform-Variablen
@@ -78,6 +145,11 @@ private:
         GLuint program = glCreateProgram();
         GLuint shader = compileShader(GL_COMPUTE_SHADER, source);
         
+        if (shader == 0) {
+            glDeleteProgram(program);
+            return 0;
+        }
+        
         GLCall(glAttachShader(program, shader));
         GLCall(glLinkProgram(program));
         GLCall(glValidateProgram(program));
@@ -93,6 +165,7 @@ private:
             std::cerr << "Failed to link compute shader program!" << std::endl;
             std::cerr << message << std::endl;
             glDeleteProgram(program);
+            glDeleteShader(shader);
             return 0;
         }
 

@@ -1,8 +1,6 @@
 #pragma once
 #include "vendor/glm/glm.hpp"
-
-// Forward declaration to avoid circular dependency
-struct Material;
+#include "Material.h"
 
 struct HitRecord {
     float t = 0.0f;          // Parameter along ray

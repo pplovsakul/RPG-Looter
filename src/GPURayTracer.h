@@ -1,5 +1,6 @@
 #pragma once
 #include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #include <vector>
 #include "vendor/glm/glm.hpp"
 #include "ComputeShader.h"
@@ -9,6 +10,26 @@
 #include "Camera.h"
 #include "Debug.h"
 #include <iostream>
+
+// External function pointers from ComputeShader.h
+extern PFNGLBINDIMAGETEXTUREPROC glBindImageTexture_ptr;
+
+// Additional GL constants and function pointers
+#ifndef GL_SHADER_STORAGE_BUFFER
+#define GL_SHADER_STORAGE_BUFFER 0x90D2
+#endif
+
+typedef void (*PFNGLBINDBUFFERBASEPROC)(GLenum target, GLuint index, GLuint buffer);
+static PFNGLBINDBUFFERBASEPROC glBindBufferBase_ptr = nullptr;
+
+static bool loadSSBOFunctions() {
+    static bool loaded = false;
+    if (loaded) return (glBindBufferBase_ptr != nullptr);
+    loaded = true;
+    
+    glBindBufferBase_ptr = (PFNGLBINDBUFFERBASEPROC)glfwGetProcAddress("glBindBufferBase");
+    return (glBindBufferBase_ptr != nullptr);
+}
 
 // GPURayTracer: GPU-basierter Ray Tracer mit OpenGL Compute Shaders
 // Dramatisch schneller als CPU-Version, unterstützt höhere Auflösungen
@@ -69,6 +90,12 @@ public:
         camera.aspect = float(w) / float(h);
         camera.update();
         
+        // Load required OpenGL functions
+        if (!loadSSBOFunctions()) {
+            std::cerr << "Failed to load SSBO functions!" << std::endl;
+            return;
+        }
+        
         // Initialisiere Material-Sets
         initializeMaterials();
         
@@ -91,6 +118,10 @@ public:
         // Lade Compute Shader
         try {
             computeShader = new ComputeShader("res/shaders/raytracer.comp");
+            if (!computeShader->isAvailable()) {
+                delete computeShader;
+                computeShader = nullptr;
+            }
         } catch (...) {
             std::cerr << "Failed to load compute shader!" << std::endl;
         }
@@ -116,13 +147,13 @@ public:
     }
 
     void render() {
-        if (!computeShader) return;
+        if (!computeShader || !glBindImageTexture_ptr) return;
         
         camera.update();
         updateScene();
         
         // Binde Output-Textur als Image
-        GLCall(glBindImageTexture(0, outputTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8));
+        glBindImageTexture_ptr(0, outputTexture, 0, GL_FALSE, 0, 0x88B9 /* GL_WRITE_ONLY */, GL_RGBA8);
         
         // Binde Compute Shader
         computeShader->Bind();
@@ -262,27 +293,27 @@ private:
         }
         
         // Upload Spheres
-        if (!gpuSpheres.empty()) {
+        if (!gpuSpheres.empty() && glBindBufferBase_ptr) {
             GLCall(glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphereSSBO));
             GLCall(glBufferData(GL_SHADER_STORAGE_BUFFER, gpuSpheres.size() * sizeof(GPUSphere), 
                                gpuSpheres.data(), GL_DYNAMIC_DRAW));
-            GLCall(glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, sphereSSBO));
+            glBindBufferBase_ptr(GL_SHADER_STORAGE_BUFFER, 1, sphereSSBO);
         }
         
         // Upload Boxes
-        if (!gpuBoxes.empty()) {
+        if (!gpuBoxes.empty() && glBindBufferBase_ptr) {
             GLCall(glBindBuffer(GL_SHADER_STORAGE_BUFFER, boxSSBO));
             GLCall(glBufferData(GL_SHADER_STORAGE_BUFFER, gpuBoxes.size() * sizeof(GPUBox), 
                                gpuBoxes.data(), GL_DYNAMIC_DRAW));
-            GLCall(glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, boxSSBO));
+            glBindBufferBase_ptr(GL_SHADER_STORAGE_BUFFER, 2, boxSSBO);
         }
         
         // Upload Materials
-        if (!gpuMaterials.empty()) {
+        if (!gpuMaterials.empty() && glBindBufferBase_ptr) {
             GLCall(glBindBuffer(GL_SHADER_STORAGE_BUFFER, materialSSBO));
             GLCall(glBufferData(GL_SHADER_STORAGE_BUFFER, gpuMaterials.size() * sizeof(GPUMaterial), 
                                gpuMaterials.data(), GL_DYNAMIC_DRAW));
-            GLCall(glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, materialSSBO));
+            glBindBufferBase_ptr(GL_SHADER_STORAGE_BUFFER, 3, materialSSBO);
         }
         
         GLCall(glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0));
