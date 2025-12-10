@@ -9,10 +9,13 @@
 #include "VertexBufferLayout.h"
 #include "Shader.h"
 #include "InputSystem.h"
+#include "RayTraceRenderer.h"
 
 // GLM für Matrizen
 #include "vendor/glm/glm.hpp"
 #include "vendor/glm/gtc/matrix_transform.hpp"
+
+int width = 1280, height = 720;
 
 // ===== KAMERA VARIABLEN =====
 // Kamera Position und Orientierung
@@ -114,7 +117,7 @@ int main(void) {
     }
 
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(0); // Enable vsync
+    glfwSwapInterval(1); // Enable vsync
 
     // Initialize GLAD
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -182,8 +185,13 @@ int main(void) {
     va.AddBuffer(vb, layout);
 
     // Load shader
-    Shader shader("res/shaders/basic.shader");
-    
+
+	bool useRayTracer = false;
+	Shader shader("res/shaders/basic.shader");
+
+    Shader rtshader("res/shaders/neuer_shader.shader");
+    RayTraceRenderer rt(width, height);
+
     Renderer renderer;
 
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -207,10 +215,9 @@ int main(void) {
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        // FPS berechnen und im Fenstertitel anzeigen
-        float fps = 1.0f / deltaTime;
-        std::string title = "3D Camera Demo - FPS: " + std::to_string(static_cast<int>(fps));
-        glfwSetWindowTitle(window, title.c_str());
+        if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
+			useRayTracer = !useRayTracer;
+        }
 
         // Eingabe verarbeiten
         processInput(window);
@@ -226,9 +233,14 @@ int main(void) {
 
         // Draw quad
         shader.Bind();
-        shader.SetUniformMat4f("u_MVP", mvp);
-        shader.SetUniform4f("u_Color", 1.0f, 0.5f, 0.2f, 1.0f);
-        renderer.Draw(va, ib, shader);
+        if (useRayTracer) {
+			rt.draw(rtshader.GetRendererID());
+        }
+        else {
+            shader.SetUniformMat4f("u_MVP", mvp);
+            shader.SetUniform4f("u_Color", 1.0f, 0.5f, 0.2f, 1.0f);
+            renderer.Draw(va, ib, shader);
+        }
 
         // Swap buffers and poll events
         glfwSwapBuffers(window);

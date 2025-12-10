@@ -32,7 +32,7 @@ add_executable(RPG-Looter
     "src/vendor/glm/glm.hpp"
     
     "src/main.cpp"
-)
+ "src/Ray.h" "src/Hit.h" "src/Sphere.h" "src/Camera.h" "src/RayTraceRenderer.h" "src/RayTracer.h")
 
 # Includes
 target_include_directories(RPG-Looter PUBLIC 
