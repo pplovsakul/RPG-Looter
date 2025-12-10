@@ -31,11 +31,27 @@ std::vector<OBJLoader::Material> OBJLoader::loadMTL(const std::string& mtlPath) 
             iss >> currentMaterial.name;
             hasMaterial = true;
         }
+        else if (prefix == "Ka") {
+            // Ambient color
+            iss >> currentMaterial.ambientColor.r 
+                >> currentMaterial.ambientColor.g 
+                >> currentMaterial.ambientColor.b;
+        }
         else if (prefix == "Kd") {
             // Diffuse color
             iss >> currentMaterial.diffuseColor.r 
                 >> currentMaterial.diffuseColor.g 
                 >> currentMaterial.diffuseColor.b;
+        }
+        else if (prefix == "Ks") {
+            // Specular color
+            iss >> currentMaterial.specularColor.r 
+                >> currentMaterial.specularColor.g 
+                >> currentMaterial.specularColor.b;
+        }
+        else if (prefix == "Ns") {
+            // Shininess
+            iss >> currentMaterial.shininess;
         }
         else if (prefix == "map_Kd") {
             // Diffuse texture
@@ -74,16 +90,33 @@ std::unique_ptr<ModelComponent> OBJLoader::loadOBJ(const std::string& objPath) {
     }
 
     std::vector<glm::vec3> positions;
+    std::vector<glm::vec3> normals;
     std::vector<glm::vec2> uvs;
     std::vector<Material> materials;
-    std::vector<Mesh> meshes;
     
-    Mesh currentMesh;
+    auto model = std::make_unique<ModelComponent>();
+    ModelComponent::Mesh currentMesh;
     std::string currentMaterialName;
-    std::unordered_map<std::string, int> vertexCache;
+    
+    // Map to deduplicate vertices
+    struct VertexKey {
+        int posIdx, uvIdx, normIdx;
+        bool operator==(const VertexKey& other) const {
+            return posIdx == other.posIdx && uvIdx == other.uvIdx && normIdx == other.normIdx;
+        }
+    };
+    struct VertexKeyHash {
+        size_t operator()(const VertexKey& k) const {
+            return ((size_t)k.posIdx * 100000) + ((size_t)k.uvIdx * 1000) + (size_t)k.normIdx;
+        }
+    };
+    std::unordered_map<VertexKey, unsigned int, VertexKeyHash> vertexCache;
 
     std::string line;
     while (std::getline(file, line)) {
+        // Skip empty lines and comments
+        if (line.empty() || line[0] == '#') continue;
+        
         std::istringstream iss(line);
         std::string prefix;
         iss >> prefix;
@@ -102,6 +135,12 @@ std::unique_ptr<ModelComponent> OBJLoader::loadOBJ(const std::string& objPath) {
             iss >> pos.x >> pos.y >> pos.z;
             positions.push_back(pos);
         }
+        else if (prefix == "vn") {
+            // Vertex normal
+            glm::vec3 norm;
+            iss >> norm.x >> norm.y >> norm.z;
+            normals.push_back(glm::normalize(norm));
+        }
         else if (prefix == "vt") {
             // Texture coordinate
             glm::vec2 uv;
@@ -111,122 +150,97 @@ std::unique_ptr<ModelComponent> OBJLoader::loadOBJ(const std::string& objPath) {
         else if (prefix == "usemtl") {
             // Start new mesh with this material
             if (!currentMesh.vertices.empty()) {
-                meshes.push_back(currentMesh);
-                currentMesh = Mesh();
+                model->meshes.push_back(currentMesh);
+                currentMesh = ModelComponent::Mesh();
                 vertexCache.clear();
             }
             iss >> currentMaterialName;
             currentMesh.materialName = currentMaterialName;
         }
         else if (prefix == "f") {
-            // Face (triangle)
-            std::string vertexData[3];
-            iss >> vertexData[0] >> vertexData[1] >> vertexData[2];
+            // Face - can be triangle or quad
+            std::vector<std::string> vertexData;
+            std::string vd;
+            while (iss >> vd) {
+                vertexData.push_back(vd);
+            }
 
-            for (int i = 0; i < 3; i++) {
-                // Check cache
-                auto it = vertexCache.find(vertexData[i]);
-                if (it != vertexCache.end()) {
-                    currentMesh.indices.push_back(it->second);
-                    continue;
+            // Triangulate if necessary (quads -> 2 triangles)
+            for (size_t i = 0; i < vertexData.size() - 2; i++) {
+                std::string verts[3] = {
+                    vertexData[0],
+                    vertexData[i + 1],
+                    vertexData[i + 2]
+                };
+
+                for (int j = 0; j < 3; j++) {
+                    // Parse vertex data (format: v/vt/vn or v/vt or v//vn or v)
+                    VertexKey key{0, 0, 0};
+                    std::string& vstr = verts[j];
+                    std::replace(vstr.begin(), vstr.end(), '/', ' ');
+                    std::istringstream viss(vstr);
+                    viss >> key.posIdx;
+                    if (!viss.eof()) viss >> key.uvIdx;
+                    if (!viss.eof()) viss >> key.normIdx;
+
+                    // Check cache
+                    auto it = vertexCache.find(key);
+                    if (it != vertexCache.end()) {
+                        currentMesh.indices.push_back(it->second);
+                        continue;
+                    }
+
+                    // Add new vertex
+                    if (key.posIdx > 0 && key.posIdx <= (int)positions.size()) {
+                        currentMesh.vertices.push_back(positions[key.posIdx - 1]);
+                    } else {
+                        currentMesh.vertices.push_back(glm::vec3(0.0f));
+                    }
+
+                    if (key.normIdx > 0 && key.normIdx <= (int)normals.size()) {
+                        currentMesh.normals.push_back(normals[key.normIdx - 1]);
+                    } else {
+                        currentMesh.normals.push_back(glm::vec3(0.0f, 1.0f, 0.0f));
+                    }
+
+                    if (key.uvIdx > 0 && key.uvIdx <= (int)uvs.size()) {
+                        currentMesh.uvs.push_back(uvs[key.uvIdx - 1]);
+                    } else {
+                        currentMesh.uvs.push_back(glm::vec2(0.0f));
+                    }
+
+                    unsigned int index = (unsigned int)currentMesh.vertices.size() - 1;
+                    currentMesh.indices.push_back(index);
+                    vertexCache[key] = index;
                 }
-
-                // Parse vertex data (format: v/vt/vn or v/vt or v)
-                int vIdx = 0, vtIdx = 0, vnIdx = 0;
-                std::replace(vertexData[i].begin(), vertexData[i].end(), '/', ' ');
-                std::istringstream viss(vertexData[i]);
-                viss >> vIdx;
-                if (!viss.eof()) viss >> vtIdx;
-                if (!viss.eof()) viss >> vnIdx;
-
-                // OBJ indices are 1-based
-                if (vIdx > 0 && vIdx <= (int)positions.size()) {
-                    currentMesh.vertices.push_back(positions[vIdx - 1]);
-                }
-                if (vtIdx > 0 && vtIdx <= (int)uvs.size()) {
-                    currentMesh.uvs.push_back(uvs[vtIdx - 1]);
-                } else {
-                    currentMesh.uvs.push_back(glm::vec2(0.0f));
-                }
-
-                int index = (int)currentMesh.vertices.size() - 1;
-                currentMesh.indices.push_back(index);
-                vertexCache[vertexData[i]] = index;
             }
         }
     }
 
+    // Add final mesh
     if (!currentMesh.vertices.empty()) {
-        meshes.push_back(currentMesh);
+        model->meshes.push_back(currentMesh);
     }
 
-    std::cout << "[OBJLoader] Loaded " << meshes.size() << " meshes from " << objPath << "\n";
-    
-    return convertToModelComponent(meshes, materials);
-}
-
-std::unique_ptr<ModelComponent> OBJLoader::convertToModelComponent(
-    const std::vector<Mesh>& meshes,
-    const std::vector<Material>& materials
-) {
-    auto model = std::make_unique<ModelComponent>();
-
-    // Create a material lookup map
+    // Apply material properties to meshes
     std::unordered_map<std::string, Material> materialMap;
     for (const auto& mat : materials) {
         materialMap[mat.name] = mat;
     }
 
-    int layer = 0;
-    for (const auto& mesh : meshes) {
-        if (mesh.vertices.empty()) continue;
-
-        // Calculate bounding box for the mesh in 2D (using X and Y)
-        glm::vec2 minPos(FLT_MAX);
-        glm::vec2 maxPos(-FLT_MAX);
-        
-        for (const auto& v : mesh.vertices) {
-            minPos.x = std::min(minPos.x, v.x);
-            minPos.y = std::min(minPos.y, v.y);
-            maxPos.x = std::max(maxPos.x, v.x);
-            maxPos.y = std::max(maxPos.y, v.y);
-        }
-
-        glm::vec2 center = (minPos + maxPos) * 0.5f;
-        glm::vec2 size = maxPos - minPos;
-
-        // Create a shape for this mesh
-        ModelComponent::Shape shape;
-        
-        // Determine shape type based on vertex count
-        if (mesh.vertices.size() == 3) {
-            shape.type = ModelComponent::ShapeType::Triangle;
-        } else {
-            // Default to textured quad for meshes with 4+ vertices
-            shape.type = ModelComponent::ShapeType::TexturedQuad;
-        }
-
-        shape.position = center * 100.0f; // Scale up for screen coordinates
-        shape.rotation = 0.0f;
-        shape.size = size * 100.0f; // Scale up for screen coordinates
-        shape.scale = glm::vec2(1.0f);
-        
-        // Apply material properties
+    for (auto& mesh : model->meshes) {
         auto matIt = materialMap.find(mesh.materialName);
         if (matIt != materialMap.end()) {
-            shape.color = matIt->second.diffuseColor;
-            shape.textureName = matIt->second.diffuseTexture;
-        } else {
-            shape.color = glm::vec3(1.0f);
-            shape.textureName = "";
+            mesh.color = matIt->second.diffuseColor;
+            mesh.textureName = matIt->second.diffuseTexture;
         }
-
-        shape.filled = true;
-        shape.layer = layer++;
-
-        model->shapes.push_back(shape);
     }
 
-    std::cout << "[OBJLoader] Created ModelComponent with " << model->shapes.size() << " shapes\n";
+    std::cout << "[OBJLoader] Loaded " << model->meshes.size() << " meshes from " << objPath 
+              << " (total vertices: ";
+    int totalVerts = 0;
+    for (const auto& m : model->meshes) totalVerts += m.vertices.size();
+    std::cout << totalVerts << ")\n";
+    
     return model;
 }

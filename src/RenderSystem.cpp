@@ -18,76 +18,74 @@
 RenderSystem::RenderSystem() {
     assetManager = AssetManager::getInstance();
     viewMatrix = glm::mat4(1.0f);
-    // Projektionsmatrix für Bildschirm-Koordinaten (0-1920, 0-1080)
-    // Consistent with main.cpp coordinate system
-    projectionMatrix = glm::ortho(0.0f, 1920.0f, 0.0f, 1080.0f, -1.0f, 1.0f);
+    // Perspective projection for 3D rendering
+    projectionMatrix = glm::perspective(glm::radians(60.0f), 1920.0f / 1080.0f, 0.1f, 1000.0f);
 }
 
 void RenderSystem::init() {
     createDefaultAssets();
-    // GL state for 2D rendering
-    glViewport(0, 0, 1920, 1080); // Match window size; adjust if window size differs
-    glDisable(GL_CULL_FACE);
-    glDisable(GL_DEPTH_TEST);
-    glClearColor(0.05f, 0.05f, 0.08f, 1.0f); // dark background so white paddle is visible
+    // GL state for 3D rendering
+    glViewport(0, 0, 1920, 1080);
+    glEnable(GL_DEPTH_TEST);           // Enable depth testing
+    glDepthFunc(GL_LESS);              // Accept fragment if closer
+    glEnable(GL_CULL_FACE);            // Enable backface culling
+    glCullFace(GL_BACK);               // Cull back faces
+    glFrontFace(GL_CCW);               // Counter-clockwise winding is front
+    glClearColor(0.1f, 0.1f, 0.15f, 1.0f);  // Dark blue background
     viewMatrix = glm::mat4(1.0f);
 }
 
 void RenderSystem::createDefaultAssets() {
-    // Quad Mesh
-    float quadVertices[] = {
-        -0.5f, -0.5f, 0.0f,   0.0f, 0.0f,
-         0.5f, -0.5f, 0.0f,   1.0f, 0.0f,
-         0.5f,  0.5f, 0.0f,   1.0f, 1.0f,
-        -0.5f,  0.5f, 0.0f,   0.0f, 1.0f
+    // Cube Mesh for 3D rendering (with normals)
+    // Format: position (3) + normal (3) + texcoord (2)
+    float cubeVertices[] = {
+        // Back face
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
+        // Front face
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 1.0f,
+        // Left face
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+        // Right face
+         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+        // Bottom face
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 0.0f,
+        // Top face
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
     };
 
-    unsigned int quadIndices[6] = { 0, 1, 2, 2, 3, 0 };
-
-    assetManager->createMesh("quad", quadVertices, sizeof(quadVertices),
-        quadIndices, 6);
-
-    // Triangle Mesh (use same local corners as CollisionUtils triangle: indices 0,1,3)
-    float triVertices[] = {
-        -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, // corner 0
-         0.5f, -0.5f, 0.0f,   1.0f, 0.0f, // corner 1
-        -0.5f,  0.5f, 0.0f,   0.0f, 1.0f  // corner 3
+    unsigned int cubeIndices[] = {
+        0, 1, 2, 2, 3, 0,       // Back
+        4, 5, 6, 6, 7, 4,       // Front
+        8, 9, 10, 10, 11, 8,    // Left
+        12, 13, 14, 14, 15, 12, // Right
+        16, 17, 18, 18, 19, 16, // Bottom
+        20, 21, 22, 22, 23, 20  // Top
     };
-    unsigned int triIndices[] = { 0, 1, 2 };
-    assetManager->createMesh("triangle", triVertices, sizeof(triVertices), triIndices, 3);
 
-    // Circle Mesh
-    const int segments = 32;
-    std::vector<float> circleVertices;
-    std::vector<unsigned int> circleIndices;
+    assetManager->createMesh("cube", cubeVertices, sizeof(cubeVertices),
+        cubeIndices, 36);
 
-    circleVertices.push_back(0.0f);
-    circleVertices.push_back(0.0f);
-    circleVertices.push_back(0.0f);
-    circleVertices.push_back(0.5f);
-    circleVertices.push_back(0.5f);
+    std::cout << "[RenderSystem] Created 3D cube mesh\n";
 
-    for (int i = 0; i <= segments; i++) {
-        float angle = (float)i / segments * 2.0f * 3.14159f;
-        circleVertices.push_back(cos(angle) * 0.5f);
-        circleVertices.push_back(sin(angle) * 0.5f);
-        circleVertices.push_back(0.0f);
-        circleVertices.push_back(cos(angle) * 0.5f + 0.5f);
-        circleVertices.push_back(sin(angle) * 0.5f + 0.5f);
-    }
-
-    for (int i = 1; i <= segments; i++) {
-        circleIndices.push_back(0);
-        circleIndices.push_back(i);
-        circleIndices.push_back(i + 1);
-    }
-
-    assetManager->createMesh("circle", circleVertices.data(),
-        circleVertices.size() * sizeof(float),
-        circleIndices.data(), circleIndices.size());
-
-    // Shader laden - WICHTIG: Pfad zur .shader Datei!
-    // Bevorzugt: res/ECS_shaders (wie von dir genutzt). Fallback: res/shaders/ECS.shader
+    // Shader laden
     Shader* loaded = assetManager->loadShader("default", "res/ECS_shaders");
     if (!loaded) {
         std::cout << "[RenderSystem] Primary shader path failed, trying res/shaders/ECS.shader...\n";
@@ -96,8 +94,8 @@ void RenderSystem::createDefaultAssets() {
         std::cout << "[RenderSystem] Shader loaded from res/ECS_shaders\n";
     }
 
-    // Fallback: Erstelle einen einfachen Shader direkt im Code
-    std::cout << "[RenderSystem] Creating fallback shader...\n";
+    // Fallback: Create 3D shader
+    std::cout << "[RenderSystem] Creating fallback 3D shader...\n";
     createFallbackShader();
 }
 
@@ -371,33 +369,69 @@ void RenderSystem::setProjectionMatrix(const glm::mat4& proj) {
 }
 
 void RenderSystem::createFallbackShader() {
-    // Einfacher Vertex Shader
+    // 3D Vertex Shader with lighting
     const char* vertexShaderSource = R"(
         #version 330 core
         layout (location = 0) in vec3 a_Position;
-        layout (location = 1) in vec2 a_TexCoord;
-        uniform mat4 u_MVP;
+        layout (location = 1) in vec3 a_Normal;
+        layout (location = 2) in vec2 a_TexCoord;
+        
+        uniform mat4 u_Model;
+        uniform mat4 u_View;
+        uniform mat4 u_Projection;
+        
+        out vec3 v_FragPos;
+        out vec3 v_Normal;
         out vec2 v_TexCoord;
+        
         void main() {
-            gl_Position = u_MVP * vec4(a_Position, 1.0);
+            v_FragPos = vec3(u_Model * vec4(a_Position, 1.0));
+            v_Normal = mat3(transpose(inverse(u_Model))) * a_Normal;
             v_TexCoord = a_TexCoord;
+            gl_Position = u_Projection * u_View * vec4(v_FragPos, 1.0);
         }
     )";
 
-    // Einfacher Fragment Shader mit Texture support
+    // Fragment Shader with Phong lighting
     const char* fragmentShaderSource = R"(
         #version 330 core
-        out vec4 color;
+        out vec4 FragColor;
+        
+        in vec3 v_FragPos;
+        in vec3 v_Normal;
         in vec2 v_TexCoord;
-        uniform vec4 u_color;
+        
+        uniform vec3 u_LightPos;
+        uniform vec3 u_LightColor;
+        uniform vec3 u_AmbientColor;
+        uniform vec3 u_ViewPos;
+        uniform vec3 u_ObjectColor;
         uniform sampler2D u_Texture;
         uniform int u_UseTexture;
+        
         void main() {
+            // Ambient
+            vec3 ambient = u_AmbientColor;
+            
+            // Diffuse
+            vec3 norm = normalize(v_Normal);
+            vec3 lightDir = normalize(u_LightPos - v_FragPos);
+            float diff = max(dot(norm, lightDir), 0.0);
+            vec3 diffuse = diff * u_LightColor;
+            
+            // Specular
+            vec3 viewDir = normalize(u_ViewPos - v_FragPos);
+            vec3 reflectDir = reflect(-lightDir, norm);
+            float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+            vec3 specular = 0.5 * spec * u_LightColor;
+            
+            vec3 result = (ambient + diffuse + specular) * u_ObjectColor;
+            
             if (u_UseTexture == 1) {
                 vec4 texColor = texture(u_Texture, v_TexCoord);
-                color = texColor * u_color;
+                FragColor = vec4(result, 1.0) * texColor;
             } else {
-                color = u_color;
+                FragColor = vec4(result, 1.0);
             }
         }
     )";
@@ -444,7 +478,7 @@ void RenderSystem::createFallbackShader() {
 
     // Create and store as AssetManager shader for consistency
     try {
-        std::cout << "[RenderSystem] Fallback shader created with ID: " << shaderProgram << "\n";
+        std::cout << "[RenderSystem] Fallback 3D shader created with ID: " << shaderProgram << "\n";
         fallbackShaderID = shaderProgram;
         cachedProgramID = shaderProgram; // Cache the program ID
     } catch (const std::exception& e) {
