@@ -30,7 +30,8 @@ const int GPU_RT_HEIGHT = 720;
 
 // ===== KAMERA VARIABLEN =====
 // Kamera Position und Orientierung
-glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 3.0f);
+// Positioniert, um den Würfel und die Deckenleuchte zu sehen
+glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 6.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
 
@@ -267,6 +268,100 @@ int main(void) {
     
     if (gpuRT) {
         gpuRT->boxes.emplace_back(Box::fromCenterSize(glm::vec3(0.0f, 0.0f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f), boxMaterial));
+    }
+    
+    // ===== RAUM UM DEN WÜRFEL =====
+    // Erstelle einen großen Raum (10x10x10) um den Würfel
+    const float roomSize = 10.0f;
+    const float wallThickness = 0.1f;
+    Material wallMaterial = Material::Diffuse(glm::vec3(0.7f, 0.7f, 0.7f)); // Grau
+    
+    // Boden (Y = -roomSize/2)
+    cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(
+        glm::vec3(0.0f, -roomSize/2.0f, roomSize/2.0f), 
+        glm::vec3(roomSize, wallThickness, roomSize), 
+        wallMaterial));
+    if (gpuRT) {
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(
+            glm::vec3(0.0f, -roomSize/2.0f, roomSize/2.0f), 
+            glm::vec3(roomSize, wallThickness, roomSize), 
+            wallMaterial));
+    }
+    
+    // Decke (Y = roomSize/2)
+    cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(
+        glm::vec3(0.0f, roomSize/2.0f, roomSize/2.0f), 
+        glm::vec3(roomSize, wallThickness, roomSize), 
+        wallMaterial));
+    if (gpuRT) {
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(
+            glm::vec3(0.0f, roomSize/2.0f, roomSize/2.0f), 
+            glm::vec3(roomSize, wallThickness, roomSize), 
+            wallMaterial));
+    }
+    
+    // Wand hinten (Z = 0)
+    cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(
+        glm::vec3(0.0f, 0.0f, 0.0f), 
+        glm::vec3(roomSize, roomSize, wallThickness), 
+        wallMaterial));
+    if (gpuRT) {
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(
+            glm::vec3(0.0f, 0.0f, 0.0f), 
+            glm::vec3(roomSize, roomSize, wallThickness), 
+            wallMaterial));
+    }
+    
+    // Wand vorne (Z = roomSize)
+    cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(
+        glm::vec3(0.0f, 0.0f, roomSize), 
+        glm::vec3(roomSize, roomSize, wallThickness), 
+        wallMaterial));
+    if (gpuRT) {
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(
+            glm::vec3(0.0f, 0.0f, roomSize), 
+            glm::vec3(roomSize, roomSize, wallThickness), 
+            wallMaterial));
+    }
+    
+    // Wand links (X = -roomSize/2)
+    cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(
+        glm::vec3(-roomSize/2.0f, 0.0f, roomSize/2.0f), 
+        glm::vec3(wallThickness, roomSize, roomSize), 
+        wallMaterial));
+    if (gpuRT) {
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(
+            glm::vec3(-roomSize/2.0f, 0.0f, roomSize/2.0f), 
+            glm::vec3(wallThickness, roomSize, roomSize), 
+            wallMaterial));
+    }
+    
+    // Wand rechts (X = roomSize/2)
+    cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(
+        glm::vec3(roomSize/2.0f, 0.0f, roomSize/2.0f), 
+        glm::vec3(wallThickness, roomSize, roomSize), 
+        wallMaterial));
+    if (gpuRT) {
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(
+            glm::vec3(roomSize/2.0f, 0.0f, roomSize/2.0f), 
+            glm::vec3(wallThickness, roomSize, roomSize), 
+            wallMaterial));
+    }
+    
+    // ===== LICHTQUELLE AN DER DECKE =====
+    // Physische Lichtquelle: Nur sichtbar durch Ray Bouncing
+    // Position: Mitte der Decke, leicht darunter
+    const float lightOffset = 0.3f; // Abstand von der Decke, damit das Licht sichtbar ist
+    Material lightMaterial = Material::Emissive(glm::vec3(1.0f, 1.0f, 0.9f), 5.0f); // Helles warmweißes Licht
+    cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(
+        glm::vec3(0.0f, roomSize/2.0f - lightOffset, roomSize/2.0f), 
+        glm::vec3(1.0f, 0.1f, 1.0f), // Flache Box als Lichtpanel
+        lightMaterial));
+    if (gpuRT) {
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(
+            glm::vec3(0.0f, roomSize/2.0f - lightOffset, roomSize/2.0f), 
+            glm::vec3(1.0f, 0.1f, 1.0f), 
+            lightMaterial));
     }
 
     Renderer renderer;
