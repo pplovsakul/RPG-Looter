@@ -109,11 +109,9 @@ public:
         // Emission: Füge selbstleuchtende Farbe hinzu
         glm::vec3 emitted = mat.emission;
 
-        // Kein direktionales Licht mehr - nur Emission und Ambient
-        // Die Deckenlampe liefert Licht durch ihre Emission
-        
-        // Ambient Term - erhöht für bessere Sichtbarkeit
-        glm::vec3 ambient = mat.albedo * 0.2f;
+        // Sehr reduziertes Ambient nur um komplette Dunkelheit zu vermeiden
+        // Hauptbeleuchtung kommt von der Deckenlampe durch Bounces
+        glm::vec3 ambient = mat.albedo * 0.02f; // Stark reduziert für echte Schatten
 
         // Berechne Reflexion basierend auf Material
         glm::vec3 reflectedColor(0.0f);
@@ -131,17 +129,15 @@ public:
             Ray reflectedRay(closestRec.point, reflectionDir);
             reflectedColor = shade(reflectedRay, depth + 1);
             
-            // Metallic bestimmt, wie viel von Reflexion vs. Albedo verwendet wird
-            // Metalle reflektieren ihre Farbe, Dielektrika reflektieren weiß
-            glm::vec3 reflectionTint = glm::mix(glm::vec3(1.0f), mat.albedo, mat.metallic);
-            reflectedColor *= reflectionTint;
+            // Diffuse Oberflächen färben das reflektierte Licht mit ihrer Albedo-Farbe
+            // Licht nimmt die Farbe der Oberfläche an, von der es abprallt
+            reflectedColor *= mat.albedo;
         }
 
         // Kombiniere alle Komponenten
-        float reflectivity = (1.0f - mat.roughness) * 0.5f; // Reduzierte Reflektivität für mehr Lichtdurchlass
         glm::vec3 finalColor = emitted + 
-                               ambient * (1.0f - reflectivity * 0.5f) +  // Ambient weniger durch Reflektivität reduziert
-                               reflectedColor * reflectivity;
+                               ambient + 
+                               reflectedColor;
 
         return finalColor;
     }

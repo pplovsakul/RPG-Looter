@@ -232,12 +232,12 @@ vec3 shade(vec3 rayOrigin, vec3 rayDir, inout uint seed) {
         
         Material mat = materials[rec.materialIndex];
         
-        // Emission
+        // Emission - Lichtquellen leuchten direkt
         color += throughput * mat.emission;
         
-        // Kein direktionales Licht mehr - nur Emission und Ambient
-        // Die Deckenlampe liefert Licht durch ihre Emission
-        vec3 ambient = mat.albedo * 0.2; // Erhöhtes Ambient für bessere Sichtbarkeit
+        // Sehr reduziertes Ambient nur um komplette Dunkelheit zu vermeiden
+        // Hauptbeleuchtung kommt von der Deckenlampe durch Bounces
+        vec3 ambient = mat.albedo * 0.02; // Stark reduziert für echte Schatten
         
         // Berechne neue Strahlrichtung
         vec3 perfectReflection = reflect_vec(rayDir, rec.normal);
@@ -246,17 +246,14 @@ vec3 shade(vec3 rayOrigin, vec3 rayDir, inout uint seed) {
         // Interpoliere basierend auf Roughness
         vec3 reflectionDir = normalize(mix(perfectReflection, diffuseReflection, mat.roughness));
         
-        // Metallic bestimmt Reflexionsfarbe
-        vec3 reflectionTint = mix(vec3(1.0), mat.albedo, mat.metallic);
+        // Aktualisiere Farbe mit minimalem Ambient
+        color += throughput * ambient;
         
-        // Reflektivität basierend auf Roughness - reduziert für mehr Lichtdurchlass
-        float reflectivity = (1.0 - mat.roughness) * 0.5;
-        
-        // Aktualisiere Farbe mit Ambient-Beleuchtung
-        color += throughput * ambient * (1.0 - reflectivity * 0.5); // Ambient weniger durch Reflektivität reduziert
-        
-        // Aktualisiere Throughput für nächsten Bounce - weniger aggressiv
-        throughput *= reflectionTint * mix(0.8, reflectivity, 0.5); // Mehr Energie bleibt erhalten
+        // Aktualisiere Throughput für nächsten Bounce
+        // Diffuse Oberflächen absorbieren Licht basierend auf Albedo
+        // Metallische Oberflächen reflektieren mit ihrer Farbe
+        vec3 surfaceColor = mix(mat.albedo, mat.albedo, mat.roughness); // Diffuse Oberflächen nutzen Albedo
+        throughput *= surfaceColor;
         
         // Russisches Roulette für frühe Terminierung
         // Start nach 3 Bounces um initiale Reflexionen sicherzustellen
