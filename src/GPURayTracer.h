@@ -84,7 +84,7 @@ public:
     std::vector<Sphere> spheres;
     std::vector<Box> boxes;
     Camera camera;
-    glm::vec3 lightDir = glm::normalize(glm::vec3(-1.0f, -1.0f, -0.5f));
+    // Kein Richtungslicht mehr - nur Deckenlampe als Lichtquelle
 
     GPURayTracer(int w, int h) : width(w), height(h) {
         camera.aspect = float(w) / float(h);
@@ -181,8 +181,7 @@ public:
         computeShader->SetUniformVec3("cameraHorizontal", camera.horizontal);
         computeShader->SetUniformVec3("cameraVertical", camera.vertical);
         
-        // Licht
-        computeShader->SetUniformVec3("lightDir", lightDir);
+        // Kein Licht-Uniform mehr - Licht kommt von emissiver Deckenlampe
         
         // Dispatch Compute Shader (8x8 Work Groups)
         GLuint numGroupsX = (width + 7) / 8;

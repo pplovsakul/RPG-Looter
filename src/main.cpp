@@ -265,8 +265,95 @@ int main(void) {
     Material boxMaterial = Material::Diffuse(glm::vec3(0.8f, 0.3f, 0.3f));
     cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(glm::vec3(0.0f, 0.0f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f), boxMaterial));
     
+    // ===== RAUM MIT OFFENER FRONTWAND =====
+    // Raumgröße: 5x5x5 Einheiten, Zentrum bei (0, 0, 2.5)
+    // Wanddicke: 0.2 Einheiten
+    const float roomSize = 5.0f;
+    const float wallThickness = 0.2f;
+    Material wallMaterial = Material::Diffuse(glm::vec3(0.7f, 0.7f, 0.7f)); // Hellgrau
+    
+    // Boden (unten)
+    cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(
+        glm::vec3(0.0f, -roomSize/2.0f - wallThickness/2.0f, roomSize/2.0f),
+        glm::vec3(roomSize, wallThickness, roomSize),
+        wallMaterial
+    ));
+    
+    // Decke (oben)
+    cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(
+        glm::vec3(0.0f, roomSize/2.0f + wallThickness/2.0f, roomSize/2.0f),
+        glm::vec3(roomSize, wallThickness, roomSize),
+        wallMaterial
+    ));
+    
+    // Linke Wand
+    cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(
+        glm::vec3(-roomSize/2.0f - wallThickness/2.0f, 0.0f, roomSize/2.0f),
+        glm::vec3(wallThickness, roomSize, roomSize),
+        wallMaterial
+    ));
+    
+    // Rechte Wand
+    cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(
+        glm::vec3(roomSize/2.0f + wallThickness/2.0f, 0.0f, roomSize/2.0f),
+        glm::vec3(wallThickness, roomSize, roomSize),
+        wallMaterial
+    ));
+    
+    // Rückwand
+    cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(
+        glm::vec3(0.0f, 0.0f, roomSize + wallThickness/2.0f),
+        glm::vec3(roomSize, roomSize, wallThickness),
+        wallMaterial
+    ));
+    
+    // FRONTWAND WIRD NICHT HINZUGEFÜGT - der Raum ist auf dieser Seite offen!
+    
+    // ===== DECKENLAMPE (EINZIGE LICHTQUELLE) =====
+    // Kleine leuchtende Kugel an der Decke
+    Material lampMaterial = Material::Emissive(glm::vec3(1.0f, 1.0f, 0.9f), 5.0f); // Warmes weißes Licht
+    cpuRT.tracer.spheres.emplace_back(Sphere(
+        glm::vec3(0.0f, roomSize/2.0f, roomSize/2.0f), // An der Decke, zentral
+        0.3f, // Kleine Lampe
+        lampMaterial
+    ));
+    
     if (gpuRT) {
         gpuRT->boxes.emplace_back(Box::fromCenterSize(glm::vec3(0.0f, 0.0f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f), boxMaterial));
+        
+        // Füge Raumwände zum GPU Ray Tracer hinzu
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(
+            glm::vec3(0.0f, -roomSize/2.0f - wallThickness/2.0f, roomSize/2.0f),
+            glm::vec3(roomSize, wallThickness, roomSize),
+            wallMaterial
+        ));
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(
+            glm::vec3(0.0f, roomSize/2.0f + wallThickness/2.0f, roomSize/2.0f),
+            glm::vec3(roomSize, wallThickness, roomSize),
+            wallMaterial
+        ));
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(
+            glm::vec3(-roomSize/2.0f - wallThickness/2.0f, 0.0f, roomSize/2.0f),
+            glm::vec3(wallThickness, roomSize, roomSize),
+            wallMaterial
+        ));
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(
+            glm::vec3(roomSize/2.0f + wallThickness/2.0f, 0.0f, roomSize/2.0f),
+            glm::vec3(wallThickness, roomSize, roomSize),
+            wallMaterial
+        ));
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(
+            glm::vec3(0.0f, 0.0f, roomSize + wallThickness/2.0f),
+            glm::vec3(roomSize, roomSize, wallThickness),
+            wallMaterial
+        ));
+        
+        // Deckenlampe
+        gpuRT->spheres.emplace_back(Sphere(
+            glm::vec3(0.0f, roomSize/2.0f, roomSize/2.0f),
+            0.3f,
+            lampMaterial
+        ));
     }
 
     Renderer renderer;

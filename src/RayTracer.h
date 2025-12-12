@@ -19,7 +19,7 @@ public:
     int width = 4;
     int height = 3;
     Camera camera;
-    glm::vec3 lightDir = glm::normalize(glm::vec3(-1.0f, -1.0f, -0.5f)); // Richtungslicht
+    // Kein Richtungslicht mehr - nur Deckenlampe als Lichtquelle
 
     // Rendering-Einstellungen
     int samplesPerPixel = 1;  // Anti-Aliasing: 1, 4, 9, 16 samples
@@ -109,12 +109,11 @@ public:
         // Emission: Füge selbstleuchtende Farbe hinzu
         glm::vec3 emitted = mat.emission;
 
-        // Berechne direkte Beleuchtung (Lambert)
-        float NdotL = glm::max(0.0f, glm::dot(closestRec.normal, -lightDir));
-        glm::vec3 directLight = mat.albedo * NdotL;
-
+        // Kein direktionales Licht mehr - nur Emission und Ambient
+        // Die Deckenlampe liefert Licht durch ihre Emission
+        
         // Ambient Term
-        glm::vec3 ambient = mat.albedo * 0.1f;
+        glm::vec3 ambient = mat.albedo * 0.05f; // Reduziertes Ambient für realistischere Beleuchtung
 
         // Berechne Reflexion basierend auf Material
         glm::vec3 reflectedColor(0.0f);
@@ -143,7 +142,6 @@ public:
         float reflectivity = (1.0f - mat.roughness) * 0.8f;
         glm::vec3 finalColor = emitted + 
                                ambient + 
-                               directLight * (1.0f - reflectivity) + 
                                reflectedColor * reflectivity;
 
         return finalColor;

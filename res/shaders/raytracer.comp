@@ -62,7 +62,7 @@ uniform vec3 cameraTarget;
 uniform vec3 cameraUp;
 uniform float cameraVFov;
 uniform float cameraAspect;
-uniform vec3 lightDir;
+// Kein Richtungslicht mehr - nur emissive Deckenlampe
 uniform uint frameCount; // Für unterschiedliche Random Seeds pro Frame
 
 // Kamera-Basis-Vektoren (werden in CPU berechnet und übergeben)
@@ -235,10 +235,9 @@ vec3 shade(vec3 rayOrigin, vec3 rayDir, inout uint seed) {
         // Emission
         color += throughput * mat.emission;
         
-        // Direkte Beleuchtung
-        float NdotL = max(0.0, dot(rec.normal, -lightDir));
-        vec3 directLight = mat.albedo * NdotL;
-        vec3 ambient = mat.albedo * 0.1;
+        // Kein direktionales Licht mehr - nur Emission und Ambient
+        // Die Deckenlampe liefert Licht durch ihre Emission
+        vec3 ambient = mat.albedo * 0.05; // Reduziertes Ambient für realistischere Beleuchtung
         
         // Berechne neue Strahlrichtung
         vec3 perfectReflection = reflect_vec(rayDir, rec.normal);
@@ -253,8 +252,8 @@ vec3 shade(vec3 rayOrigin, vec3 rayDir, inout uint seed) {
         // Reflektivität basierend auf Roughness
         float reflectivity = (1.0 - mat.roughness) * 0.8;
         
-        // Aktualisiere Farbe mit direkter Beleuchtung
-        color += throughput * (ambient + directLight * (1.0 - reflectivity));
+        // Aktualisiere Farbe mit Ambient-Beleuchtung
+        color += throughput * ambient;
         
         // Aktualisiere Throughput für nächsten Bounce
         throughput *= reflectionTint * reflectivity;
