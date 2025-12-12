@@ -32,7 +32,17 @@ add_executable(RPG-Looter
     "src/vendor/glm/glm.hpp"
     
     "src/main.cpp"
- "src/Ray.h" "src/Hit.h" "src/Sphere.h" "src/Box.h" "src/Camera.h" "src/RayTraceRenderer.h" "src/RayTracer.h")
+    "src/Ray.h"
+    "src/Hit.h"
+    "src/Sphere.h"
+    "src/Box.h"
+    "src/Camera.h"
+    "src/RayTraceRenderer.h"
+    "src/RayTracer.h"
+    "src/Material.h"
+    "src/ComputeShader.h"
+    "src/GPURayTracer.h"
+)
 
 # Includes
 target_include_directories(RPG-Looter PUBLIC 
@@ -46,7 +56,7 @@ target_link_libraries(RPG-Looter PRIVATE glfw)
 set(SHADER_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/res/shaders")
 set(SHADER_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/res/shaders")
 
-file(GLOB SHADER_FILES "${SHADER_SOURCE_DIR}/*.shader")
+file(GLOB SHADER_FILES "${SHADER_SOURCE_DIR}/*.shader" "${SHADER_SOURCE_DIR}/*.comp")
 
 # Create shader directory if it doesn't exist
 file(MAKE_DIRECTORY ${SHADER_BUILD_DIR})

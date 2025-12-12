@@ -10,19 +10,23 @@
 #include "Shader.h"
 #include "InputSystem.h"
 #include "RayTraceRenderer.h"
+#include "GPURayTracer.h"
+#include "Material.h"
 
-// GLM f�r Matrizen
+// GLM für Matrizen
 #include "vendor/glm/glm.hpp"
 #include "vendor/glm/gtc/matrix_transform.hpp"
 
 int width = 1280, height = 720;
 
 // ===== RAY TRACER KONFIGURATION =====
-// Ray Tracer Resolution: Reduziert auf 400x300, um CPU-Last zu minimieren
-// und Einfrieren während des Renderns zu vermeiden. Bei höheren Auflösungen
-// kann das Ray Tracing mehrere Sekunden pro Frame dauern.
-const int RT_WIDTH = 400;
-const int RT_HEIGHT = 300;
+// CPU Ray Tracer: Reduzierte Auflösung für akzeptable Performance
+const int CPU_RT_WIDTH = 400;
+const int CPU_RT_HEIGHT = 300;
+
+// GPU Ray Tracer: Kann volle Auflösung nutzen
+const int GPU_RT_WIDTH = 1280/8;
+const int GPU_RT_HEIGHT = 720/8;
 
 // ===== KAMERA VARIABLEN =====
 // Kamera Position und Orientierung
@@ -43,10 +47,18 @@ float cameraSpeed = 2.5f;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
+// ===== FPS COUNTER =====
+float lastTitleUpdate = 0.0f;
+
 // ===== RAY TRACER HOTKEY STATE =====
-// Tracking für R-Taste, um sauberes Toggle zwischen Rasterizer/Ray Tracer zu ermöglichen
-// Ohne Debouncing würde die Taste bei jedem Frame mehrfach erkannt werden
+// Tracking für Hotkeys mit Debouncing
 bool rKeyWasPressed = false;
+bool key1WasPressed = false;
+bool key2WasPressed = false;
+bool key3WasPressed = false;
+bool key4WasPressed = false;
+bool bKeyWasPressed = false;
+bool mKeyWasPressed = false;
 
 // Maus-Callback Funktion
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
@@ -112,8 +124,8 @@ int main(void) {
         return -1;
     }
 
-    // Set OpenGL version hints
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    // Set OpenGL version hints - Use 4.3 for compute shader support
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -129,7 +141,7 @@ int main(void) {
     }
 
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1); // Enable vsync
+    glfwSwapInterval(0); // Enable vsync
 
     // Initialize GLAD
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -143,7 +155,10 @@ int main(void) {
     std::cout << "Maus    - Umsehen" << std::endl;
     std::cout << "Space   - Hoch" << std::endl;
     std::cout << "Shift   - Runter" << std::endl;
-    std::cout << "R       - Toggle Ray Tracer / Rasterizer" << std::endl;
+    std::cout << "R       - Toggle Ray Tracer (CPU/GPU/Rasterizer)" << std::endl;
+    std::cout << "1-4     - Samples per Pixel (1, 4, 9, 16)" << std::endl;
+    std::cout << "B       - Bounce Depth erhöhen (max 10)" << std::endl;
+    std::cout << "M       - Material Set wechseln" << std::endl;
     std::cout << "ESC     - Beenden" << std::endl;
 
     // Maus einfangen und Callback setzen
@@ -198,25 +213,61 @@ int main(void) {
     va.AddBuffer(vb, layout);
 
     // ===== SHADER UND RENDERER SETUP =====
-    // useRayTracer: Flag zum Umschalten zwischen Rasterizer (OpenGL) und Ray Tracer (CPU)
-	bool useRayTracer = false;
+    // Rendering-Modi: 0 = Rasterizer, 1 = CPU Ray Tracer, 2 = GPU Ray Tracer
+    int renderMode = 0;
     
     // basic.shader: Standard OpenGL Vertex/Fragment Shader für Rasterizer
-	Shader shader("res/shaders/basic.shader");
+    Shader shader("res/shaders/basic.shader");
     
     // neuer_shader.shader: Shader zum Anzeigen der Ray-Traced Textur auf einem Fullscreen Quad
     Shader rtshader("res/shaders/neuer_shader.shader");
     
-    // RayTraceRenderer: CPU-basierter Ray Tracer mit reduzierter Auflösung (400x300)
-    // Dies verhindert Einfrieren, da Ray Tracing sehr rechenintensiv ist
-    RayTraceRenderer rt(RT_WIDTH, RT_HEIGHT);
+    // CPU Ray Tracer: Reduzierte Auflösung (400x300)
+    RayTraceRenderer cpuRT(CPU_RT_WIDTH, CPU_RT_HEIGHT);
+    
+    // GPU Ray Tracer: Volle Auflösung (1280x720)
+    GPURayTracer* gpuRT = nullptr;
+    bool gpuRTAvailable = false;
+    
+    // Prüfe ob OpenGL 4.3+ verfügbar ist (für Compute Shaders)
+    GLint major, minor;
+    glGetIntegerv(GL_MAJOR_VERSION, &major);
+    glGetIntegerv(GL_MINOR_VERSION, &minor);
+    bool computeShadersSupported = (major > 4) || (major == 4 && minor >= 3);
+    
+    if (computeShadersSupported) {
+        try {
+            gpuRT = new GPURayTracer(GPU_RT_WIDTH, GPU_RT_HEIGHT);
+            if (gpuRT->isAvailable()) {
+                gpuRTAvailable = true;
+                std::cout << "\nGPU Ray Tracer verfügbar! (OpenGL " << major << "." << minor << ")" << std::endl;
+            } else {
+                delete gpuRT;
+                gpuRT = nullptr;
+            }
+        } catch (...) {
+            std::cerr << "GPU Ray Tracer konnte nicht initialisiert werden." << std::endl;
+            if (gpuRT) {
+                delete gpuRT;
+                gpuRT = nullptr;
+            }
+        }
+    } else {
+        std::cout << "\nGPU Ray Tracer nicht verfügbar (OpenGL " << major << "." << minor << " < 4.3)" << std::endl;
+        std::cout << "CPU Ray Tracer wird als Fallback verwendet." << std::endl;
+    }
     
     // ===== SZENE KONFIGURATION =====
     // Füge Würfel aus der Rasterizer-Szene zum Ray Tracer hinzu
     // Der Würfel hat folgende Koordinaten in den Vertices:
     // X: -0.5 bis 0.5, Y: -0.5 bis 0.5, Z: 0.0 bis 1.0
     // Center: (0, 0, 0.5), Size: (1.0, 1.0, 1.0)
-    rt.tracer.boxes.emplace_back(Box::fromCenterSize(glm::vec3(0.0f, 0.0f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f)));
+    Material boxMaterial = Material::Diffuse(glm::vec3(0.8f, 0.3f, 0.3f));
+    cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(glm::vec3(0.0f, 0.0f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f), boxMaterial));
+    
+    if (gpuRT) {
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(glm::vec3(0.0f, 0.0f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f), boxMaterial));
+    }
 
     Renderer renderer;
 
@@ -241,27 +292,92 @@ int main(void) {
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        // ===== HOTKEY TOGGLE MIT DEBOUNCING =====
-        // R-Taste zum Umschalten zwischen Rasterizer und Ray Tracer
-        // Debouncing: Nur bei Tastendruck-Flanke (nicht gedrückt -> gedrückt) togglen,
-        // um mehrfaches Umschalten pro Frame zu verhindern
+        // ===== FPS COUNTER UPDATE =====
+        float currentTime = static_cast<float>(glfwGetTime());
+        if (currentTime - lastTitleUpdate >= 0.5f) {
+            float fps = 1.0f / deltaTime;
+            std::string title = "3D Camera Demo - WASD + Maus - FPS: " + std::to_string(static_cast<int>(fps));
+            glfwSetWindowTitle(window, title.c_str());
+            lastTitleUpdate = currentTime;
+        }
+
+        // ===== HOTKEY HANDLING MIT DEBOUNCING =====
+        
+        // R-Taste: Toggle zwischen Rasterizer / CPU Ray Tracer / GPU Ray Tracer
         bool rKeyIsPressed = (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS);
         if (rKeyIsPressed && !rKeyWasPressed) {
-            useRayTracer = !useRayTracer;
-            std::cout << "Switched to " << (useRayTracer ? "Ray Tracer" : "Rasterizer") << " mode" << std::endl;
+            renderMode = (renderMode + 1) % (gpuRTAvailable ? 3 : 2);
+            const char* modes[] = { "Rasterizer", "CPU Ray Tracer", "GPU Ray Tracer" };
+            std::cout << "Switched to " << modes[renderMode] << " mode" << std::endl;
         }
         rKeyWasPressed = rKeyIsPressed;
+        
+        // 1-4: Samples per Pixel
+        bool key1IsPressed = (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS);
+        if (key1IsPressed && !key1WasPressed) {
+            cpuRT.tracer.samplesPerPixel = 1;
+            if (gpuRT) gpuRT->samplesPerPixel = 1;
+            std::cout << "Samples per Pixel: 1" << std::endl;
+        }
+        key1WasPressed = key1IsPressed;
+        
+        bool key2IsPressed = (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS);
+        if (key2IsPressed && !key2WasPressed) {
+            cpuRT.tracer.samplesPerPixel = 4;
+            if (gpuRT) gpuRT->samplesPerPixel = 4;
+            std::cout << "Samples per Pixel: 4" << std::endl;
+        }
+        key2WasPressed = key2IsPressed;
+        
+        bool key3IsPressed = (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS);
+        if (key3IsPressed && !key3WasPressed) {
+            cpuRT.tracer.samplesPerPixel = 9;
+            if (gpuRT) gpuRT->samplesPerPixel = 9;
+            std::cout << "Samples per Pixel: 9" << std::endl;
+        }
+        key3WasPressed = key3IsPressed;
+        
+        bool key4IsPressed = (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS);
+        if (key4IsPressed && !key4WasPressed) {
+            cpuRT.tracer.samplesPerPixel = 16;
+            if (gpuRT) gpuRT->samplesPerPixel = 16;
+            std::cout << "Samples per Pixel: 16" << std::endl;
+        }
+        key4WasPressed = key4IsPressed;
+        
+        // B: Bounce Depth erhöhen
+        bool bKeyIsPressed = (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS);
+        if (bKeyIsPressed && !bKeyWasPressed) {
+            cpuRT.tracer.maxBounces = (cpuRT.tracer.maxBounces % 10) + 1;
+            if (gpuRT) gpuRT->maxBounces = cpuRT.tracer.maxBounces;
+            std::cout << "Max Bounces: " << cpuRT.tracer.maxBounces << std::endl;
+        }
+        bKeyWasPressed = bKeyIsPressed;
+        
+        // M: Material Set wechseln
+        bool mKeyIsPressed = (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS);
+        if (mKeyIsPressed && !mKeyWasPressed) {
+            if (gpuRT) gpuRT->cycleMaterialSet();
+        }
+        mKeyWasPressed = mKeyIsPressed;
 
         // Eingabe verarbeiten
         processInput(window);
 
         // ===== KAMERA SYNCHRONISATION =====
         // Die Kamera-Controls (WASD, Maus) aktualisieren globale Variablen (cameraPos, cameraFront, etc.)
-        // Diese werden hier zum Ray Tracer synchronisiert, sodass beide Renderer dieselbe Ansicht haben
-        rt.tracer.camera.position = cameraPos;
-        rt.tracer.camera.target = cameraPos + cameraFront;
-        rt.tracer.camera.up = cameraUp;
-        rt.tracer.camera.vfov = 45.0f; // FOV muss mit dem Rasterizer übereinstimmen
+        // Diese werden hier zu beiden Ray Tracern synchronisiert, sodass alle Renderer dieselbe Ansicht haben
+        cpuRT.tracer.camera.position = cameraPos;
+        cpuRT.tracer.camera.target = cameraPos + cameraFront;
+        cpuRT.tracer.camera.up = cameraUp;
+        cpuRT.tracer.camera.vfov = 45.0f; // FOV muss mit dem Rasterizer übereinstimmen
+        
+        if (gpuRT) {
+            gpuRT->camera.position = cameraPos;
+            gpuRT->camera.target = cameraPos + cameraFront;
+            gpuRT->camera.up = cameraUp;
+            gpuRT->camera.vfov = 45.0f;
+        }
 
         // Clear screen
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -273,13 +389,21 @@ int main(void) {
         glm::mat4 mvp = projection * view * model;
 
         // ===== RENDERING BASIEREND AUF MODUS =====
-        if (useRayTracer) {
-            // RAY TRACER MODUS:
+        if (renderMode == 1) {
+            // CPU RAY TRACER MODUS:
             // 1. CPU berechnet das Bild Pixel für Pixel (siehe RayTracer::render())
             // 2. Bild wird als OpenGL-Textur hochgeladen
             // 3. Textur wird auf einem Fullscreen-Quad angezeigt
             // HINWEIS: Ray Tracing ist CPU-intensiv, daher niedrigere Auflösung (400x300)
-            rt.draw(rtshader.GetRendererID());
+            cpuRT.draw(rtshader.GetRendererID());
+        }
+        else if (renderMode == 2 && gpuRT) {
+            // GPU RAY TRACER MODUS:
+            // 1. Compute Shader berechnet das Bild parallel auf der GPU
+            // 2. Ergebnis wird direkt in eine Textur geschrieben
+            // 3. Textur wird auf einem Fullscreen-Quad angezeigt
+            // VORTEIL: Viel schneller, höhere Auflösung möglich (1280x720)
+            gpuRT->draw(rtshader.GetRendererID());
         }
         else {
             // RASTERIZER MODUS:
@@ -297,6 +421,7 @@ int main(void) {
     }
 
     // Cleanup
+    if (gpuRT) delete gpuRT;
     glfwDestroyWindow(window);
     glfwTerminate();
 
