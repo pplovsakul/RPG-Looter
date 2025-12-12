@@ -30,7 +30,8 @@ const int GPU_RT_HEIGHT = 720/8;
 
 // ===== KAMERA VARIABLEN =====
 // Kamera Position und Orientierung
-glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 3.0f);
+// Positioniert, um den Würfel und die Deckenleuchte zu sehen
+glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 6.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
 
