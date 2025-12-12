@@ -42,6 +42,9 @@ add_executable(RPG-Looter
     "src/Material.h"
     "src/ComputeShader.h"
     "src/GPURayTracer.h"
+    "src/Triangle.h"
+    "src/BVH.h"
+    "src/GPUStructures.h"
 )
 
 # Includes

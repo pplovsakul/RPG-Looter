@@ -9,6 +9,9 @@
 #include "Material.h"
 #include "Camera.h"
 #include "Debug.h"
+#include "GPUStructures.h"
+#include "Triangle.h"
+#include "BVH.h"
 #include <iostream>
 
 // External function pointers from ComputeShader.h
@@ -44,6 +47,10 @@ private:
     GLuint sphereSSBO = 0;
     GLuint boxSSBO = 0;
     GLuint materialSSBO = 0;
+    
+    // Triangle Mesh and BVH SSBOs (Phase 2)
+    GLuint triangleSSBO = 0;      // Buffer for triangle geometry data
+    GLuint bvhNodeSSBO = 0;       // Buffer for BVH acceleration structure
     
     ComputeShader* computeShader = nullptr;
     
@@ -132,6 +139,17 @@ public:
         GLCall(glGenBuffers(1, &boxSSBO));
         GLCall(glGenBuffers(1, &materialSSBO));
         
+        // Erstelle Triangle Mesh und BVH SSBOs (Phase 2)
+        GLCall(glGenBuffers(1, &triangleSSBO));
+        GLCall(glGenBuffers(1, &bvhNodeSSBO));
+        
+        // Debug: Print GPU structure layouts for validation
+        std::cout << "\n=== GPU Buffer Infrastructure Initialized ===" << std::endl;
+        GPUStructs::Debug::printTriangleGPULayout();
+        GPUStructs::Debug::printBVHNodeGPULayout();
+        std::cout << "Triangle and BVH buffers created successfully." << std::endl;
+        std::cout << "============================================\n" << std::endl;
+        
         // Lade Compute Shader
         try {
             computeShader = new ComputeShader("res/shaders/raytracer.comp");
@@ -152,6 +170,8 @@ public:
         if (sphereSSBO) glDeleteBuffers(1, &sphereSSBO);
         if (boxSSBO) glDeleteBuffers(1, &boxSSBO);
         if (materialSSBO) glDeleteBuffers(1, &materialSSBO);
+        if (triangleSSBO) glDeleteBuffers(1, &triangleSSBO);
+        if (bvhNodeSSBO) glDeleteBuffers(1, &bvhNodeSSBO);
         delete computeShader;
     }
 
@@ -366,4 +386,273 @@ private:
         int baseIndex = currentMaterialSet * materialsPerSet;
         return baseIndex + (objectIndex % materialsPerSet);
     }
+
+    // ============================================================================
+    // PHASE 2: GPU BUFFER INFRASTRUCTURE FOR TRIANGLE MESH AND BVH RENDERING
+    // ============================================================================
+    
+    /**
+     * serializeTrianglesToGPU
+     * ------------------------
+     * Converts host-side Triangle structures to GPU-compatible TriangleGPU format.
+     * Handles proper padding and alignment for std430 GLSL layout.
+     * 
+     * @param triangles - Host-side triangle data (from scene or mesh)
+     * @return Vector of GPU-compatible triangles ready for SSBO upload
+     * 
+     * Performance Note: This is a CPU-side conversion, so it should be done
+     * infrequently (e.g., at scene load time, not every frame).
+     */
+    std::vector<GPUStructs::TriangleGPU> serializeTrianglesToGPU(const std::vector<Triangle>& triangles) {
+        std::vector<GPUStructs::TriangleGPU> gpuTriangles;
+        gpuTriangles.reserve(triangles.size());
+        
+        for (const auto& tri : triangles) {
+            gpuTriangles.emplace_back(
+                tri.v0,
+                tri.v1,
+                tri.v2,
+                tri.normal,
+                tri.materialIndex
+            );
+        }
+        
+        // Debug output for validation
+        if (!gpuTriangles.empty()) {
+            std::cout << "[GPU Buffer] Serialized " << gpuTriangles.size() 
+                      << " triangles to GPU format" << std::endl;
+            GPUStructs::Debug::printBufferInfo("TriangleBuffer", 
+                                               sizeof(GPUStructs::TriangleGPU), 
+                                               gpuTriangles.size());
+        }
+        
+        return gpuTriangles;
+    }
+
+    /**
+     * serializeBVHToGPU
+     * -----------------
+     * Converts host-side BVHNode structures to GPU-compatible BVHNodeGPU format.
+     * Preserves tree structure through index-based parent-child relationships.
+     * 
+     * @param nodes - Host-side BVH node data (from BVHBuilder)
+     * @return Vector of GPU-compatible BVH nodes ready for SSBO upload
+     * 
+     * Architecture Note: BVH traversal on GPU follows depth-first pattern.
+     * Nodes should be laid out in pre-order for optimal cache coherency.
+     */
+    std::vector<GPUStructs::BVHNodeGPU> serializeBVHToGPU(const std::vector<BVHNode>& nodes) {
+        std::vector<GPUStructs::BVHNodeGPU> gpuNodes;
+        gpuNodes.reserve(nodes.size());
+        
+        for (const auto& node : nodes) {
+            // BVHNode already has compatible structure, but we need to convert to GPU format
+            GPUStructs::BVHNodeGPU gpuNode;
+            gpuNode.aabbMin = node.aabbMin;
+            gpuNode.aabbMax = node.aabbMax;
+            gpuNode.leftChild = node.leftChild;
+            
+            // Right child is implicit (leftChild + 1) in current BVH layout
+            // We'll store -1 if it's a leaf, otherwise compute from structure
+            if (node.isLeaf()) {
+                gpuNode.rightChild = -1;
+                gpuNode.triangleIndex = node.leftChild; // For leaf, leftChild stores triangle index
+                gpuNode.triangleCount = node.triangleCount;
+            } else {
+                gpuNode.rightChild = node.leftChild + 1; // Implicit layout: right = left + 1
+                gpuNode.triangleIndex = 0;
+                gpuNode.triangleCount = 0;
+            }
+            
+            gpuNodes.push_back(gpuNode);
+        }
+        
+        // Debug output for validation
+        if (!gpuNodes.empty()) {
+            std::cout << "[GPU Buffer] Serialized " << gpuNodes.size() 
+                      << " BVH nodes to GPU format" << std::endl;
+            
+            // Count leaf vs internal nodes for diagnostics
+            int leafCount = 0, internalCount = 0;
+            for (const auto& node : gpuNodes) {
+                if (node.isLeaf()) leafCount++;
+                else if (node.isInternal()) internalCount++;
+            }
+            
+            std::cout << "  Leaf Nodes: " << leafCount 
+                      << ", Internal Nodes: " << internalCount << std::endl;
+            
+            GPUStructs::Debug::printBufferInfo("BVHBuffer", 
+                                               sizeof(GPUStructs::BVHNodeGPU), 
+                                               gpuNodes.size());
+        }
+        
+        return gpuNodes;
+    }
+
+    /**
+     * uploadTrianglesToGPU
+     * ---------------------
+     * Uploads serialized triangle data to GPU via SSBO.
+     * Binds buffer to specified binding point for shader access.
+     * 
+     * @param gpuTriangles - GPU-formatted triangle data
+     * @param bindingPoint - SSBO binding point (must match shader layout)
+     * @param usage - OpenGL buffer usage hint (GL_STATIC_DRAW, GL_DYNAMIC_DRAW, etc.)
+     * 
+     * Error Handling: Checks for OpenGL errors and validates buffer size.
+     * Returns true on success, false on failure.
+     */
+    bool uploadTrianglesToGPU(const std::vector<GPUStructs::TriangleGPU>& gpuTriangles, 
+                              GLuint bindingPoint = 4, 
+                              GLenum usage = GL_STATIC_DRAW) {
+        if (gpuTriangles.empty()) {
+            std::cerr << "[GPU Buffer] Warning: Attempted to upload empty triangle buffer" << std::endl;
+            return false;
+        }
+        
+        if (!glBindBufferBase_ptr) {
+            std::cerr << "[GPU Buffer] Error: SSBO functions not loaded!" << std::endl;
+            return false;
+        }
+        
+        // Calculate buffer size
+        size_t bufferSize = gpuTriangles.size() * sizeof(GPUStructs::TriangleGPU);
+        
+        std::cout << "[GPU Buffer] Uploading triangle buffer:" << std::endl;
+        std::cout << "  Triangles: " << gpuTriangles.size() << std::endl;
+        std::cout << "  Size: " << bufferSize << " bytes (" 
+                  << (bufferSize / 1024.0f) << " KB)" << std::endl;
+        std::cout << "  Binding Point: " << bindingPoint << std::endl;
+        std::cout << "  Usage Hint: " << (usage == GL_STATIC_DRAW ? "STATIC" : "DYNAMIC") << std::endl;
+        
+        // Bind and upload
+        GLCall(glBindBuffer(GL_SHADER_STORAGE_BUFFER, triangleSSBO));
+        GLCall(glBufferData(GL_SHADER_STORAGE_BUFFER, bufferSize, 
+                           gpuTriangles.data(), usage));
+        
+        // Check for errors
+        GLenum error = glGetError();
+        if (error != GL_NO_ERROR) {
+            std::cerr << "[GPU Buffer] Error uploading triangle buffer: 0x" 
+                      << std::hex << error << std::dec << std::endl;
+            return false;
+        }
+        
+        // Bind to shader binding point
+        glBindBufferBase_ptr(GL_SHADER_STORAGE_BUFFER, bindingPoint, triangleSSBO);
+        
+        std::cout << "[GPU Buffer] Triangle buffer uploaded successfully!" << std::endl;
+        
+        // Unbind
+        GLCall(glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0));
+        
+        return true;
+    }
+
+    /**
+     * uploadBVHToGPU
+     * ---------------
+     * Uploads serialized BVH data to GPU via SSBO.
+     * Binds buffer to specified binding point for shader access.
+     * 
+     * @param gpuNodes - GPU-formatted BVH node data
+     * @param bindingPoint - SSBO binding point (must match shader layout)
+     * @param usage - OpenGL buffer usage hint
+     * 
+     * Architecture Note: BVH upload should happen after triangle upload,
+     * as BVH nodes reference triangle indices.
+     */
+    bool uploadBVHToGPU(const std::vector<GPUStructs::BVHNodeGPU>& gpuNodes, 
+                        GLuint bindingPoint = 5, 
+                        GLenum usage = GL_STATIC_DRAW) {
+        if (gpuNodes.empty()) {
+            std::cerr << "[GPU Buffer] Warning: Attempted to upload empty BVH buffer" << std::endl;
+            return false;
+        }
+        
+        if (!glBindBufferBase_ptr) {
+            std::cerr << "[GPU Buffer] Error: SSBO functions not loaded!" << std::endl;
+            return false;
+        }
+        
+        // Calculate buffer size
+        size_t bufferSize = gpuNodes.size() * sizeof(GPUStructs::BVHNodeGPU);
+        
+        std::cout << "[GPU Buffer] Uploading BVH buffer:" << std::endl;
+        std::cout << "  Nodes: " << gpuNodes.size() << std::endl;
+        std::cout << "  Size: " << bufferSize << " bytes (" 
+                  << (bufferSize / 1024.0f) << " KB)" << std::endl;
+        std::cout << "  Binding Point: " << bindingPoint << std::endl;
+        std::cout << "  Usage Hint: " << (usage == GL_STATIC_DRAW ? "STATIC" : "DYNAMIC") << std::endl;
+        
+        // Bind and upload
+        GLCall(glBindBuffer(GL_SHADER_STORAGE_BUFFER, bvhNodeSSBO));
+        GLCall(glBufferData(GL_SHADER_STORAGE_BUFFER, bufferSize, 
+                           gpuNodes.data(), usage));
+        
+        // Check for errors
+        GLenum error = glGetError();
+        if (error != GL_NO_ERROR) {
+            std::cerr << "[GPU Buffer] Error uploading BVH buffer: 0x" 
+                      << std::hex << error << std::dec << std::endl;
+            return false;
+        }
+        
+        // Bind to shader binding point
+        glBindBufferBase_ptr(GL_SHADER_STORAGE_BUFFER, bindingPoint, bvhNodeSSBO);
+        
+        std::cout << "[GPU Buffer] BVH buffer uploaded successfully!" << std::endl;
+        
+        // Unbind
+        GLCall(glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0));
+        
+        return true;
+    }
+
+    /**
+     * validateBufferLayouts
+     * ----------------------
+     * Runtime validation of GPU buffer structures.
+     * Prints detailed layout information and checks for common issues.
+     * 
+     * Call this during initialization to verify GPU-CPU compatibility.
+     * Critical for debugging alignment and padding issues.
+     */
+    void validateBufferLayouts() {
+        std::cout << "\n========================================" << std::endl;
+        std::cout << "GPU BUFFER LAYOUT VALIDATION" << std::endl;
+        std::cout << "========================================" << std::endl;
+        
+        // Validate TriangleGPU
+        GPUStructs::Debug::printTriangleGPULayout();
+        
+        // Check alignment requirements
+        if (sizeof(GPUStructs::TriangleGPU) % 16 != 0) {
+            std::cerr << "WARNING: TriangleGPU size is not 16-byte aligned!" << std::endl;
+        }
+        
+        // Validate BVHNodeGPU
+        GPUStructs::Debug::printBVHNodeGPULayout();
+        
+        if (sizeof(GPUStructs::BVHNodeGPU) % 16 != 0) {
+            std::cerr << "WARNING: BVHNodeGPU size is not 16-byte aligned!" << std::endl;
+        }
+        
+        // Print GLSL compatibility notes
+        std::cout << "\n=== GLSL Shader Compatibility Notes ===" << std::endl;
+        std::cout << "Ensure your compute shader uses the following layouts:" << std::endl;
+        std::cout << "\nlayout(std430, binding = 4) buffer TriangleBuffer {" << std::endl;
+        std::cout << "    TriangleGPU triangles[];" << std::endl;
+        std::cout << "};" << std::endl;
+        std::cout << "\nlayout(std430, binding = 5) buffer BVHBuffer {" << std::endl;
+        std::cout << "    BVHNodeGPU nodes[];" << std::endl;
+        std::cout << "};" << std::endl;
+        std::cout << "\nStruct definitions in GLSL must match C++ layouts exactly!" << std::endl;
+        std::cout << "========================================\n" << std::endl;
+    }
+
+    // ============================================================================
+    // END PHASE 2 IMPLEMENTATION
+    // ============================================================================
 };
