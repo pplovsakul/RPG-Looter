@@ -108,9 +108,7 @@ namespace MeshGenerator {
         for (int sub = 0; sub < subdivisions; ++sub) {
             std::vector<glm::ivec3> newFaces;
             for (const auto& face : faces) {
-                // Mittelp
-
-unkte der Kanten
+                // Mittelpunkte der Kanten
                 glm::vec3 mid01 = glm::normalize((vertices[face.x] - center + vertices[face.y] - center) * 0.5f) * radius + center;
                 glm::vec3 mid12 = glm::normalize((vertices[face.y] - center + vertices[face.z] - center) * 0.5f) * radius + center;
                 glm::vec3 mid20 = glm::normalize((vertices[face.z] - center + vertices[face.x] - center) * 0.5f) * radius + center;
