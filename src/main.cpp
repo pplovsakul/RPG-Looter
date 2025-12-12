@@ -54,6 +54,10 @@ bool key3WasPressed = false;
 bool key4WasPressed = false;
 bool bKeyWasPressed = false;
 bool mKeyWasPressed = false;
+bool tKeyWasPressed = false;  // Phase 3: Triangle mesh toggle
+bool key7WasPressed = false;  // Phase 3: Load cube mesh
+bool key8WasPressed = false;  // Phase 3: Load icosphere
+bool key9WasPressed = false;  // Phase 3: Clear mesh
 
 // Maus-Callback Funktion
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
@@ -154,7 +158,11 @@ int main(void) {
     std::cout << "1-4     - Samples per Pixel (1, 4, 9, 16)" << std::endl;
     std::cout << "B       - Bounce Depth erhöhen (max 10)" << std::endl;
     std::cout << "M       - Material Set wechseln" << std::endl;
-    std::cout << "ESC     - Beenden" << std::endl;
+    std::cout << "\n=== PHASE 3: TRIANGLE MESH CONTROLS ===" << std::endl;
+    std::cout << "7       - Load Cube Mesh (12 triangles)" << std::endl;
+    std::cout << "8       - Load Icosphere Mesh (320 triangles)" << std::endl;
+    std::cout << "9       - Clear Triangle Mesh" << std::endl;
+    std::cout << "\nESC     - Beenden" << std::endl;
 
     // Maus einfangen und Callback setzen
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -236,6 +244,21 @@ int main(void) {
                 
                 // Phase 2: Validate GPU buffer infrastructure
                 gpuRT->demonstrateGPUBufferInfrastructure();
+                
+                // Phase 3: Load example triangle meshes for testing
+                std::cout << "\n=== Phase 3: Loading Triangle Meshes ===" << std::endl;
+                
+                // Create a simple cube mesh for testing
+                auto testCubeMesh = MeshGenerator::createBox(
+                    glm::vec3(0.0f, 0.0f, 2.0f),  // Center of the room
+                    glm::vec3(1.0f, 1.0f, 1.0f),  // Size
+                    0  // Material index (will use first material)
+                );
+                
+                std::cout << "Created test cube mesh with " << testCubeMesh.size() << " triangles" << std::endl;
+                gpuRT->loadTriangleMesh(testCubeMesh);
+                std::cout << "Triangle mesh loaded into GPU Ray Tracer!" << std::endl;
+                std::cout << "=========================================\n" << std::endl;
             } else {
                 delete gpuRT;
                 gpuRT = nullptr;
@@ -517,6 +540,51 @@ int main(void) {
             if (gpuRT) gpuRT->cycleMaterialSet();
         }
         mKeyWasPressed = mKeyIsPressed;
+        
+        // ===== PHASE 3: TRIANGLE MESH HOTKEYS =====
+        // 7: Load Cube Mesh
+        bool key7IsPressed = (glfwGetKey(window, GLFW_KEY_7) == GLFW_PRESS);
+        if (key7IsPressed && !key7WasPressed) {
+            if (gpuRT) {
+                std::cout << "\n[Hotkey 7] Loading Cube Mesh..." << std::endl;
+                auto cubeMesh = MeshGenerator::createBox(
+                    glm::vec3(0.0f, 0.0f, 2.0f),
+                    glm::vec3(1.0f, 1.0f, 1.0f),
+                    0
+                );
+                gpuRT->loadTriangleMesh(cubeMesh);
+                std::cout << "Cube mesh loaded (12 triangles)\n" << std::endl;
+            }
+        }
+        key7WasPressed = key7IsPressed;
+        
+        // 8: Load Icosphere Mesh
+        bool key8IsPressed = (glfwGetKey(window, GLFW_KEY_8) == GLFW_PRESS);
+        if (key8IsPressed && !key8WasPressed) {
+            if (gpuRT) {
+                std::cout << "\n[Hotkey 8] Loading Icosphere Mesh..." << std::endl;
+                auto sphereMesh = MeshGenerator::createIcosphere(
+                    glm::vec3(0.0f, 0.0f, 2.0f),
+                    1.0f,
+                    2,  // Subdivision level 2 = 320 triangles
+                    0
+                );
+                gpuRT->loadTriangleMesh(sphereMesh);
+                std::cout << "Icosphere mesh loaded (320 triangles)\n" << std::endl;
+            }
+        }
+        key8WasPressed = key8IsPressed;
+        
+        // 9: Clear Triangle Mesh
+        bool key9IsPressed = (glfwGetKey(window, GLFW_KEY_9) == GLFW_PRESS);
+        if (key9IsPressed && !key9WasPressed) {
+            if (gpuRT) {
+                std::cout << "\n[Hotkey 9] Clearing Triangle Mesh..." << std::endl;
+                gpuRT->clearTriangleMesh();
+                std::cout << "Triangle mesh cleared\n" << std::endl;
+            }
+        }
+        key9WasPressed = key9IsPressed;
 
         // Eingabe verarbeiten
         processInput(window);

@@ -98,6 +98,11 @@ public:
     std::vector<Sphere> spheres;
     std::vector<Box> boxes;
     Camera camera;
+    
+    // Phase 3: Triangle mesh and BVH support
+    std::vector<Triangle> triangles;  // Host-side triangle data
+    std::vector<BVHNode> bvhNodes;    // Host-side BVH data
+    bool meshDataDirty = false;       // Flag to track if mesh needs re-upload
     // Kein Richtungslicht mehr - nur Deckenlampe als Lichtquelle
 
     GPURayTracer(int w, int h) : width(w), height(h) {
@@ -228,6 +233,64 @@ public:
         std::cout << "Ready for Phase 3: Shader integration\n" << std::endl;
     }
 
+    /**
+     * loadTriangleMesh
+     * -----------------
+     * Loads a triangle mesh into the ray tracer and builds BVH.
+     * Automatically uploads to GPU on next render() call.
+     * 
+     * @param meshTriangles - Triangle data to load
+     * 
+     * Usage Example:
+     * auto cubeTriangles = MeshGenerator::createBox(center, size, materialIndex);
+     * gpuRT->loadTriangleMesh(cubeTriangles);
+     */
+    void loadTriangleMesh(const std::vector<Triangle>& meshTriangles) {
+        std::cout << "\n[GPU Ray Tracer] Loading triangle mesh..." << std::endl;
+        std::cout << "  Triangles: " << meshTriangles.size() << std::endl;
+        
+        triangles = meshTriangles;
+        
+        // Build BVH acceleration structure
+        if (!triangles.empty()) {
+            BVHBuilder bvhBuilder;
+            bvhBuilder.build(triangles);
+            bvhNodes = bvhBuilder.getNodes();
+            triangles = bvhBuilder.getOrderedTriangles(); // Use reordered triangles for cache coherency
+            
+            std::cout << "  BVH Nodes: " << bvhNodes.size() << std::endl;
+            std::cout << "  Triangle mesh loaded successfully!" << std::endl;
+        } else {
+            bvhNodes.clear();
+            std::cout << "  Warning: Empty mesh loaded" << std::endl;
+        }
+        
+        meshDataDirty = true;
+        accumulatedFrames = 0; // Reset accumulation when scene changes
+    }
+
+    /**
+     * clearTriangleMesh
+     * ------------------
+     * Removes all triangle mesh data from the scene.
+     * 
+     * Behavior:
+     * - Clears triangles vector
+     * - Clears bvhNodes vector
+     * - Sets meshDataDirty flag for GPU buffer cleanup
+     * - Resets accumulatedFrames to restart progressive rendering
+     * 
+     * Use case: When switching between different scenes or removing
+     * triangle geometry while keeping spheres/boxes.
+     */
+    void clearTriangleMesh() {
+        triangles.clear();
+        bvhNodes.clear();
+        meshDataDirty = true;
+        accumulatedFrames = 0;
+        std::cout << "[GPU Ray Tracer] Triangle mesh cleared" << std::endl;
+    }
+
     void cycleMaterialSet() {
         currentMaterialSet = (currentMaterialSet + 1) % 4; // 4 verschiedene Material-Sets
         std::cout << "Material Set: " << currentMaterialSet << std::endl;
@@ -239,6 +302,12 @@ public:
         
         camera.update();
         updateScene();
+        
+        // Phase 3: Upload triangle mesh and BVH if dirty
+        if (meshDataDirty) {
+            uploadMeshData();
+            meshDataDirty = false;
+        }
         
         // Prüfe ob Kamera sich bewegt hat - Reset Akkumulation
         const float epsilon = 0.001f;
@@ -261,6 +330,8 @@ public:
         // Setze Uniforms
         GLCall(glUniform1i(glGetUniformLocation(computeShader->GetRendererID(), "numSpheres"), spheres.size()));
         GLCall(glUniform1i(glGetUniformLocation(computeShader->GetRendererID(), "numBoxes"), boxes.size()));
+        GLCall(glUniform1i(glGetUniformLocation(computeShader->GetRendererID(), "numTriangles"), triangles.size()));
+        GLCall(glUniform1i(glGetUniformLocation(computeShader->GetRendererID(), "numBVHNodes"), bvhNodes.size()));
         GLCall(glUniform1i(glGetUniformLocation(computeShader->GetRendererID(), "samplesPerPixel"), samplesPerPixel));
         GLCall(glUniform1i(glGetUniformLocation(computeShader->GetRendererID(), "maxBounces"), maxBounces));
         GLCall(glUniform1ui(glGetUniformLocation(computeShader->GetRendererID(), "frameCount"), frameCount++));
@@ -699,6 +770,39 @@ private:
         std::cout << "};" << std::endl;
         std::cout << "\nStruct definitions in GLSL must match C++ layouts exactly!" << std::endl;
         std::cout << "========================================\n" << std::endl;
+    }
+
+    /**
+     * uploadMeshData
+     * ---------------
+     * Uploads triangle mesh and BVH data to GPU.
+     * Called automatically when meshDataDirty flag is set.
+     * 
+     * Phase 3 Integration: Uploads to binding points 4 (triangles) and 5 (BVH).
+     */
+    void uploadMeshData() {
+        if (!glBindBufferBase_ptr) {
+            std::cerr << "[GPU Ray Tracer] Error: SSBO functions not loaded!" << std::endl;
+            return;
+        }
+        
+        // Serialize and upload triangles
+        if (!triangles.empty()) {
+            auto gpuTriangles = serializeTrianglesToGPU(triangles);
+            uploadTrianglesToGPU(gpuTriangles, 4, GL_STATIC_DRAW);
+        } else {
+            // Upload empty buffer to avoid shader errors
+            std::cout << "[GPU Ray Tracer] No triangles to upload" << std::endl;
+        }
+        
+        // Serialize and upload BVH
+        if (!bvhNodes.empty()) {
+            auto gpuBVH = serializeBVHToGPU(bvhNodes);
+            uploadBVHToGPU(gpuBVH, 5, GL_STATIC_DRAW);
+        } else {
+            // Upload empty buffer to avoid shader errors
+            std::cout << "[GPU Ray Tracer] No BVH nodes to upload" << std::endl;
+        }
     }
 
     // ============================================================================
