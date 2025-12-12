@@ -78,7 +78,7 @@ private:
 public:
     // Rendering-Einstellungen
     int samplesPerPixel = 1;
-    int maxBounces = 1;
+    int maxBounces = 3;  // Erhöht für bessere Beleuchtung durch Deckenlampe
     
     // Szene
     std::vector<Sphere> spheres;

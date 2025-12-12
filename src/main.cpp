@@ -30,12 +30,12 @@ const int GPU_RT_HEIGHT = 720;
 
 // ===== KAMERA VARIABLEN =====
 // Kamera Position und Orientierung
-glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 3.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, -3.0f);  // Außerhalb des Raums, vor der offenen Frontwand
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, 1.0f);    // Blick in den Raum hinein (positive Z-Richtung)
 glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
 
 // Maus-Steuerung
-float yaw   = -90.0f;  // Horizontale Rotation (links/rechts)
+float yaw   = 90.0f;   // Horizontale Rotation (links/rechts) - 90° für Blick in positive Z-Richtung
 float pitch = 0.0f;    // Vertikale Rotation (hoch/runter)
 float lastX = 640.0f;  // Letzte Maus X-Position
 float lastY = 360.0f;  // Letzte Maus Y-Position

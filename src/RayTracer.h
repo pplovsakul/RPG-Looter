@@ -23,7 +23,7 @@ public:
 
     // Rendering-Einstellungen
     int samplesPerPixel = 1;  // Anti-Aliasing: 1, 4, 9, 16 samples
-    int maxBounces = 1;        // Maximale Reflexionstiefe: 0-10
+    int maxBounces = 3;        // Maximale Reflexionstiefe: 0-10 (erhöht für bessere Beleuchtung durch Deckenlampe)
 
     // Szenen-Objekte: Spheres und AABBs können separat gerendert werden
     std::vector<Sphere> spheres;
