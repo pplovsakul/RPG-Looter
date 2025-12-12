@@ -25,8 +25,8 @@ const int CPU_RT_WIDTH = 400;
 const int CPU_RT_HEIGHT = 300;
 
 // GPU Ray Tracer: Kann volle Auflösung nutzen
-const int GPU_RT_WIDTH = 1280/8;
-const int GPU_RT_HEIGHT = 720/8;
+const int GPU_RT_WIDTH = 1280;
+const int GPU_RT_HEIGHT = 728;
 
 // ===== KAMERA VARIABLEN =====
 // Kamera Position und Orientierung
