@@ -233,6 +233,9 @@ int main(void) {
             if (gpuRT->isAvailable()) {
                 gpuRTAvailable = true;
                 std::cout << "\nGPU Ray Tracer verfügbar! (OpenGL " << major << "." << minor << ")" << std::endl;
+                
+                // Phase 2: Validate GPU buffer infrastructure
+                gpuRT->demonstrateGPUBufferInfrastructure();
             } else {
                 delete gpuRT;
                 gpuRT = nullptr;

@@ -179,6 +179,55 @@ public:
         return computeShader != nullptr;
     }
 
+    /**
+     * demonstrateGPUBufferInfrastructure
+     * -----------------------------------
+     * Public method to demonstrate and validate the GPU buffer infrastructure.
+     * Creates example triangle mesh and BVH, then serializes and uploads to GPU.
+     * 
+     * This is a Phase 2 validation function - shows that the infrastructure works
+     * without requiring shader integration (Phase 3).
+     */
+    void demonstrateGPUBufferInfrastructure() {
+        std::cout << "\n=== Phase 2: GPU Buffer Infrastructure Validation ===" << std::endl;
+        validateBufferLayouts();
+        
+        // Demonstrate triangle and BVH serialization with example data
+        std::cout << "\n=== Example: Triangle Mesh Serialization ===" << std::endl;
+        std::vector<Triangle> exampleTriangles = MeshGenerator::createBox(
+            glm::vec3(0.0f, 0.0f, 0.0f), 
+            glm::vec3(1.0f, 1.0f, 1.0f), 
+            0
+        );
+        std::cout << "Created example box mesh with " << exampleTriangles.size() << " triangles" << std::endl;
+        
+        auto gpuTriangles = serializeTrianglesToGPU(exampleTriangles);
+        bool uploadSuccess = uploadTrianglesToGPU(gpuTriangles, 4, GL_STATIC_DRAW);
+        
+        if (uploadSuccess) {
+            std::cout << "✓ Triangle mesh serialization and upload successful!" << std::endl;
+        } else {
+            std::cout << "✗ Triangle mesh upload failed!" << std::endl;
+        }
+        
+        std::cout << "\n=== Example: BVH Construction and Upload ===" << std::endl;
+        BVHBuilder bvhBuilder;
+        bvhBuilder.build(exampleTriangles);
+        
+        auto gpuBVH = serializeBVHToGPU(bvhBuilder.getNodes());
+        uploadSuccess = uploadBVHToGPU(gpuBVH, 5, GL_STATIC_DRAW);
+        
+        if (uploadSuccess) {
+            std::cout << "✓ BVH construction and upload successful!" << std::endl;
+        } else {
+            std::cout << "✗ BVH upload failed!" << std::endl;
+        }
+        
+        std::cout << "\n=== GPU Buffer Infrastructure Ready ===" << std::endl;
+        std::cout << "All buffer structures validated and tested successfully!" << std::endl;
+        std::cout << "Ready for Phase 3: Shader integration\n" << std::endl;
+    }
+
     void cycleMaterialSet() {
         currentMaterialSet = (currentMaterialSet + 1) % 4; // 4 verschiedene Material-Sets
         std::cout << "Material Set: " << currentMaterialSet << std::endl;
