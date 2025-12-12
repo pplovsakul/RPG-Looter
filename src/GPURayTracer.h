@@ -235,6 +235,9 @@ private:
         materials.push_back(Material::Emissive(glm::vec3(1.0f, 0.5f, 0.2f), 2.0f));
         materials.push_back(Material::Diffuse(glm::vec3(0.8f, 0.8f, 0.8f)));
         materials.push_back(Material::Gold());
+        
+        // WICHTIG: Deckenlampen-Material für Szene (Index 12)
+        materials.push_back(Material::Emissive(glm::vec3(1.0f, 1.0f, 0.9f), 20.0f)); // Helle Deckenlampe
     }
 
     void createQuad() {
@@ -267,7 +270,14 @@ private:
             GPUSphere gs;
             gs.center = spheres[i].center;
             gs.radius = spheres[i].radius;
-            gs.materialIndex = getMaterialIndexForObject(i);
+            
+            // Suche nach dem Material in der materials-Liste
+            // Für die Deckenlampe (letzte Sphere) verwenden wir das helle Lampenmaterial (Index 12)
+            if (i == spheres.size() - 1) {
+                gs.materialIndex = 12; // Deckenlampen-Material
+            } else {
+                gs.materialIndex = getMaterialIndexForObject(i);
+            }
             gpuSpheres.push_back(gs);
         }
         
