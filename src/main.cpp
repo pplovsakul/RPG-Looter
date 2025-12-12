@@ -351,14 +351,15 @@ int main(void) {
     // ===== LICHTQUELLE AN DER DECKE =====
     // Physische Lichtquelle: Nur sichtbar durch Ray Bouncing
     // Position: Mitte der Decke, leicht darunter
+    const float lightOffset = 0.3f; // Abstand von der Decke, damit das Licht sichtbar ist
     Material lightMaterial = Material::Emissive(glm::vec3(1.0f, 1.0f, 0.9f), 5.0f); // Helles warmweißes Licht
     cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(
-        glm::vec3(0.0f, roomSize/2.0f - 0.3f, roomSize/2.0f), 
+        glm::vec3(0.0f, roomSize/2.0f - lightOffset, roomSize/2.0f), 
         glm::vec3(1.0f, 0.1f, 1.0f), // Flache Box als Lichtpanel
         lightMaterial));
     if (gpuRT) {
         gpuRT->boxes.emplace_back(Box::fromCenterSize(
-            glm::vec3(0.0f, roomSize/2.0f - 0.3f, roomSize/2.0f), 
+            glm::vec3(0.0f, roomSize/2.0f - lightOffset, roomSize/2.0f), 
             glm::vec3(1.0f, 0.1f, 1.0f), 
             lightMaterial));
     }
