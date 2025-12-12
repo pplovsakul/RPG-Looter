@@ -272,7 +272,16 @@ public:
     /**
      * clearTriangleMesh
      * ------------------
-     * Removes triangle mesh from the scene.
+     * Removes all triangle mesh data from the scene.
+     * 
+     * Behavior:
+     * - Clears triangles vector
+     * - Clears bvhNodes vector
+     * - Sets meshDataDirty flag for GPU buffer cleanup
+     * - Resets accumulatedFrames to restart progressive rendering
+     * 
+     * Use case: When switching between different scenes or removing
+     * triangle geometry while keeping spheres/boxes.
      */
     void clearTriangleMesh() {
         triangles.clear();

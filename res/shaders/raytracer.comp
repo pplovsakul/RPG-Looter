@@ -400,6 +400,9 @@ bool hitBVH(vec3 rayOrigin, vec3 rayDir, float tMin, float tMax, inout HitRecord
     vec3 rayInvDir = vec3(1.0) / rayDir;
     
     // Stack for iterative traversal (64 entries = depth ~20)
+    // NOTE: Stack uses local memory (256 bytes per thread).
+    // For GPUs with memory pressure, consider reducing to 32 entries (128 bytes)
+    // or using shared memory across work group (requires synchronization).
     const int MAX_STACK_SIZE = 64;
     int stack[MAX_STACK_SIZE];
     int stackPtr = 0;
@@ -462,7 +465,7 @@ bool hitBVH(vec3 rayOrigin, vec3 rayDir, float tMin, float tMax, inout HitRecord
     return hitAnything;
 }
 
-// Teste alle Objekte (Spheres, Boxes, and Triangles via BVH)
+// Test all objects (Spheres, Boxes, and Triangles via BVH)
 bool hitWorld(vec3 rayOrigin, vec3 rayDir, float tMin, float tMax, inout HitRecord rec) {
     bool hitAnything = false;
     float closest = tMax;

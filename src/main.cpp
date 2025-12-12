@@ -236,6 +236,21 @@ int main(void) {
                 
                 // Phase 2: Validate GPU buffer infrastructure
                 gpuRT->demonstrateGPUBufferInfrastructure();
+                
+                // Phase 3: Load example triangle meshes for testing
+                std::cout << "\n=== Phase 3: Loading Triangle Meshes ===" << std::endl;
+                
+                // Create a simple cube mesh for testing
+                auto testCubeMesh = MeshGenerator::createBox(
+                    glm::vec3(0.0f, 0.0f, 2.0f),  // Center of the room
+                    glm::vec3(1.0f, 1.0f, 1.0f),  // Size
+                    0  // Material index (will use first material)
+                );
+                
+                std::cout << "Created test cube mesh with " << testCubeMesh.size() << " triangles" << std::endl;
+                gpuRT->loadTriangleMesh(testCubeMesh);
+                std::cout << "Triangle mesh loaded into GPU Ray Tracer!" << std::endl;
+                std::cout << "=========================================\n" << std::endl;
             } else {
                 delete gpuRT;
                 gpuRT = nullptr;
