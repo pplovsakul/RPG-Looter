@@ -37,6 +37,7 @@ class GPURayTracer {
 private:
     int width, height;
     GLuint outputTexture = 0;
+    GLuint accumulationTexture = 0; // Für temporale Akkumulation
     GLuint vao = 0, vbo = 0; // Für Fullscreen-Quad
     
     // Shader Storage Buffer Objects
@@ -50,8 +51,14 @@ private:
     std::vector<Material> materials;
     int currentMaterialSet = 0;
     
-    // Frame Counter für Random Seed
+    // Frame Counter für Random Seed und Akkumulation
     uint32_t frameCount = 0;
+    uint32_t accumulatedFrames = 0;
+    
+    // Kamera-Tracking für Akkumulations-Reset
+    glm::vec3 lastCameraPos;
+    glm::vec3 lastCameraTarget;
+    bool cameraChanged = true;
 
     // GPU-kompatible Strukturen (müssen mit Shader übereinstimmen)
     struct GPUSphere {
@@ -89,6 +96,8 @@ public:
     GPURayTracer(int w, int h) : width(w), height(h) {
         camera.aspect = float(w) / float(h);
         camera.update();
+        lastCameraPos = camera.position;
+        lastCameraTarget = camera.target;
         
         // Load required OpenGL functions
         if (!loadSSBOFunctions()) {
@@ -104,7 +113,15 @@ public:
         GLCall(glBindTexture(GL_TEXTURE_2D, outputTexture));
         GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
         GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-        GLCall(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr));
+        GLCall(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, nullptr));
+        GLCall(glBindTexture(GL_TEXTURE_2D, 0));
+        
+        // Erstelle Akkumulations-Textur (höhere Präzision für Durchschnittsbildung)
+        GLCall(glGenTextures(1, &accumulationTexture));
+        GLCall(glBindTexture(GL_TEXTURE_2D, accumulationTexture));
+        GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+        GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+        GLCall(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, nullptr));
         GLCall(glBindTexture(GL_TEXTURE_2D, 0));
         
         // Erstelle Fullscreen Quad
@@ -129,6 +146,7 @@ public:
 
     ~GPURayTracer() {
         if (outputTexture) glDeleteTextures(1, &outputTexture);
+        if (accumulationTexture) glDeleteTextures(1, &accumulationTexture);
         if (vbo) glDeleteBuffers(1, &vbo);
         if (vao) glDeleteVertexArrays(1, &vao);
         if (sphereSSBO) glDeleteBuffers(1, &sphereSSBO);
@@ -144,6 +162,7 @@ public:
     void cycleMaterialSet() {
         currentMaterialSet = (currentMaterialSet + 1) % 4; // 4 verschiedene Material-Sets
         std::cout << "Material Set: " << currentMaterialSet << std::endl;
+        accumulatedFrames = 0; // Reset bei Material-Wechsel
     }
 
     void render() {
@@ -152,9 +171,20 @@ public:
         camera.update();
         updateScene();
         
-        // Binde Output-Textur als Image
+        // Prüfe ob Kamera sich bewegt hat - Reset Akkumulation
+        const float epsilon = 0.001f;
+        if (glm::length(camera.position - lastCameraPos) > epsilon ||
+            glm::length(camera.target - lastCameraTarget) > epsilon) {
+            accumulatedFrames = 0;
+            lastCameraPos = camera.position;
+            lastCameraTarget = camera.target;
+        }
+        
+        // Binde Output-Textur und Akkumulations-Textur als Images
         const GLenum GL_WRITE_ONLY_CONST = 0x88B9; // GL_WRITE_ONLY
-        glBindImageTexture_ptr(0, outputTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY_CONST, GL_RGBA8);
+        const GLenum GL_READ_WRITE_CONST = 0x88BA; // GL_READ_WRITE
+        glBindImageTexture_ptr(0, outputTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY_CONST, GL_RGBA32F);
+        glBindImageTexture_ptr(1, accumulationTexture, 0, GL_FALSE, 0, GL_READ_WRITE_CONST, GL_RGBA32F);
         
         // Binde Compute Shader
         computeShader->Bind();
@@ -165,6 +195,7 @@ public:
         GLCall(glUniform1i(glGetUniformLocation(computeShader->GetRendererID(), "samplesPerPixel"), samplesPerPixel));
         GLCall(glUniform1i(glGetUniformLocation(computeShader->GetRendererID(), "maxBounces"), maxBounces));
         GLCall(glUniform1ui(glGetUniformLocation(computeShader->GetRendererID(), "frameCount"), frameCount++));
+        GLCall(glUniform1ui(glGetUniformLocation(computeShader->GetRendererID(), "accumulatedFrames"), accumulatedFrames++));
         
         // Kamera-Parameter
         computeShader->SetUniformVec3("cameraPos", camera.position);
