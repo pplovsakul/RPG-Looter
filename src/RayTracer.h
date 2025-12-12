@@ -19,11 +19,11 @@ public:
     int width = 4;
     int height = 3;
     Camera camera;
-    glm::vec3 lightDir = glm::normalize(glm::vec3(-1.0f, -1.0f, -0.5f)); // Richtungslicht
+    // Kein Richtungslicht mehr - nur Deckenlampe als Lichtquelle
 
     // Rendering-Einstellungen
     int samplesPerPixel = 1;  // Anti-Aliasing: 1, 4, 9, 16 samples
-    int maxBounces = 1;        // Maximale Reflexionstiefe: 0-10
+    int maxBounces = 3;        // Maximale Reflexionstiefe: 0-10 (erhöht für bessere Beleuchtung durch Deckenlampe)
 
     // Szenen-Objekte: Spheres und AABBs können separat gerendert werden
     std::vector<Sphere> spheres;
@@ -109,12 +109,9 @@ public:
         // Emission: Füge selbstleuchtende Farbe hinzu
         glm::vec3 emitted = mat.emission;
 
-        // Berechne direkte Beleuchtung (Lambert)
-        float NdotL = glm::max(0.0f, glm::dot(closestRec.normal, -lightDir));
-        glm::vec3 directLight = mat.albedo * NdotL;
-
-        // Ambient Term
-        glm::vec3 ambient = mat.albedo * 0.1f;
+        // Sehr reduziertes Ambient nur um komplette Dunkelheit zu vermeiden
+        // Hauptbeleuchtung kommt von der Deckenlampe durch Bounces
+        glm::vec3 ambient = mat.albedo * 0.02f; // Stark reduziert für echte Schatten
 
         // Berechne Reflexion basierend auf Material
         glm::vec3 reflectedColor(0.0f);
@@ -132,19 +129,15 @@ public:
             Ray reflectedRay(closestRec.point, reflectionDir);
             reflectedColor = shade(reflectedRay, depth + 1);
             
-            // Metallic bestimmt, wie viel von Reflexion vs. Albedo verwendet wird
-            // Metalle reflektieren ihre Farbe, Dielektrika reflektieren weiß
-            glm::vec3 reflectionTint = glm::mix(glm::vec3(1.0f), mat.albedo, mat.metallic);
-            reflectedColor *= reflectionTint;
+            // Diffuse Oberflächen färben das reflektierte Licht mit ihrer Albedo-Farbe
+            // Licht nimmt die Farbe der Oberfläche an, von der es abprallt
+            reflectedColor *= mat.albedo;
         }
 
         // Kombiniere alle Komponenten
-        // Mehr reflektierend = weniger direkte Beleuchtung
-        float reflectivity = (1.0f - mat.roughness) * 0.8f;
         glm::vec3 finalColor = emitted + 
                                ambient + 
-                               directLight * (1.0f - reflectivity) + 
-                               reflectedColor * reflectivity;
+                               reflectedColor;
 
         return finalColor;
     }

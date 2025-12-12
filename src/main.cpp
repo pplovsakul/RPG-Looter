@@ -9,7 +9,6 @@
 #include "VertexBufferLayout.h"
 #include "Shader.h"
 #include "InputSystem.h"
-#include "RayTraceRenderer.h"
 #include "GPURayTracer.h"
 #include "Material.h"
 
@@ -20,22 +19,18 @@
 int width = 1280, height = 720;
 
 // ===== RAY TRACER KONFIGURATION =====
-// CPU Ray Tracer: Reduzierte Auflösung für akzeptable Performance
-const int CPU_RT_WIDTH = 400;
-const int CPU_RT_HEIGHT = 300;
-
 // GPU Ray Tracer: Kann volle Auflösung nutzen
 const int GPU_RT_WIDTH = 1280;
 const int GPU_RT_HEIGHT = 720;
 
 // ===== KAMERA VARIABLEN =====
 // Kamera Position und Orientierung
-glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 3.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, -3.0f);  // Außerhalb des Raums, vor der offenen Frontwand
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, 1.0f);    // Blick in den Raum hinein (positive Z-Richtung)
 glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
 
 // Maus-Steuerung
-float yaw   = -90.0f;  // Horizontale Rotation (links/rechts)
+float yaw   = 90.0f;   // Horizontale Rotation (links/rechts) - 90° für Blick in positive Z-Richtung
 float pitch = 0.0f;    // Vertikale Rotation (hoch/runter)
 float lastX = 640.0f;  // Letzte Maus X-Position
 float lastY = 360.0f;  // Letzte Maus Y-Position
@@ -155,7 +150,7 @@ int main(void) {
     std::cout << "Maus    - Umsehen" << std::endl;
     std::cout << "Space   - Hoch" << std::endl;
     std::cout << "Shift   - Runter" << std::endl;
-    std::cout << "R       - Toggle Ray Tracer (CPU/GPU/Rasterizer)" << std::endl;
+    std::cout << "R       - Toggle Ray Tracer (Rasterizer/GPU Ray Tracer)" << std::endl;
     std::cout << "1-4     - Samples per Pixel (1, 4, 9, 16)" << std::endl;
     std::cout << "B       - Bounce Depth erhöhen (max 10)" << std::endl;
     std::cout << "M       - Material Set wechseln" << std::endl;
@@ -213,7 +208,7 @@ int main(void) {
     va.AddBuffer(vb, layout);
 
     // ===== SHADER UND RENDERER SETUP =====
-    // Rendering-Modi: 0 = Rasterizer, 1 = CPU Ray Tracer, 2 = GPU Ray Tracer
+    // Rendering-Modi: 0 = Rasterizer, 1 = GPU Ray Tracer
     int renderMode = 0;
     
     // basic.shader: Standard OpenGL Vertex/Fragment Shader für Rasterizer
@@ -221,9 +216,6 @@ int main(void) {
     
     // neuer_shader.shader: Shader zum Anzeigen der Ray-Traced Textur auf einem Fullscreen Quad
     Shader rtshader("res/shaders/neuer_shader.shader");
-    
-    // CPU Ray Tracer: Reduzierte Auflösung (400x300)
-    RayTraceRenderer cpuRT(CPU_RT_WIDTH, CPU_RT_HEIGHT);
     
     // GPU Ray Tracer: Volle Auflösung (1280x720)
     GPURayTracer* gpuRT = nullptr;
@@ -258,15 +250,180 @@ int main(void) {
     }
     
     // ===== SZENE KONFIGURATION =====
-    // Füge Würfel aus der Rasterizer-Szene zum Ray Tracer hinzu
-    // Der Würfel hat folgende Koordinaten in den Vertices:
-    // X: -0.5 bis 0.5, Y: -0.5 bis 0.5, Z: 0.0 bis 1.0
-    // Center: (0, 0, 0.5), Size: (1.0, 1.0, 1.0)
-    Material boxMaterial = Material::Diffuse(glm::vec3(0.8f, 0.3f, 0.3f));
-    cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(glm::vec3(0.0f, 0.0f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f), boxMaterial));
+    // Raumgröße: 5x5x5 Einheiten, Zentrum bei (0, 0, 2.5)
+    // Wanddicke: 0.2 Einheiten
+    const float roomSize = 5.0f;
+    const float wallThickness = 0.2f;
+    Material wallMaterial = Material::Diffuse(glm::vec3(0.7f, 0.7f, 0.7f)); // Hellgrau
+    Material lampMaterial = Material::Emissive(glm::vec3(1.0f, 1.0f, 0.9f), 20.0f); // Warmes weißes Licht, erhöhte Intensität
+    
+    // ===== SKULPTUR MATERIALIEN =====
+    Material bronzeMaterial = Material::Copper(); // Bronze-ähnlich
+    Material goldMaterial = Material::Gold();
+    Material chromeMaterial = Material::Chrome();
+    Material whiteMaterial = Material::Diffuse(glm::vec3(0.95f, 0.95f, 0.95f));
+    Material blackMaterial = Material::Diffuse(glm::vec3(0.1f, 0.1f, 0.1f));
     
     if (gpuRT) {
-        gpuRT->boxes.emplace_back(Box::fromCenterSize(glm::vec3(0.0f, 0.0f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f), boxMaterial));
+        // ===== KOMPLEXE ABSTRAKTE SKULPTUR =====
+        // Eine spiralförmige Skulptur mit vielen Details
+        const glm::vec3 sculptureCenter(0.0f, -0.5f, 2.0f);
+        
+        // Basis-Sockel
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(
+            sculptureCenter + glm::vec3(0.0f, -0.8f, 0.0f),
+            glm::vec3(1.2f, 0.3f, 1.2f),
+            blackMaterial
+        ));
+        
+        // Zentrale Säule
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(
+            sculptureCenter + glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3(0.2f, 1.5f, 0.2f),
+            bronzeMaterial
+        ));
+        
+        // Spiralförmige Elemente um die Säule
+        const int numSpiralElements = 8;
+        for (int i = 0; i < numSpiralElements; ++i) {
+            float angle = (float)i / numSpiralElements * 2.0f * 3.14159f * 2.0f; // 2 volle Umdrehungen
+            float height = -0.6f + (float)i / numSpiralElements * 1.8f;
+            float radius = 0.4f + 0.2f * sin((float)i / numSpiralElements * 3.14159f);
+            
+            glm::vec3 pos = sculptureCenter + glm::vec3(
+                cos(angle) * radius,
+                height,
+                sin(angle) * radius
+            );
+            
+            // Alternierende Materialien für interessante Effekte
+            Material mat = (i % 3 == 0) ? goldMaterial : 
+                          (i % 3 == 1) ? chromeMaterial : bronzeMaterial;
+            
+            gpuRT->spheres.emplace_back(Sphere(pos, 0.15f, mat));
+        }
+        
+        // Dekorative Ringe
+        const int numRings = 3;
+        for (int ring = 0; ring < numRings; ++ring) {
+            float ringHeight = -0.4f + ring * 0.6f;
+            float ringRadius = 0.5f + ring * 0.1f;
+            int elementsInRing = 6 + ring * 2;
+            
+            for (int i = 0; i < elementsInRing; ++i) {
+                float angle = (float)i / elementsInRing * 2.0f * 3.14159f;
+                glm::vec3 pos = sculptureCenter + glm::vec3(
+                    cos(angle) * ringRadius,
+                    ringHeight,
+                    sin(angle) * ringRadius
+                );
+                
+                gpuRT->spheres.emplace_back(Sphere(pos, 0.08f, chromeMaterial));
+            }
+        }
+        
+        // Obere Krone - komplexe Struktur
+        const glm::vec3 crownBase = sculptureCenter + glm::vec3(0.0f, 1.2f, 0.0f);
+        
+        // Krone Zentrum
+        gpuRT->spheres.emplace_back(Sphere(crownBase, 0.25f, goldMaterial));
+        
+        // Krone Spitzen
+        const int numCrownSpikes = 8;
+        for (int i = 0; i < numCrownSpikes; ++i) {
+            float angle = (float)i / numCrownSpikes * 2.0f * 3.14159f;
+            float spikeRadius = 0.35f;
+            
+            glm::vec3 spikePos = crownBase + glm::vec3(
+                cos(angle) * spikeRadius,
+                0.0f,
+                sin(angle) * spikeRadius
+            );
+            
+            // Kleine Kugeln an den Spitzen
+            gpuRT->spheres.emplace_back(Sphere(spikePos, 0.1f, goldMaterial));
+            
+            // Verbindungselemente
+            gpuRT->spheres.emplace_back(Sphere(
+                crownBase + glm::vec3(cos(angle) * spikeRadius * 0.7f, 0.15f, sin(angle) * spikeRadius * 0.7f),
+                0.06f,
+                whiteMaterial
+            ));
+        }
+        
+        // Abstrakte geometrische Elemente an den Seiten
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(
+            sculptureCenter + glm::vec3(0.6f, 0.2f, 0.0f),
+            glm::vec3(0.15f, 0.4f, 0.15f),
+            chromeMaterial
+        ));
+        
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(
+            sculptureCenter + glm::vec3(-0.6f, 0.2f, 0.0f),
+            glm::vec3(0.15f, 0.4f, 0.15f),
+            chromeMaterial
+        ));
+        
+        // Schwebende Elemente für visuelles Interesse
+        for (int i = 0; i < 5; ++i) {
+            float angle = (float)i / 5.0f * 2.0f * 3.14159f;
+            float orbitRadius = 0.8f;
+            float orbitHeight = 0.3f + i * 0.1f;
+            
+            glm::vec3 pos = sculptureCenter + glm::vec3(
+                cos(angle) * orbitRadius,
+                orbitHeight,
+                sin(angle) * orbitRadius
+            );
+            
+            gpuRT->spheres.emplace_back(Sphere(pos, 0.05f, bronzeMaterial));
+        }
+        
+        // ===== RAUM MIT OFFENER FRONTWAND =====
+        // Boden (unten)
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(
+            glm::vec3(0.0f, -roomSize/2.0f - wallThickness/2.0f, roomSize/2.0f),
+            glm::vec3(roomSize, wallThickness, roomSize),
+            wallMaterial
+        ));
+        
+        // Decke (oben)
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(
+            glm::vec3(0.0f, roomSize/2.0f + wallThickness/2.0f, roomSize/2.0f),
+            glm::vec3(roomSize, wallThickness, roomSize),
+            wallMaterial
+        ));
+        
+        // Linke Wand
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(
+            glm::vec3(-roomSize/2.0f - wallThickness/2.0f, 0.0f, roomSize/2.0f),
+            glm::vec3(wallThickness, roomSize, roomSize),
+            wallMaterial
+        ));
+        
+        // Rechte Wand
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(
+            glm::vec3(roomSize/2.0f + wallThickness/2.0f, 0.0f, roomSize/2.0f),
+            glm::vec3(wallThickness, roomSize, roomSize),
+            wallMaterial
+        ));
+        
+        // Rückwand
+        gpuRT->boxes.emplace_back(Box::fromCenterSize(
+            glm::vec3(0.0f, 0.0f, roomSize + wallThickness/2.0f),
+            glm::vec3(roomSize, roomSize, wallThickness),
+            wallMaterial
+        ));
+        
+        // FRONTWAND WIRD NICHT HINZUGEFÜGT - der Raum ist auf dieser Seite offen!
+        
+        // ===== DECKENLAMPE (EINZIGE LICHTQUELLE) =====
+        // Leuchtende Kugel an der Decke - größer und heller für bessere Raumbeleuchtung
+        gpuRT->spheres.emplace_back(Sphere(
+            glm::vec3(0.0f, roomSize/2.0f, roomSize/2.0f),
+            0.5f,
+            lampMaterial
+        ));
     }
 
     Renderer renderer;
@@ -303,11 +460,11 @@ int main(void) {
 
         // ===== HOTKEY HANDLING MIT DEBOUNCING =====
         
-        // R-Taste: Toggle zwischen Rasterizer / CPU Ray Tracer / GPU Ray Tracer
+        // R-Taste: Toggle zwischen Rasterizer / GPU Ray Tracer
         bool rKeyIsPressed = (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS);
         if (rKeyIsPressed && !rKeyWasPressed) {
-            renderMode = (renderMode + 1) % (gpuRTAvailable ? 3 : 2);
-            const char* modes[] = { "Rasterizer", "CPU Ray Tracer", "GPU Ray Tracer" };
+            renderMode = (renderMode + 1) % (gpuRTAvailable ? 2 : 1);
+            const char* modes[] = { "Rasterizer", "GPU Ray Tracer" };
             std::cout << "Switched to " << modes[renderMode] << " mode" << std::endl;
         }
         rKeyWasPressed = rKeyIsPressed;
@@ -315,7 +472,6 @@ int main(void) {
         // 1-4: Samples per Pixel
         bool key1IsPressed = (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS);
         if (key1IsPressed && !key1WasPressed) {
-            cpuRT.tracer.samplesPerPixel = 1;
             if (gpuRT) gpuRT->samplesPerPixel = 1;
             std::cout << "Samples per Pixel: 1" << std::endl;
         }
@@ -323,7 +479,6 @@ int main(void) {
         
         bool key2IsPressed = (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS);
         if (key2IsPressed && !key2WasPressed) {
-            cpuRT.tracer.samplesPerPixel = 4;
             if (gpuRT) gpuRT->samplesPerPixel = 4;
             std::cout << "Samples per Pixel: 4" << std::endl;
         }
@@ -331,7 +486,6 @@ int main(void) {
         
         bool key3IsPressed = (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS);
         if (key3IsPressed && !key3WasPressed) {
-            cpuRT.tracer.samplesPerPixel = 9;
             if (gpuRT) gpuRT->samplesPerPixel = 9;
             std::cout << "Samples per Pixel: 9" << std::endl;
         }
@@ -339,7 +493,6 @@ int main(void) {
         
         bool key4IsPressed = (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS);
         if (key4IsPressed && !key4WasPressed) {
-            cpuRT.tracer.samplesPerPixel = 16;
             if (gpuRT) gpuRT->samplesPerPixel = 16;
             std::cout << "Samples per Pixel: 16" << std::endl;
         }
@@ -348,9 +501,10 @@ int main(void) {
         // B: Bounce Depth erhöhen
         bool bKeyIsPressed = (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS);
         if (bKeyIsPressed && !bKeyWasPressed) {
-            cpuRT.tracer.maxBounces = (cpuRT.tracer.maxBounces % 10) + 1;
-            if (gpuRT) gpuRT->maxBounces = cpuRT.tracer.maxBounces;
-            std::cout << "Max Bounces: " << cpuRT.tracer.maxBounces << std::endl;
+            if (gpuRT) {
+                gpuRT->maxBounces = (gpuRT->maxBounces % 10) + 1;
+                std::cout << "Max Bounces: " << gpuRT->maxBounces << std::endl;
+            }
         }
         bKeyWasPressed = bKeyIsPressed;
         
@@ -366,12 +520,6 @@ int main(void) {
 
         // ===== KAMERA SYNCHRONISATION =====
         // Die Kamera-Controls (WASD, Maus) aktualisieren globale Variablen (cameraPos, cameraFront, etc.)
-        // Diese werden hier zu beiden Ray Tracern synchronisiert, sodass alle Renderer dieselbe Ansicht haben
-        cpuRT.tracer.camera.position = cameraPos;
-        cpuRT.tracer.camera.target = cameraPos + cameraFront;
-        cpuRT.tracer.camera.up = cameraUp;
-        cpuRT.tracer.camera.vfov = 45.0f; // FOV muss mit dem Rasterizer übereinstimmen
-        
         if (gpuRT) {
             gpuRT->camera.position = cameraPos;
             gpuRT->camera.target = cameraPos + cameraFront;
@@ -389,15 +537,7 @@ int main(void) {
         glm::mat4 mvp = projection * view * model;
 
         // ===== RENDERING BASIEREND AUF MODUS =====
-        if (renderMode == 1) {
-            // CPU RAY TRACER MODUS:
-            // 1. CPU berechnet das Bild Pixel für Pixel (siehe RayTracer::render())
-            // 2. Bild wird als OpenGL-Textur hochgeladen
-            // 3. Textur wird auf einem Fullscreen-Quad angezeigt
-            // HINWEIS: Ray Tracing ist CPU-intensiv, daher niedrigere Auflösung (400x300)
-            cpuRT.draw(rtshader.GetRendererID());
-        }
-        else if (renderMode == 2 && gpuRT) {
+        if (renderMode == 1 && gpuRT) {
             // GPU RAY TRACER MODUS:
             // 1. Compute Shader berechnet das Bild parallel auf der GPU
             // 2. Ergebnis wird direkt in eine Textur geschrieben

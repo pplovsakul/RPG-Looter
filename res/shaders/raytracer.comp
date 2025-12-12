@@ -1,10 +1,11 @@
 #version 430 core
 
 // Ray Tracer Compute Shader
-// Führt GPU-basiertes Ray Tracing mit PBR-Materialien, MSAA und Reflexionen durch
+// Führt GPU-basiertes Ray Tracing mit PBR-Materialien, MSAA, Reflexionen und temporaler Akkumulation durch
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
-layout(rgba8, binding = 0) uniform writeonly image2D outputImage;
+layout(rgba32f, binding = 0) uniform writeonly image2D outputImage;
+layout(rgba32f, binding = 1) uniform image2D accumulationImage; // Für temporale Akkumulation
 
 // Material-Struktur
 struct Material {
@@ -62,8 +63,9 @@ uniform vec3 cameraTarget;
 uniform vec3 cameraUp;
 uniform float cameraVFov;
 uniform float cameraAspect;
-uniform vec3 lightDir;
+// Kein Richtungslicht mehr - nur emissive Deckenlampe
 uniform uint frameCount; // Für unterschiedliche Random Seeds pro Frame
+uniform uint accumulatedFrames; // Anzahl akkumulierter Frames für progressive Rendering
 
 // Kamera-Basis-Vektoren (werden in CPU berechnet und übergeben)
 uniform vec3 cameraU;
@@ -232,13 +234,12 @@ vec3 shade(vec3 rayOrigin, vec3 rayDir, inout uint seed) {
         
         Material mat = materials[rec.materialIndex];
         
-        // Emission
+        // Emission - Lichtquellen leuchten direkt
         color += throughput * mat.emission;
         
-        // Direkte Beleuchtung
-        float NdotL = max(0.0, dot(rec.normal, -lightDir));
-        vec3 directLight = mat.albedo * NdotL;
-        vec3 ambient = mat.albedo * 0.1;
+        // Sehr reduziertes Ambient nur um komplette Dunkelheit zu vermeiden
+        // Hauptbeleuchtung kommt von der Deckenlampe durch Bounces
+        vec3 ambient = mat.albedo * 0.02; // Stark reduziert für echte Schatten
         
         // Berechne neue Strahlrichtung
         vec3 perfectReflection = reflect_vec(rayDir, rec.normal);
@@ -247,17 +248,14 @@ vec3 shade(vec3 rayOrigin, vec3 rayDir, inout uint seed) {
         // Interpoliere basierend auf Roughness
         vec3 reflectionDir = normalize(mix(perfectReflection, diffuseReflection, mat.roughness));
         
-        // Metallic bestimmt Reflexionsfarbe
-        vec3 reflectionTint = mix(vec3(1.0), mat.albedo, mat.metallic);
-        
-        // Reflektivität basierend auf Roughness
-        float reflectivity = (1.0 - mat.roughness) * 0.8;
-        
-        // Aktualisiere Farbe mit direkter Beleuchtung
-        color += throughput * (ambient + directLight * (1.0 - reflectivity));
+        // Aktualisiere Farbe mit minimalem Ambient
+        color += throughput * ambient;
         
         // Aktualisiere Throughput für nächsten Bounce
-        throughput *= reflectionTint * reflectivity;
+        // Diffuse Oberflächen absorbieren Licht basierend auf Albedo
+        // Metallische Oberflächen reflektieren mit ihrer Farbe
+        vec3 surfaceColor = mix(mat.albedo, mat.albedo, mat.roughness); // Diffuse Oberflächen nutzen Albedo
+        throughput *= surfaceColor;
         
         // Russisches Roulette für frühe Terminierung
         // Start nach 3 Bounces um initiale Reflexionen sicherzustellen
@@ -308,9 +306,24 @@ void main() {
         pixelColor += shade(rayOrigin, rayDir, seed);
     }
     
-    // Mittelwertbildung
+    // Mittelwertbildung über Samples
     pixelColor /= float(samplesPerPixel);
     
-    // Schreibe in Output-Image
+    // ===== TEMPORALE AKKUMULATION =====
+    // Mische aktuelles Frame mit akkumulierten vorherigen Frames
+    if (accumulatedFrames > 0) {
+        // Lade vorheriges akkumuliertes Ergebnis
+        vec4 previousColor = imageLoad(accumulationImage, pixelCoords);
+        
+        // Berechne gewichteten Durchschnitt
+        // Je mehr Frames akkumuliert wurden, desto weniger Gewicht hat das neue Frame
+        float weight = 1.0 / float(accumulatedFrames + 1);
+        pixelColor = mix(previousColor.rgb, pixelColor, weight);
+    }
+    
+    // Speichere akkumuliertes Ergebnis
+    imageStore(accumulationImage, pixelCoords, vec4(pixelColor, 1.0));
+    
+    // Schreibe finales Bild in Output-Image
     imageStore(outputImage, pixelCoords, vec4(pixelColor, 1.0));
 }
