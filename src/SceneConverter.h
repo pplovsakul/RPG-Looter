@@ -6,6 +6,7 @@
 #include "Material.h"
 #include <vector>
 #include <iostream>
+#include <functional>
 
 /**
  * ============================================================================
