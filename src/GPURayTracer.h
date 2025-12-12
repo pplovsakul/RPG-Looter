@@ -12,7 +12,9 @@
 #include "GPUStructures.h"
 #include "Triangle.h"
 #include "BVH.h"
+#include "SceneConverter.h"
 #include <iostream>
+#include <functional>
 
 // External function pointers from ComputeShader.h
 extern PFNGLBINDIMAGETEXTUREPROC glBindImageTexture_ptr;
@@ -289,6 +291,144 @@ public:
         meshDataDirty = true;
         accumulatedFrames = 0;
         std::cout << "[GPU Ray Tracer] Triangle mesh cleared" << std::endl;
+    }
+
+    /**
+     * convertSceneToMeshes (PHASE 4)
+     * --------------------------------
+     * Converts entire scene from primitives (Boxes, Spheres) to unified triangle mesh.
+     * This is the core Phase 4 functionality that enables pure triangle-based rendering.
+     * 
+     * Workflow:
+     * 1. Convert all Box primitives to triangle meshes (12 tris/box)
+     * 2. Convert all Sphere primitives to icosphere meshes (configurable subdivision)
+     * 3. Build unified BVH acceleration structure
+     * 4. Upload to GPU via existing loadTriangleMesh pipeline
+     * 5. Optionally clear primitive arrays for pure mesh rendering
+     * 
+     * @param sphereSubdivision - Quality level for sphere approximation
+     *                           0 = 20 tris (debug), 1 = 80 tris, 2 = 320 tris (recommended), 3 = 1280 tris
+     * @param clearPrimitives - If true, clears boxes/spheres arrays after conversion
+     *                         Enables pure triangle-based rendering mode
+     * 
+     * Material Index Mapping Strategy:
+     * - Uses existing getMaterialIndexForObject() for consistency
+     * - Preserves material assignments from primitive-based scene
+     * - Ceiling lamp (last sphere) gets special emissive material (index 12)
+     * 
+     * Debug Output:
+     * - Prints detailed conversion statistics
+     * - Reports triangle counts, BVH stats, material mapping
+     * - Validates scene conversion success
+     * 
+     * Hot-Reload:
+     * - Can be called multiple times (e.g., via hotkey)
+     * - Resets accumulation buffer automatically
+     * - Supports live scene updates and A/B testing
+     * 
+     * Architecture Notes:
+     * - Leverages SceneConverter utility for primitive conversion
+     * - Integrates seamlessly with existing Phase 3 triangle pipeline
+     * - No shader changes required - uses existing triangle/BVH infrastructure
+     * - Maintains same material system and rendering quality
+     */
+    void convertSceneToMeshes(int sphereSubdivision = 2, bool clearPrimitives = false) {
+        std::cout << "\n========================================" << std::endl;
+        std::cout << "PHASE 4: SCENE CONVERSION TO TRIANGLE MESHES" << std::endl;
+        std::cout << "========================================" << std::endl;
+        
+        // Report input scene state
+        std::cout << "\n[Scene State Before Conversion]" << std::endl;
+        std::cout << "  Boxes:   " << boxes.size() << std::endl;
+        std::cout << "  Spheres: " << spheres.size() << std::endl;
+        std::cout << "  Sphere Subdivision Level: " << sphereSubdivision << std::endl;
+        
+        // Define material mapping function
+        // This lambda captures 'this' to access getMaterialIndexForObject
+        auto materialMapping = [this](size_t primitiveIndex, bool isSphere) -> int {
+            if (isSphere) {
+                // Special handling for ceiling lamp (last sphere)
+                if (primitiveIndex == spheres.size() - 1) {
+                    return 12; // Emissive ceiling lamp material
+                }
+            }
+            // Use existing material index mapping logic
+            return getMaterialIndexForObject(primitiveIndex);
+        };
+        
+        // Convert scene using SceneConverter utility
+        SceneConverter::ConversionStatistics stats;
+        std::vector<Triangle> convertedTriangles = SceneConverter::convertSceneToTriangles(
+            boxes,
+            spheres,
+            materialMapping,
+            sphereSubdivision,
+            &stats
+        );
+        
+        // Print conversion statistics
+        stats.print();
+        
+        // Validate conversion
+        if (convertedTriangles.empty()) {
+            std::cerr << "[Scene Conversion] ERROR: No triangles generated!" << std::endl;
+            std::cerr << "  Input scene was empty or conversion failed." << std::endl;
+            std::cout << "========================================\n" << std::endl;
+            return;
+        }
+        
+        std::cout << "[Scene Conversion] ✓ Successfully generated " 
+                  << convertedTriangles.size() << " triangles" << std::endl;
+        
+        // Load triangle mesh into GPU ray tracer
+        // This will build BVH and upload to GPU buffers
+        std::cout << "\n[BVH Construction]" << std::endl;
+        loadTriangleMesh(convertedTriangles);
+        
+        // Material Index Validation
+        std::cout << "\n[Material Validation]" << std::endl;
+        int maxMaterialIndex = 0;
+        for (const auto& tri : convertedTriangles) {
+            if (tri.materialIndex > maxMaterialIndex) {
+                maxMaterialIndex = tri.materialIndex;
+            }
+        }
+        std::cout << "  Max Material Index: " << maxMaterialIndex << std::endl;
+        std::cout << "  Available Materials: " << materials.size() << std::endl;
+        
+        if (maxMaterialIndex >= static_cast<int>(materials.size())) {
+            std::cerr << "  WARNING: Material index out of bounds detected!" << std::endl;
+            std::cerr << "  Some triangles may use invalid materials." << std::endl;
+        } else {
+            std::cout << "  ✓ All material indices valid" << std::endl;
+        }
+        
+        // Optionally clear primitive arrays for pure triangle rendering
+        if (clearPrimitives) {
+            std::cout << "\n[Primitive Cleanup]" << std::endl;
+            std::cout << "  Clearing primitive arrays (pure mesh mode enabled)" << std::endl;
+            boxes.clear();
+            spheres.clear();
+            std::cout << "  ✓ Primitives cleared - scene is now 100% triangle-based" << std::endl;
+        } else {
+            std::cout << "\n[Hybrid Mode]" << std::endl;
+            std::cout << "  Primitives retained - both primitives and meshes will render" << std::endl;
+            std::cout << "  Note: This may cause duplicate geometry rendering" << std::endl;
+        }
+        
+        // Summary
+        std::cout << "\n========================================" << std::endl;
+        std::cout << "PHASE 4 CONVERSION COMPLETE" << std::endl;
+        std::cout << "========================================" << std::endl;
+        std::cout << "Scene is now ready for triangle-based GPU ray tracing!" << std::endl;
+        std::cout << "  - " << convertedTriangles.size() << " triangles loaded" << std::endl;
+        std::cout << "  - " << bvhNodes.size() << " BVH nodes constructed" << std::endl;
+        std::cout << "  - GPU buffers uploaded and ready" << std::endl;
+        std::cout << "  - Material mapping validated" << std::endl;
+        std::cout << "========================================\n" << std::endl;
+        
+        // Reset accumulation for clean frame
+        accumulatedFrames = 0;
     }
 
     void cycleMaterialSet() {
