@@ -250,19 +250,13 @@ int main(void) {
                 // Phase 2: Validate GPU buffer infrastructure
                 gpuRT->demonstrateGPUBufferInfrastructure();
                 
-                // Phase 3: Load example triangle meshes for testing
-                std::cout << "\n=== Phase 3: Loading Triangle Meshes ===" << std::endl;
-                
-                // Create a simple cube mesh for testing
-                auto testCubeMesh = MeshGenerator::createBox(
-                    glm::vec3(0.0f, 0.0f, 2.0f),  // Center of the room
-                    glm::vec3(1.0f, 1.0f, 1.0f),  // Size
-                    0  // Material index (will use first material)
-                );
-                
-                std::cout << "Created test cube mesh with " << testCubeMesh.size() << " triangles" << std::endl;
-                gpuRT->loadTriangleMesh(testCubeMesh);
-                std::cout << "Triangle mesh loaded into GPU Ray Tracer!" << std::endl;
+                // Phase 4: Scene starts with primitives only
+                // Users can press 'C' or '0' to convert to triangle meshes
+                std::cout << "\n=== Phase 4: Scene Conversion Available ===" << std::endl;
+                std::cout << "Scene initialized with " << gpuRT->boxes.size() + gpuRT->spheres.size() 
+                          << " primitives (boxes + spheres)" << std::endl;
+                std::cout << "Press 'C' to convert to triangle meshes (hybrid mode)" << std::endl;
+                std::cout << "Press '0' to convert to triangle meshes (pure mesh mode)" << std::endl;
                 std::cout << "=========================================\n" << std::endl;
             } else {
                 delete gpuRT;
