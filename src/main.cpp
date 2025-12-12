@@ -9,7 +9,6 @@
 #include "VertexBufferLayout.h"
 #include "Shader.h"
 #include "InputSystem.h"
-#include "RayTraceRenderer.h"
 #include "GPURayTracer.h"
 #include "Material.h"
 
@@ -20,10 +19,6 @@
 int width = 1280, height = 720;
 
 // ===== RAY TRACER KONFIGURATION =====
-// CPU Ray Tracer: Reduzierte Auflösung für akzeptable Performance
-const int CPU_RT_WIDTH = 400;
-const int CPU_RT_HEIGHT = 300;
-
 // GPU Ray Tracer: Kann volle Auflösung nutzen
 const int GPU_RT_WIDTH = 1280;
 const int GPU_RT_HEIGHT = 720;
@@ -155,7 +150,7 @@ int main(void) {
     std::cout << "Maus    - Umsehen" << std::endl;
     std::cout << "Space   - Hoch" << std::endl;
     std::cout << "Shift   - Runter" << std::endl;
-    std::cout << "R       - Toggle Ray Tracer (CPU/GPU/Rasterizer)" << std::endl;
+    std::cout << "R       - Toggle Ray Tracer (Rasterizer/GPU Ray Tracer)" << std::endl;
     std::cout << "1-4     - Samples per Pixel (1, 4, 9, 16)" << std::endl;
     std::cout << "B       - Bounce Depth erhöhen (max 10)" << std::endl;
     std::cout << "M       - Material Set wechseln" << std::endl;
@@ -213,7 +208,7 @@ int main(void) {
     va.AddBuffer(vb, layout);
 
     // ===== SHADER UND RENDERER SETUP =====
-    // Rendering-Modi: 0 = Rasterizer, 1 = CPU Ray Tracer, 2 = GPU Ray Tracer
+    // Rendering-Modi: 0 = Rasterizer, 1 = GPU Ray Tracer
     int renderMode = 0;
     
     // basic.shader: Standard OpenGL Vertex/Fragment Shader für Rasterizer
@@ -221,9 +216,6 @@ int main(void) {
     
     // neuer_shader.shader: Shader zum Anzeigen der Ray-Traced Textur auf einem Fullscreen Quad
     Shader rtshader("res/shaders/neuer_shader.shader");
-    
-    // CPU Ray Tracer: Reduzierte Auflösung (400x300)
-    RayTraceRenderer cpuRT(CPU_RT_WIDTH, CPU_RT_HEIGHT);
     
     // GPU Ray Tracer: Volle Auflösung (1280x720)
     GPURayTracer* gpuRT = nullptr;
@@ -258,97 +250,58 @@ int main(void) {
     }
     
     // ===== SZENE KONFIGURATION =====
-    // Füge Würfel aus der Rasterizer-Szene zum Ray Tracer hinzu
-    // Der Würfel hat folgende Koordinaten in den Vertices:
-    // X: -0.5 bis 0.5, Y: -0.5 bis 0.5, Z: 0.0 bis 1.0
-    // Center: (0, 0, 0.5), Size: (1.0, 1.0, 1.0)
-    Material boxMaterial = Material::Diffuse(glm::vec3(0.8f, 0.3f, 0.3f));
-    cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(glm::vec3(0.0f, 0.0f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f), boxMaterial));
-    
-    // ===== RAUM MIT OFFENER FRONTWAND =====
     // Raumgröße: 5x5x5 Einheiten, Zentrum bei (0, 0, 2.5)
     // Wanddicke: 0.2 Einheiten
     const float roomSize = 5.0f;
     const float wallThickness = 0.2f;
+    Material boxMaterial = Material::Diffuse(glm::vec3(0.8f, 0.3f, 0.3f));
     Material wallMaterial = Material::Diffuse(glm::vec3(0.7f, 0.7f, 0.7f)); // Hellgrau
-    
-    // Boden (unten)
-    cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(
-        glm::vec3(0.0f, -roomSize/2.0f - wallThickness/2.0f, roomSize/2.0f),
-        glm::vec3(roomSize, wallThickness, roomSize),
-        wallMaterial
-    ));
-    
-    // Decke (oben)
-    cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(
-        glm::vec3(0.0f, roomSize/2.0f + wallThickness/2.0f, roomSize/2.0f),
-        glm::vec3(roomSize, wallThickness, roomSize),
-        wallMaterial
-    ));
-    
-    // Linke Wand
-    cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(
-        glm::vec3(-roomSize/2.0f - wallThickness/2.0f, 0.0f, roomSize/2.0f),
-        glm::vec3(wallThickness, roomSize, roomSize),
-        wallMaterial
-    ));
-    
-    // Rechte Wand
-    cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(
-        glm::vec3(roomSize/2.0f + wallThickness/2.0f, 0.0f, roomSize/2.0f),
-        glm::vec3(wallThickness, roomSize, roomSize),
-        wallMaterial
-    ));
-    
-    // Rückwand
-    cpuRT.tracer.boxes.emplace_back(Box::fromCenterSize(
-        glm::vec3(0.0f, 0.0f, roomSize + wallThickness/2.0f),
-        glm::vec3(roomSize, roomSize, wallThickness),
-        wallMaterial
-    ));
-    
-    // FRONTWAND WIRD NICHT HINZUGEFÜGT - der Raum ist auf dieser Seite offen!
-    
-    // ===== DECKENLAMPE (EINZIGE LICHTQUELLE) =====
-    // Leuchtende Kugel an der Decke - größer und heller für bessere Raumbeleuchtung
     Material lampMaterial = Material::Emissive(glm::vec3(1.0f, 1.0f, 0.9f), 20.0f); // Warmes weißes Licht, erhöhte Intensität
-    cpuRT.tracer.spheres.emplace_back(Sphere(
-        glm::vec3(0.0f, roomSize/2.0f, roomSize/2.0f), // An der Decke, zentral
-        0.5f, // Größere Lampe für bessere Ausleuchtung
-        lampMaterial
-    ));
     
     if (gpuRT) {
+        // Füge Würfel zum Ray Tracer hinzu (Center: (0, 0, 0.5), Size: (1.0, 1.0, 1.0))
         gpuRT->boxes.emplace_back(Box::fromCenterSize(glm::vec3(0.0f, 0.0f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f), boxMaterial));
         
-        // Füge Raumwände zum GPU Ray Tracer hinzu
+        // ===== RAUM MIT OFFENER FRONTWAND =====
+        // Boden (unten)
         gpuRT->boxes.emplace_back(Box::fromCenterSize(
             glm::vec3(0.0f, -roomSize/2.0f - wallThickness/2.0f, roomSize/2.0f),
             glm::vec3(roomSize, wallThickness, roomSize),
             wallMaterial
         ));
+        
+        // Decke (oben)
         gpuRT->boxes.emplace_back(Box::fromCenterSize(
             glm::vec3(0.0f, roomSize/2.0f + wallThickness/2.0f, roomSize/2.0f),
             glm::vec3(roomSize, wallThickness, roomSize),
             wallMaterial
         ));
+        
+        // Linke Wand
         gpuRT->boxes.emplace_back(Box::fromCenterSize(
             glm::vec3(-roomSize/2.0f - wallThickness/2.0f, 0.0f, roomSize/2.0f),
             glm::vec3(wallThickness, roomSize, roomSize),
             wallMaterial
         ));
+        
+        // Rechte Wand
         gpuRT->boxes.emplace_back(Box::fromCenterSize(
             glm::vec3(roomSize/2.0f + wallThickness/2.0f, 0.0f, roomSize/2.0f),
             glm::vec3(wallThickness, roomSize, roomSize),
             wallMaterial
         ));
+        
+        // Rückwand
         gpuRT->boxes.emplace_back(Box::fromCenterSize(
             glm::vec3(0.0f, 0.0f, roomSize + wallThickness/2.0f),
             glm::vec3(roomSize, roomSize, wallThickness),
             wallMaterial
         ));
         
-        // Deckenlampe
+        // FRONTWAND WIRD NICHT HINZUGEFÜGT - der Raum ist auf dieser Seite offen!
+        
+        // ===== DECKENLAMPE (EINZIGE LICHTQUELLE) =====
+        // Leuchtende Kugel an der Decke - größer und heller für bessere Raumbeleuchtung
         gpuRT->spheres.emplace_back(Sphere(
             glm::vec3(0.0f, roomSize/2.0f, roomSize/2.0f),
             0.5f,
@@ -390,11 +343,11 @@ int main(void) {
 
         // ===== HOTKEY HANDLING MIT DEBOUNCING =====
         
-        // R-Taste: Toggle zwischen Rasterizer / CPU Ray Tracer / GPU Ray Tracer
+        // R-Taste: Toggle zwischen Rasterizer / GPU Ray Tracer
         bool rKeyIsPressed = (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS);
         if (rKeyIsPressed && !rKeyWasPressed) {
-            renderMode = (renderMode + 1) % (gpuRTAvailable ? 3 : 2);
-            const char* modes[] = { "Rasterizer", "CPU Ray Tracer", "GPU Ray Tracer" };
+            renderMode = (renderMode + 1) % (gpuRTAvailable ? 2 : 1);
+            const char* modes[] = { "Rasterizer", "GPU Ray Tracer" };
             std::cout << "Switched to " << modes[renderMode] << " mode" << std::endl;
         }
         rKeyWasPressed = rKeyIsPressed;
@@ -402,7 +355,6 @@ int main(void) {
         // 1-4: Samples per Pixel
         bool key1IsPressed = (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS);
         if (key1IsPressed && !key1WasPressed) {
-            cpuRT.tracer.samplesPerPixel = 1;
             if (gpuRT) gpuRT->samplesPerPixel = 1;
             std::cout << "Samples per Pixel: 1" << std::endl;
         }
@@ -410,7 +362,6 @@ int main(void) {
         
         bool key2IsPressed = (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS);
         if (key2IsPressed && !key2WasPressed) {
-            cpuRT.tracer.samplesPerPixel = 4;
             if (gpuRT) gpuRT->samplesPerPixel = 4;
             std::cout << "Samples per Pixel: 4" << std::endl;
         }
@@ -418,7 +369,6 @@ int main(void) {
         
         bool key3IsPressed = (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS);
         if (key3IsPressed && !key3WasPressed) {
-            cpuRT.tracer.samplesPerPixel = 9;
             if (gpuRT) gpuRT->samplesPerPixel = 9;
             std::cout << "Samples per Pixel: 9" << std::endl;
         }
@@ -426,7 +376,6 @@ int main(void) {
         
         bool key4IsPressed = (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS);
         if (key4IsPressed && !key4WasPressed) {
-            cpuRT.tracer.samplesPerPixel = 16;
             if (gpuRT) gpuRT->samplesPerPixel = 16;
             std::cout << "Samples per Pixel: 16" << std::endl;
         }
@@ -435,9 +384,10 @@ int main(void) {
         // B: Bounce Depth erhöhen
         bool bKeyIsPressed = (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS);
         if (bKeyIsPressed && !bKeyWasPressed) {
-            cpuRT.tracer.maxBounces = (cpuRT.tracer.maxBounces % 10) + 1;
-            if (gpuRT) gpuRT->maxBounces = cpuRT.tracer.maxBounces;
-            std::cout << "Max Bounces: " << cpuRT.tracer.maxBounces << std::endl;
+            if (gpuRT) {
+                gpuRT->maxBounces = (gpuRT->maxBounces % 10) + 1;
+                std::cout << "Max Bounces: " << gpuRT->maxBounces << std::endl;
+            }
         }
         bKeyWasPressed = bKeyIsPressed;
         
@@ -453,12 +403,6 @@ int main(void) {
 
         // ===== KAMERA SYNCHRONISATION =====
         // Die Kamera-Controls (WASD, Maus) aktualisieren globale Variablen (cameraPos, cameraFront, etc.)
-        // Diese werden hier zu beiden Ray Tracern synchronisiert, sodass alle Renderer dieselbe Ansicht haben
-        cpuRT.tracer.camera.position = cameraPos;
-        cpuRT.tracer.camera.target = cameraPos + cameraFront;
-        cpuRT.tracer.camera.up = cameraUp;
-        cpuRT.tracer.camera.vfov = 45.0f; // FOV muss mit dem Rasterizer übereinstimmen
-        
         if (gpuRT) {
             gpuRT->camera.position = cameraPos;
             gpuRT->camera.target = cameraPos + cameraFront;
@@ -476,15 +420,7 @@ int main(void) {
         glm::mat4 mvp = projection * view * model;
 
         // ===== RENDERING BASIEREND AUF MODUS =====
-        if (renderMode == 1) {
-            // CPU RAY TRACER MODUS:
-            // 1. CPU berechnet das Bild Pixel für Pixel (siehe RayTracer::render())
-            // 2. Bild wird als OpenGL-Textur hochgeladen
-            // 3. Textur wird auf einem Fullscreen-Quad angezeigt
-            // HINWEIS: Ray Tracing ist CPU-intensiv, daher niedrigere Auflösung (400x300)
-            cpuRT.draw(rtshader.GetRendererID());
-        }
-        else if (renderMode == 2 && gpuRT) {
+        if (renderMode == 1 && gpuRT) {
             // GPU RAY TRACER MODUS:
             // 1. Compute Shader berechnet das Bild parallel auf der GPU
             // 2. Ergebnis wird direkt in eine Textur geschrieben
