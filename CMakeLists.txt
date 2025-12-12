@@ -45,6 +45,7 @@ add_executable(RPG-Looter
     "src/Triangle.h"
     "src/BVH.h"
     "src/GPUStructures.h"
+    "src/SceneConverter.h"
 )
 
 # Includes

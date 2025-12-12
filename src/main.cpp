@@ -58,6 +58,8 @@ bool tKeyWasPressed = false;  // Phase 3: Triangle mesh toggle
 bool key7WasPressed = false;  // Phase 3: Load cube mesh
 bool key8WasPressed = false;  // Phase 3: Load icosphere
 bool key9WasPressed = false;  // Phase 3: Clear mesh
+bool cKeyWasPressed = false;  // Phase 4: Convert scene to meshes
+bool key0WasPressed = false;  // Phase 4: Convert and clear primitives
 
 // Maus-Callback Funktion
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
@@ -162,6 +164,9 @@ int main(void) {
     std::cout << "7       - Load Cube Mesh (12 triangles)" << std::endl;
     std::cout << "8       - Load Icosphere Mesh (320 triangles)" << std::endl;
     std::cout << "9       - Clear Triangle Mesh" << std::endl;
+    std::cout << "\n=== PHASE 4: SCENE CONVERSION ===" << std::endl;
+    std::cout << "C       - Convert Scene to Meshes (hybrid mode)" << std::endl;
+    std::cout << "0       - Convert Scene to Meshes (pure mesh mode - clears primitives)" << std::endl;
     std::cout << "\nESC     - Beenden" << std::endl;
 
     // Maus einfangen und Callback setzen
@@ -585,6 +590,27 @@ int main(void) {
             }
         }
         key9WasPressed = key9IsPressed;
+        
+        // ===== PHASE 4: SCENE CONVERSION HOTKEYS =====
+        // C: Convert Scene to Meshes (Hybrid Mode - keeps primitives)
+        bool cKeyIsPressed = (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS);
+        if (cKeyIsPressed && !cKeyWasPressed) {
+            if (gpuRT) {
+                std::cout << "\n[Hotkey C] Converting Scene to Triangle Meshes (Hybrid Mode)..." << std::endl;
+                gpuRT->convertSceneToMeshes(2, false); // subdivision=2, clearPrimitives=false
+            }
+        }
+        cKeyWasPressed = cKeyIsPressed;
+        
+        // 0: Convert Scene to Meshes (Pure Mesh Mode - clears primitives)
+        bool key0IsPressed = (glfwGetKey(window, GLFW_KEY_0) == GLFW_PRESS);
+        if (key0IsPressed && !key0WasPressed) {
+            if (gpuRT) {
+                std::cout << "\n[Hotkey 0] Converting Scene to Triangle Meshes (Pure Mesh Mode)..." << std::endl;
+                gpuRT->convertSceneToMeshes(2, true); // subdivision=2, clearPrimitives=true
+            }
+        }
+        key0WasPressed = key0IsPressed;
 
         // Eingabe verarbeiten
         processInput(window);
