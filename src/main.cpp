@@ -25,8 +25,8 @@ const int CPU_RT_WIDTH = 400;
 const int CPU_RT_HEIGHT = 300;
 
 // GPU Ray Tracer: Kann volle Auflösung nutzen
-const int GPU_RT_WIDTH = 1280;
-const int GPU_RT_HEIGHT = 720;
+const int GPU_RT_WIDTH = 1280/8;
+const int GPU_RT_HEIGHT = 720/8;
 
 // ===== KAMERA VARIABLEN =====
 // Kamera Position und Orientierung
@@ -46,6 +46,9 @@ float mouseSensitivity = 0.1f;
 float cameraSpeed = 2.5f;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
+
+// ===== FPS COUNTER =====
+float lastTitleUpdate = 0.0f;
 
 // ===== RAY TRACER HOTKEY STATE =====
 // Tracking für Hotkeys mit Debouncing
@@ -138,7 +141,7 @@ int main(void) {
     }
 
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1); // Enable vsync
+    glfwSwapInterval(0); // Enable vsync
 
     // Initialize GLAD
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -288,6 +291,15 @@ int main(void) {
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
+
+        // ===== FPS COUNTER UPDATE =====
+        float currentTime = static_cast<float>(glfwGetTime());
+        if (currentTime - lastTitleUpdate >= 0.5f) {
+            float fps = 1.0f / deltaTime;
+            std::string title = "3D Camera Demo - WASD + Maus - FPS: " + std::to_string(static_cast<int>(fps));
+            glfwSetWindowTitle(window, title.c_str());
+            lastTitleUpdate = currentTime;
+        }
 
         // ===== HOTKEY HANDLING MIT DEBOUNCING =====
         
