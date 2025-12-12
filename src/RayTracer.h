@@ -112,8 +112,8 @@ public:
         // Kein direktionales Licht mehr - nur Emission und Ambient
         // Die Deckenlampe liefert Licht durch ihre Emission
         
-        // Ambient Term
-        glm::vec3 ambient = mat.albedo * 0.05f; // Reduziertes Ambient für realistischere Beleuchtung
+        // Ambient Term - erhöht für bessere Sichtbarkeit
+        glm::vec3 ambient = mat.albedo * 0.2f;
 
         // Berechne Reflexion basierend auf Material
         glm::vec3 reflectedColor(0.0f);
@@ -138,10 +138,9 @@ public:
         }
 
         // Kombiniere alle Komponenten
-        // Mehr reflektierend = weniger direkte Beleuchtung
-        float reflectivity = (1.0f - mat.roughness) * 0.8f;
+        float reflectivity = (1.0f - mat.roughness) * 0.5f; // Reduzierte Reflektivität für mehr Lichtdurchlass
         glm::vec3 finalColor = emitted + 
-                               ambient + 
+                               ambient * (1.0f - reflectivity * 0.5f) +  // Ambient weniger durch Reflektivität reduziert
                                reflectedColor * reflectivity;
 
         return finalColor;

@@ -237,7 +237,7 @@ vec3 shade(vec3 rayOrigin, vec3 rayDir, inout uint seed) {
         
         // Kein direktionales Licht mehr - nur Emission und Ambient
         // Die Deckenlampe liefert Licht durch ihre Emission
-        vec3 ambient = mat.albedo * 0.05; // Reduziertes Ambient für realistischere Beleuchtung
+        vec3 ambient = mat.albedo * 0.2; // Erhöhtes Ambient für bessere Sichtbarkeit
         
         // Berechne neue Strahlrichtung
         vec3 perfectReflection = reflect_vec(rayDir, rec.normal);
@@ -249,14 +249,14 @@ vec3 shade(vec3 rayOrigin, vec3 rayDir, inout uint seed) {
         // Metallic bestimmt Reflexionsfarbe
         vec3 reflectionTint = mix(vec3(1.0), mat.albedo, mat.metallic);
         
-        // Reflektivität basierend auf Roughness
-        float reflectivity = (1.0 - mat.roughness) * 0.8;
+        // Reflektivität basierend auf Roughness - reduziert für mehr Lichtdurchlass
+        float reflectivity = (1.0 - mat.roughness) * 0.5;
         
         // Aktualisiere Farbe mit Ambient-Beleuchtung
-        color += throughput * ambient;
+        color += throughput * ambient * (1.0 - reflectivity * 0.5); // Ambient weniger durch Reflektivität reduziert
         
-        // Aktualisiere Throughput für nächsten Bounce
-        throughput *= reflectionTint * reflectivity;
+        // Aktualisiere Throughput für nächsten Bounce - weniger aggressiv
+        throughput *= reflectionTint * mix(0.8, reflectivity, 0.5); // Mehr Energie bleibt erhalten
         
         // Russisches Roulette für frühe Terminierung
         // Start nach 3 Bounces um initiale Reflexionen sicherzustellen

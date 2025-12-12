@@ -310,11 +310,11 @@ int main(void) {
     // FRONTWAND WIRD NICHT HINZUGEFÜGT - der Raum ist auf dieser Seite offen!
     
     // ===== DECKENLAMPE (EINZIGE LICHTQUELLE) =====
-    // Kleine leuchtende Kugel an der Decke
-    Material lampMaterial = Material::Emissive(glm::vec3(1.0f, 1.0f, 0.9f), 5.0f); // Warmes weißes Licht
+    // Leuchtende Kugel an der Decke - größer und heller für bessere Raumbeleuchtung
+    Material lampMaterial = Material::Emissive(glm::vec3(1.0f, 1.0f, 0.9f), 20.0f); // Warmes weißes Licht, erhöhte Intensität
     cpuRT.tracer.spheres.emplace_back(Sphere(
         glm::vec3(0.0f, roomSize/2.0f, roomSize/2.0f), // An der Decke, zentral
-        0.3f, // Kleine Lampe
+        0.5f, // Größere Lampe für bessere Ausleuchtung
         lampMaterial
     ));
     
@@ -351,7 +351,7 @@ int main(void) {
         // Deckenlampe
         gpuRT->spheres.emplace_back(Sphere(
             glm::vec3(0.0f, roomSize/2.0f, roomSize/2.0f),
-            0.3f,
+            0.5f,
             lampMaterial
         ));
     }
