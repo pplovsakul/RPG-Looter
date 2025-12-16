@@ -25,6 +25,13 @@ add_executable(RPG-Looter
     "src/IndexBuffer.cpp"
     "src/InputSystem.h"
     
+    # Mesh and Material System
+    "src/Material.h"
+    "src/Mesh.h"
+    "src/Mesh.cpp"
+    "src/ObjParser.h"
+    "src/ObjParser.cpp"
+    
     # GLAD
     "src/vendor/glad/glad.c"
     
@@ -57,3 +64,27 @@ foreach(SHADER_FILE ${SHADER_FILES})
 endforeach()
 
 target_compile_definitions(RPG-Looter PRIVATE SHADER_DIR="${SHADER_BUILD_DIR}")
+
+# Test executable
+add_executable(test_mesh
+    "tests/test_mesh.cpp"
+    "src/Mesh.cpp"
+    "src/Mesh.h"
+    "src/Material.h"
+    "src/ObjParser.cpp"
+    "src/ObjParser.h"
+)
+
+# Copy test resources (res/models -> build/res/models)
+set(MODEL_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/res/models")
+set(MODEL_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/res/models")
+
+file(GLOB MODEL_FILES "${MODEL_SOURCE_DIR}/*")
+
+# Create model directory if it doesn't exist
+file(MAKE_DIRECTORY ${MODEL_BUILD_DIR})
+
+foreach(MODEL_FILE ${MODEL_FILES})
+    get_filename_component(MODEL_NAME ${MODEL_FILE} NAME)
+    configure_file(${MODEL_FILE} ${MODEL_BUILD_DIR}/${MODEL_NAME} COPYONLY)
+endforeach()
