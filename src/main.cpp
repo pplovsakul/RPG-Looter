@@ -14,6 +14,9 @@
 #include "vendor/glm/glm.hpp"
 #include "vendor/glm/gtc/matrix_transform.hpp"
 
+#include "Mesh.h"
+#include "ObjParser.h"
+
 int width = 1280, height = 720;
 
 // ===== KAMERA VARIABLEN =====
@@ -142,48 +145,67 @@ int main(void) {
     // Enable depth testing for 3D
     glEnable(GL_DEPTH_TEST);
 
-    // Set up a simple quad
-    float vertices[] = {
-        // Positions      
-        -0.5f, -0.5f, 0.0f,  // Bottom left
-         0.5f, -0.5f, 0.0f,  // Bottom right
-        -0.5f,  0.5f, 0.0f,  // Top left
-         0.5f,  0.5f, 0.0f,  // Top right
+    // Mesh laden
+    Mesh mesh;
+    bool success = ObjParser::ParseOBJ("res/models/cube.obj", mesh, true);
 
-        -0.5f, -0.5f, 1.0f,
-         0.5f, -0.5f, 1.0f,
-        -0.5f,  0.5f, 1.0f,
-         0.5f,  0.5f, 1.0f,
+    if (!success) {
+        std::cerr << "Fehler beim Laden von cube.obj!" << std::endl;
+        return -1;
+    }
 
-    };
+    std::cout << "Mesh erfolgreich geladen:" << std::endl;
+    std::cout << "  - Vertices: " << mesh.GetVertexCount() << std::endl;
+    std::cout << "  - Faces: " << mesh.GetFaceCount() << std::endl;
+    std::cout << "  - Materials: " << mesh.GetMaterialCount() << std::endl;
 
-    unsigned int indices[] = {
-        0, 1, 2, // Triangle
-        1, 3, 2,  // Triangle
+    // Daten für OpenGL vorbereiten
+    std::vector<float> vertexData = mesh.GetInterleavedVertexData();
+    std::vector<unsigned int> indexData = mesh.GetIndexData();
 
-		4, 5, 6,
-		5, 7, 6,
+//    // Set up a simple quad
+//    float vertices[] = {
+//        // Positions      
+//        -0.5f, -0.5f, 0.0f,  // Bottom left
+//         0.5f, -0.5f, 0.0f,  // Bottom right
+//        -0.5f,  0.5f, 0.0f,  // Top left
+//         0.5f,  0.5f, 0.0f,  // Top right
+//
+//        -0.5f, -0.5f, 1.0f,
+//         0.5f, -0.5f, 1.0f,
+//        -0.5f,  0.5f, 1.0f,
+//         0.5f,  0.5f, 1.0f,
+//
+//    };
+//
+//    unsigned int indices_old[] = {
+//        0, 1, 2, // Triangle
+//        1, 3, 2,  // Triangle
+//
+//		4, 5, 6,
+//		5, 7, 6,
+//
+//		0, 1, 4,
+//		1, 5, 4,
+//
+//		2, 3, 6,
+//		3, 7, 6,
+//
+//		0, 2, 4,
+//		2, 6, 4,
+//
+//		1, 3, 5,
+//		3, 7, 5
+//    };
 
-		0, 1, 4,
-		1, 5, 4,
-
-		2, 3, 6,
-		3, 7, 6,
-
-		0, 2, 4,
-		2, 6, 4,
-
-		1, 3, 5,
-		3, 7, 5
-    };
-
-    // Create buffers
-    VertexBuffer vb(vertices, sizeof(vertices));
-    IndexBuffer ib(indices, sizeof(indices));
+    VertexBuffer vb(vertexData.data(), vertexData.size() * sizeof(float));
+    IndexBuffer ib(indexData.data(), indexData.size() * sizeof(unsigned int));
     
     VertexArray va;
     VertexBufferLayout layout;
-    layout.AddFloat(3); // Position attribute (3 floats: x, y, z)
+    layout.AddFloat(3);  // Position (x, y, z)
+    layout.AddFloat(3);  // Normal (nx, ny, nz)
+    layout.AddFloat(2);  // Texture coordinates (u, v)
     va.AddBuffer(vb, layout);
 
     // ===== SHADER UND RENDERER SETUP =====
@@ -236,9 +258,19 @@ int main(void) {
 
         // ===== RENDERING =====
         // Standard OpenGL GPU-Rendering mit Vertex/Fragment Shadern
+        const Material* mat = mesh.GetMaterial("RedMaterial");
+        if (mat) {
+            shader.SetUniform4f("u_Color",
+                mat->diffuse[0], mat->diffuse[1], mat->diffuse[2], 1.0f);
+        }
+        else {
+            shader.SetUniform4f("u_Color", 1.0f, 0.5f, 0.2f, 1.0f);
+        }
+
+        renderer.Draw(va, ib, shader);
+
         shader.Bind();
         shader.SetUniformMat4f("u_MVP", mvp);
-        shader.SetUniform4f("u_Color", 1.0f, 0.5f, 0.2f, 1.0f);
         renderer.Draw(va, ib, shader);
 
         // Swap buffers and poll events
