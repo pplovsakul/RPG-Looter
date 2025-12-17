@@ -76,6 +76,8 @@ StyleCopReport.xml
 *.ilk
 *.meta
 *.obj
+# Allow .obj files in res/models (3D model files)
+!res/models/*.obj
 *.iobj
 *.pch
 *.pdb
