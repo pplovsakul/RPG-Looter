@@ -147,7 +147,7 @@ int main(void) {
 
     // Mesh laden
     Mesh mesh;
-    bool success = ObjParser::ParseOBJ("res/models/cube.obj", mesh, true);
+    bool success = ObjParser::ParseOBJ("res/models/Test.obj", mesh, true);
 
     if (!success) {
         std::cerr << "Fehler beim Laden von cube.obj!" << std::endl;
