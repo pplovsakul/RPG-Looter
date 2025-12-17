@@ -20,5 +20,5 @@ public:
     inline int GetHeight() const { return m_Height; }
     inline const std::string& GetFilePath() const { return m_FilePath; }
     inline unsigned int GetRendererID() const { return m_RendererID; }
-    inline bool IsValid() const { return m_RendererID != 0; }
+    inline bool IsValid() const { return m_Width > 0 && m_Height > 0; }
 };

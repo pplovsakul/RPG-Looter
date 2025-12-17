@@ -51,16 +51,13 @@ void mtlparser::parse( std::istream& file )
 		if( keyword == "newmtl" )
 		{
 			std::string name;
-			ss >> std::ws >> name >> std::ws;
+			ss >> std::ws >> name;
 
-			if( ss.fail() )
+			if( ss.fail() || name.empty() )
 			{
 				errorSignal.send( lineNumber, "Parse error reading material name, skipping it." );
 				continue;
 			}
-
-			if( !ss.eof() )
-				errorSignal.send( lineNumber, "Ignoring information beyond first material name." );
 
 			beginMaterialSignal.send( name );
 		}
@@ -77,16 +74,13 @@ void mtlparser::parse( std::istream& file )
 				continue;
 			}
 
-			ss >> a.x >> std::ws >> a.y >> std::ws >> a.z >> std::ws;
+			ss >> a.x >> std::ws >> a.y >> std::ws >> a.z;
 
 			if( ss.fail() )
 			{
 				errorSignal.send( lineNumber, "Parse error reading ambient color, skipping it." );
 				continue;
 			}
-
-			if( !ss.eof() )
-				errorSignal.send( lineNumber, "Ignoring information beyond third ambient color value." );
 
 			ambientSignal.send( a );
 		}
@@ -103,16 +97,13 @@ void mtlparser::parse( std::istream& file )
 				continue;
 			}
 
-			ss >> d.x >> std::ws >> d.y >> std::ws >> d.z >> std::ws;
+			ss >> d.x >> std::ws >> d.y >> std::ws >> d.z;
 
 			if( ss.fail() )
 			{
 				errorSignal.send( lineNumber, "Parse error reading diffuse color, skipping it." );
 				continue;
 			}
-
-			if( !ss.eof() )
-				errorSignal.send( lineNumber, "Ignoring information beyond third diffuse color value." );
 
 			diffuseSignal.send( d );
 		}
@@ -129,16 +120,13 @@ void mtlparser::parse( std::istream& file )
 				continue;
 			}
 
-			ss >> s.x >> std::ws >> s.y >> std::ws >> s.z >> std::ws;
+			ss >> s.x >> std::ws >> s.y >> std::ws >> s.z;
 
 			if( ss.fail() )
 			{
 				errorSignal.send( lineNumber, "Parse error reading specular color, skipping it." );
 				continue;
 			}
-
-			if( !ss.eof() )
-				errorSignal.send( lineNumber, "Ignoring information beyond third specular color value." );
 
 			specularSignal.send( s );
 		}
@@ -155,7 +143,7 @@ void mtlparser::parse( std::istream& file )
 			}
 
 			double e;
-			ss >> std::ws >> e >> std::ws;
+			ss >> std::ws >> e;
 
 			if( ss.fail() )
 			{
@@ -163,16 +151,13 @@ void mtlparser::parse( std::istream& file )
 				continue;
 			}
 
-			if( !ss.eof() )
-				errorSignal.send( lineNumber, "Ignoring information beyond opacity value." );
-
 			opacitySignal.send( e );
 		}
 		// Case specular exponent
 		else if( keyword == "Ns" )
 		{
 			double e;
-			ss >> std::ws >> e >> std::ws;
+			ss >> std::ws >> e;
 
 			if( ss.fail() )
 			{
@@ -180,25 +165,19 @@ void mtlparser::parse( std::istream& file )
 				continue;
 			}
 
-			if( !ss.eof() )
-				errorSignal.send( lineNumber, "Ignoring information beyond specular exponent value." );
-
 			specularExpSignal.send( e );
 		}
 		// Case refraction index
 		else if( keyword == "Ni" )
 		{
 			double i;
-			ss >> std::ws >> i >> std::ws;
+			ss >> std::ws >> i;
 
 			if( ss.fail() )
 			{
 				errorSignal.send( lineNumber, "Parse error reading refraction index, skipping it." );
 				continue;
 			}
-
-			if( !ss.eof() )
-				errorSignal.send( lineNumber, "Ignoring information beyond refraction index value." );
 
 			refractionIndexSignal.send( i );
 		}
@@ -252,7 +231,7 @@ bool mtlparser::parseTextureMap( unsigned int lineNumber, std::stringstream& ss,
 			filename = token; // Keep last token as filename
 	}
 
-	if( ss.fail() )
+	if( filename.empty() )
 	{
 		errorSignal.send( lineNumber, "Parse error reading texture map, skipping it." );
 		return false;
