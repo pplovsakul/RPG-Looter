@@ -243,7 +243,7 @@ bool objparser::parseIndexTuple( face_index& idx, const std::string& elem )
 		char slash1;
 		elemSS >> slash1;
 
-		if( !elemSS.eof() && isdigit( elemSS.peek() ) )
+		if( !elemSS.eof() && (isdigit( elemSS.peek() ) || elemSS.peek() == '-') )
 		{
 			// We have at least v/t
 			elemSS >> idx.texCoordIdx;

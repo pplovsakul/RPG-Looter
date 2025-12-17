@@ -148,8 +148,8 @@ void mtlparser::parse( std::istream& file )
 			// If any options, skip field
 			if( ss.peek() == '-' )
 			{
-				errorSignal.send( lineNumber, "Opacity with options it not supported, skipping it." );
-				return;
+				errorSignal.send( lineNumber, "Opacity with options is not supported, skipping it." );
+				continue;
 			}
 
 			double e;
@@ -243,7 +243,12 @@ bool mtlparser::parseTextureMap( unsigned int lineNumber, std::stringstream& ss,
 		errorSignal.send( lineNumber, "Skipping texture map options." );
 
 	while( !ss.eof() )
-		ss >> std::ws >> filename;
+	{
+		std::string token;
+		ss >> std::ws >> token;
+		if (!token.empty())
+			filename = token; // Keep last token as filename
+	}
 
 	if( ss.fail() )
 	{
