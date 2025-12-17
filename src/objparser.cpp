@@ -60,16 +60,13 @@ void objparser::parse( std::istream& file )
 		if( keyword == "v" )
 		{
 			vec3d v;
-			ss >> std::ws >> v.x >> std::ws >> v.y >> std::ws >> v.z >> std::ws;
+			ss >> std::ws >> v.x >> std::ws >> v.y >> std::ws >> v.z;
 
 			if( ss.fail() )
 			{
 				errorSignal.send( _lineNumber, "Parse error reading vertex, skipping it." );
 				continue;
 			}
-
-			if( !ss.eof() )
-				errorSignal.send( _lineNumber, "Ignoring information beyond third vertex value." );
 
 			vertexSignal.send( v );
 			++_numVertices;
@@ -78,16 +75,13 @@ void objparser::parse( std::istream& file )
 		else if( keyword == "vn" )
 		{
 			vec3d n;
-			ss >> std::ws >> n.x >> std::ws >> n.y >> std::ws >> n.z >> std::ws;
+			ss >> std::ws >> n.x >> std::ws >> n.y >> std::ws >> n.z;
 
 			if( ss.fail() )
 			{
 				errorSignal.send( _lineNumber, "Parse error reading normal, skipping it." );
 				continue;
 			}
-
-			if( !ss.eof() )
-				errorSignal.send( _lineNumber, "Ignoring information beyond third normal value." );
 
 			normalSignal.send( n );
 			++_numNormals;
@@ -96,24 +90,31 @@ void objparser::parse( std::istream& file )
 		else if( keyword == "vt" )
 		{
 			vec3d t;
-			ss >> std::ws >> t.x >> std::ws;
+			ss >> std::ws >> t.x;
 			
 			// Optional parameter
 			if( !ss.eof() )
-				ss >> t.y >> std::ws;
+			{
+				ss >> std::ws >> t.y;
+			}
 
-			// Optional parameter
-			if( !ss.eof() )
-				ss >> t.z >> std::ws;
+			// Optional parameter  
+			if( !ss.eof() && !ss.fail() )
+			{
+				ss >> std::ws >> t.z;
+			}
+
+			// Clear fail state if we just ran out of optional parameters
+			if( ss.fail() && ss.eof() )
+			{
+				ss.clear();
+			}
 
 			if( ss.fail() )
 			{
 				errorSignal.send( _lineNumber, "Parse error reading texture coordinate, skipping it." );
 				continue;
 			}
-
-			if( !ss.eof() )
-				errorSignal.send( _lineNumber, "Ignoring information beyond third texcoord value." );
 
 			texcoordSignal.send( t );
 			++_numTexCoords;
@@ -127,11 +128,13 @@ void objparser::parse( std::istream& file )
 			while( !ss.eof() )
 			{
 				std::string elem;
-				ss >> std::ws >> elem >> std::ws;
-				elements.push_back( elem );
+				ss >> std::ws >> elem;
+				// Only add non-empty elements (ignores trailing whitespace/EOF reads)
+				if (!elem.empty() && !ss.fail())
+					elements.push_back( elem );
 			}
 
-			if( ss.fail() || elements.empty() )
+			if( elements.empty() )
 			{
 				errorSignal.send( _lineNumber, "Parse error reading face list, skipping it." );
 				continue;
@@ -184,14 +187,11 @@ void objparser::parse( std::istream& file )
 				}
 			}
 
-			if( ss.fail() )
+			if( filename.empty() )
 			{
 				errorSignal.send( _lineNumber, "Parse error reading material library filename, skipping it." );
 				continue;
 			}
-
-			if( !ss.eof() )
-				errorSignal.send( _lineNumber, "Ignoring information beyond first material library filename." );
 
 			materialLibSignal.send( filename );
 		}
@@ -199,16 +199,13 @@ void objparser::parse( std::istream& file )
 		else if( keyword == "usemtl" )
 		{
 			std::string material;
-			ss >> std::ws >> material >> std::ws;
+			ss >> std::ws >> material;
 
-			if( ss.fail() )
+			if( ss.fail() || material.empty() )
 			{
 				errorSignal.send( _lineNumber, "Parse error reading material name, skipping it." );
 				continue;
 			}
-
-			if( !ss.eof() )
-				errorSignal.send( _lineNumber, "Ignoring information beyond first material name." );
 
 			materialUseSignal.send( material );
 		}
