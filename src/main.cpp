@@ -16,6 +16,11 @@
 
 int width = 1280, height = 720;
 
+// ===== INDEX BUFFER LIMITS =====
+// Maximum number of indices allowed to prevent accidental upload of unreasonably large buffers
+// (e.g., due to faulty mesh or OBJ parsing). This limit helps catch errors early.
+constexpr unsigned int MAX_INDEX_COUNT = 500000;
+
 // ===== KAMERA VARIABLEN =====
 // Kamera Position und Orientierung
 glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, -3.0f);  // Außerhalb des Raums, vor der offenen Frontwand
@@ -176,6 +181,41 @@ int main(void) {
 		1, 3, 5,
 		3, 7, 5
     };
+
+    // ===== PLAUSIBILITY CHECK FOR INDEX DATA =====
+    // Calculate the number of indices (size in bytes / size of one index)
+    unsigned int indexCount = sizeof(indices) / sizeof(unsigned int);
+    unsigned int vertexDataSize = sizeof(vertices);
+    
+    // Check 1: Ensure index data is not empty
+    if (indexCount == 0) {
+        std::cerr << "ERROR: Index data is empty! Cannot create IndexBuffer." << std::endl;
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        return -1;
+    }
+    
+    // Check 2: Ensure vertex data is not empty
+    if (vertexDataSize == 0) {
+        std::cerr << "ERROR: Vertex data is empty! Cannot create buffers." << std::endl;
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        return -1;
+    }
+    
+    // Check 3: Ensure index count doesn't exceed the maximum limit
+    // This prevents uploading unreasonably large index buffers due to faulty mesh or OBJ parsing
+    if (indexCount > MAX_INDEX_COUNT) {
+        std::cerr << "ERROR: Index count (" << indexCount << ") exceeds maximum allowed (" 
+                  << MAX_INDEX_COUNT << ")!" << std::endl;
+        std::cerr << "This may indicate a faulty mesh or parsing error. Aborting." << std::endl;
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        return -1;
+    }
+    
+    std::cout << "Mesh validation passed: " << indexCount << " indices, " 
+              << vertexDataSize << " bytes of vertex data" << std::endl;
 
     // Create buffers
     VertexBuffer vb(vertices, sizeof(vertices));
