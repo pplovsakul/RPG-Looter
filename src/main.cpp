@@ -9,6 +9,8 @@
 #include "VertexBufferLayout.h"
 #include "Shader.h"
 #include "InputSystem.h"
+#include "BufferLimits.h"
+#include "OBJLoader.h"
 
 // GLM für Matrizen
 #include "vendor/glm/glm.hpp"
@@ -142,44 +144,58 @@ int main(void) {
     // Enable depth testing for 3D
     glEnable(GL_DEPTH_TEST);
 
-    // Set up a simple quad
-    float vertices[] = {
-        // Positions      
-        -0.5f, -0.5f, 0.0f,  // Bottom left
-         0.5f, -0.5f, 0.0f,  // Bottom right
-        -0.5f,  0.5f, 0.0f,  // Top left
-         0.5f,  0.5f, 0.0f,  // Top right
+    // ===== LOAD MESH FROM OBJ FILE =====
+    std::cout << "\n=== Loading Test.obj ===" << std::endl;
+    OBJLoader::MeshData mesh;
+    if (!OBJLoader::LoadOBJ("res/models/Test.obj", mesh)) {
+        std::cerr << "ERROR: Failed to load Test.obj!" << std::endl;
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        return -1;
+    }
 
-        -0.5f, -0.5f, 1.0f,
-         0.5f, -0.5f, 1.0f,
-        -0.5f,  0.5f, 1.0f,
-         0.5f,  0.5f, 1.0f,
+    // Get mesh data
+    std::vector<unsigned int> indices = OBJLoader::GetIndexData(mesh);
+    std::vector<float> vertices = OBJLoader::GetInterleavedVertexData(mesh);
 
-    };
-
-    unsigned int indices[] = {
-        0, 1, 2, // Triangle
-        1, 3, 2,  // Triangle
-
-		4, 5, 6,
-		5, 7, 6,
-
-		0, 1, 4,
-		1, 5, 4,
-
-		2, 3, 6,
-		3, 7, 6,
-
-		0, 2, 4,
-		2, 6, 4,
-
-		1, 3, 5,
-		3, 7, 5
-    };
+    // ===== PLAUSIBILITY CHECK FOR INDEX DATA =====
+    // Calculate the number of indices from the loaded mesh
+    unsigned int indexCount = static_cast<unsigned int>(indices.size());
+    unsigned int vertexDataSize = static_cast<unsigned int>(vertices.size() * sizeof(float));
+    
+    // Check 1: Ensure index data is not empty
+    if (indexCount == 0) {
+        std::cerr << "ERROR: Index data is empty! Cannot create IndexBuffer." << std::endl;
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        return -1;
+    }
+    
+    // Check 2: Ensure vertex data is not empty
+    if (vertices.empty()) {
+        std::cerr << "ERROR: Vertex data is empty! Cannot create buffers." << std::endl;
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        return -1;
+    }
+    
+    // Check 3: Ensure index count doesn't exceed the maximum limit
+    // This prevents uploading unreasonably large index buffers due to faulty mesh or OBJ parsing
+    if (indexCount > MAX_INDEX_COUNT) {
+        std::cerr << "ERROR: Index count (" << indexCount << ") exceeds maximum allowed (" 
+                  << MAX_INDEX_COUNT << ")!" << std::endl;
+        std::cerr << "This may indicate a faulty mesh or parsing error. Aborting." << std::endl;
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        return -1;
+    }
+    
+    std::cout << "Mesh validation passed: " << indexCount << " indices, " 
+              << vertexDataSize << " bytes of vertex data" << std::endl;
 
     // Create buffers
-    VertexBuffer vb(vertices, sizeof(vertices));
-    IndexBuffer ib(indices, sizeof(indices));
+    VertexBuffer vb(vertices.data(), vertexDataSize);
+    IndexBuffer ib(indices.data(), indexCount);
     
     VertexArray va;
     VertexBufferLayout layout;

@@ -11,6 +11,7 @@ add_subdirectory("extern/glfw-3.4")
 # Executable
 add_executable(RPG-Looter
     "src/Debug.h"
+    "src/BufferLimits.h"
     "src/Renderer.cpp"
     "src/Renderer.h"
     "src/VertexBuffer.h"
@@ -24,6 +25,8 @@ add_executable(RPG-Looter
     "src/IndexBuffer.h"
     "src/IndexBuffer.cpp"
     "src/InputSystem.h"
+    "src/OBJLoader.h"
+    "src/OBJLoader.cpp"
     
     # GLAD
     "src/vendor/glad/glad.c"
