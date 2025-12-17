@@ -38,7 +38,8 @@ void mtlparser::parse( std::istream& file )
 		// Check comment line
 		if( ss.peek() == '#' )
 		{
-			commentSignal.send( lineNumber, line.c_str() + 2 );
+			const char* comment = (line.length() >= 2) ? line.c_str() + 2 : "";
+			commentSignal.send( lineNumber, comment );
 			continue;
 		}
 
@@ -70,7 +71,7 @@ void mtlparser::parse( std::istream& file )
 			ss >> std::ws;
 
 			// Check option
-			if( !isdigit( ss.peek() ) )
+			if( !ss.eof() && !isdigit( ss.peek() ) )
 			{
 				errorSignal.send( lineNumber, "Ambient color not RGB, skipping it." );
 				continue;
@@ -96,7 +97,7 @@ void mtlparser::parse( std::istream& file )
 			ss >> std::ws;
 
 			// Check option
-			if( !isdigit( ss.peek() ) )
+			if( !ss.eof() && !isdigit( ss.peek() ) )
 			{
 				errorSignal.send( lineNumber, "Diffuse color not RGB, skipping it." );
 				continue;
@@ -122,7 +123,7 @@ void mtlparser::parse( std::istream& file )
 			ss >> std::ws;
 
 			// Check option
-			if( !isdigit( ss.peek() ) )
+			if( !ss.eof() && !isdigit( ss.peek() ) )
 			{
 				errorSignal.send( lineNumber, "Specular color not RGB, skipping it." );
 				continue;

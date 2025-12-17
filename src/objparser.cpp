@@ -47,7 +47,8 @@ void objparser::parse( std::istream& file )
 		// Check comment line
 		if( ss.peek() == '#' )
 		{
-			commentSignal.send( _lineNumber, line.c_str() + 2 );
+			const char* comment = (line.length() >= 2) ? line.c_str() + 2 : "";
+			commentSignal.send( _lineNumber, comment );
 			continue;
 		}
 
@@ -156,12 +157,14 @@ void objparser::parse( std::istream& file )
 		// Case object name
 		else if( keyword == "o" )
 		{
-			objectNameSignal.send( line.c_str() + 2 );
+			const char* name = (line.length() >= 2) ? line.c_str() + 2 : "";
+			objectNameSignal.send( name );
 		}
 		// Case group name
 		else if( keyword == "g" )
 		{
-			groupNameSignal.send( line.c_str() + 2 );
+			const char* name = (line.length() >= 2) ? line.c_str() + 2 : "";
+			groupNameSignal.send( name );
 		}
 		// Case material filename
 		else if( keyword == "mtllib" )
@@ -180,8 +183,6 @@ void objparser::parse( std::istream& file )
 					filename += s;
 				}
 			}
-
-			//ss >> std::ws >> filename >> std::ws;
 
 			if( ss.fail() )
 			{
