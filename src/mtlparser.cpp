@@ -102,7 +102,7 @@ void mtlparser::parse( std::istream& file )
 				continue;
 			}
 
-			ss >> std::ws >> d.x >> std::ws >> d.y >> std::ws >> d.z >> std::ws;
+			ss >> d.x >> std::ws >> d.y >> std::ws >> d.z >> std::ws;
 
 			if( ss.fail() )
 			{
@@ -128,7 +128,7 @@ void mtlparser::parse( std::istream& file )
 				continue;
 			}
 
-			ss >> std::ws >> s.x >> std::ws >> s.y >> std::ws >> s.z >> std::ws;
+			ss >> s.x >> std::ws >> s.y >> std::ws >> s.z >> std::ws;
 
 			if( ss.fail() )
 			{

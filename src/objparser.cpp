@@ -2,7 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
-#include <ctype.h>
+#include <cctype>
 
 using namespace obj;
 
@@ -174,7 +174,11 @@ void objparser::parse( std::istream& file )
 			{
 				std::string s;
 				ss >> s;
-				filename += s + " ";
+				if (!s.empty()) {
+					if (!filename.empty())
+						filename += " ";
+					filename += s;
+				}
 			}
 
 			//ss >> std::ws >> filename >> std::ws;
