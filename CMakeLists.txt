@@ -28,6 +28,14 @@ add_executable(RPG-Looter
     "src/OBJLoader.h"
     "src/OBJLoader.cpp"
     
+    # OBJ and MTL parsers
+    "include/obj/types.h"
+    "include/obj/objparser.h"
+    "src/objparser.cpp"
+    "include/obj/mtlparser.h"
+    "src/mtlparser.cpp"
+    "include/sig/sigslot.h"
+    
     # GLAD
     "src/vendor/glad/glad.c"
     
