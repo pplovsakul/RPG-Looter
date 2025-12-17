@@ -9,17 +9,13 @@
 #include "VertexBufferLayout.h"
 #include "Shader.h"
 #include "InputSystem.h"
+#include "BufferLimits.h"
 
 // GLM für Matrizen
 #include "vendor/glm/glm.hpp"
 #include "vendor/glm/gtc/matrix_transform.hpp"
 
 int width = 1280, height = 720;
-
-// ===== INDEX BUFFER LIMITS =====
-// Maximum number of indices allowed to prevent accidental upload of unreasonably large buffers
-// (e.g., due to faulty mesh or OBJ parsing). This limit helps catch errors early.
-constexpr unsigned int MAX_INDEX_COUNT = 500000;
 
 // ===== KAMERA VARIABLEN =====
 // Kamera Position und Orientierung
@@ -183,7 +179,8 @@ int main(void) {
     };
 
     // ===== PLAUSIBILITY CHECK FOR INDEX DATA =====
-    // Calculate the number of indices (size in bytes / size of one index)
+    // Calculate the number of indices
+    // NOTE: sizeof() works here because 'indices' is a local array, not a pointer parameter
     unsigned int indexCount = sizeof(indices) / sizeof(unsigned int);
     unsigned int vertexDataSize = sizeof(vertices);
     

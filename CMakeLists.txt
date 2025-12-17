@@ -11,6 +11,7 @@ add_subdirectory("extern/glfw-3.4")
 # Executable
 add_executable(RPG-Looter
     "src/Debug.h"
+    "src/BufferLimits.h"
     "src/Renderer.cpp"
     "src/Renderer.h"
     "src/VertexBuffer.h"

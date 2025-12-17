@@ -1,11 +1,8 @@
 #include "IndexBuffer.h"
 #include "Debug.h"
+#include "BufferLimits.h"
 #include <glad/glad.h>
 #include <iostream>
-
-// Maximum number of indices allowed to prevent accidental creation of giant buffers
-// This threshold helps catch errors from faulty mesh loading or OBJ parsing early
-constexpr unsigned int MAX_INDEX_COUNT = 500000;
 
 IndexBuffer::IndexBuffer(const unsigned int* indices, unsigned int count)
     : m_Count(count) {
@@ -14,7 +11,6 @@ IndexBuffer::IndexBuffer(const unsigned int* indices, unsigned int count)
     if (indices == nullptr) {
         std::cerr << "ERROR: IndexBuffer received null pointer for indices!" << std::endl;
         ASSERT(false);
-        return;
     }
     
     // Plausibility check: Ensure index count is not zero
@@ -29,7 +25,6 @@ IndexBuffer::IndexBuffer(const unsigned int* indices, unsigned int count)
                   << " indices, which exceeds maximum allowed (" << MAX_INDEX_COUNT << ")!" << std::endl;
         std::cerr << "This may indicate a faulty mesh or parsing error." << std::endl;
         ASSERT(false);
-        return;
     }
     
     GLCall(glGenBuffers(1, &m_RendererID));
