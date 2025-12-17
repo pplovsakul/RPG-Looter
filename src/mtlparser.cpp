@@ -185,16 +185,7 @@ void mtlparser::parse( std::istream& file )
 		else if( keyword == "Ke" )
 		{
 			vec3d e;
-			ss >> std::ws;
-
-			// Check option
-			if( !ss.eof() && !isdigit( ss.peek() ) )
-			{
-				errorSignal.send( lineNumber, "Emissive color not RGB, skipping it." );
-				continue;
-			}
-
-			ss >> e.x >> std::ws >> e.y >> std::ws >> e.z;
+			ss >> std::ws >> e.x >> std::ws >> e.y >> std::ws >> e.z;
 
 			if( ss.fail() )
 			{

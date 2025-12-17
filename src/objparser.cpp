@@ -129,7 +129,8 @@ void objparser::parse( std::istream& file )
 			{
 				std::string elem;
 				ss >> std::ws >> elem;
-				if (!elem.empty())
+				// Only add non-empty elements (ignores trailing whitespace/EOF reads)
+				if (!elem.empty() && !ss.fail())
 					elements.push_back( elem );
 			}
 
