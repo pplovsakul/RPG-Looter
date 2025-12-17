@@ -200,6 +200,7 @@ int main(void) {
     VertexArray va;
     VertexBufferLayout layout;
     layout.AddFloat(3); // Position attribute (3 floats: x, y, z)
+    layout.AddFloat(2); // Texture coordinate attribute (2 floats: u, v)
     va.AddBuffer(vb, layout);
 
     // ===== SHADER UND RENDERER SETUP =====
@@ -209,6 +210,26 @@ int main(void) {
     Renderer renderer;
 
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    
+    // Check if we have a texture from the loaded materials
+    bool useTexture = false;
+    std::shared_ptr<Texture> activeTexture = nullptr;
+    
+    if (!mesh.materials.empty()) {
+        // Use the first material with a texture
+        for (const auto& matPair : mesh.materials) {
+            if (matPair.second.diffuseTexture && matPair.second.diffuseTexture->IsValid()) {
+                activeTexture = matPair.second.diffuseTexture;
+                useTexture = true;
+                std::cout << "Using texture from material: " << matPair.first << std::endl;
+                break;
+            }
+        }
+    }
+    
+    if (!useTexture) {
+        std::cout << "No texture found in materials, using fallback color." << std::endl;
+    }
 
     // Projection Matrix (Perspective)
     float aspectRatio = (float)windowWidth / (float)windowHeight;
@@ -254,7 +275,16 @@ int main(void) {
         // Standard OpenGL GPU-Rendering mit Vertex/Fragment Shadern
         shader.Bind();
         shader.SetUniformMat4f("u_MVP", mvp);
-        shader.SetUniform4f("u_Color", 1.0f, 0.5f, 0.2f, 1.0f);
+        
+        if (useTexture && activeTexture) {
+            activeTexture->Bind(0); // Bind to texture slot 0
+            shader.SetUniform1i("u_Texture", 0);
+            shader.SetUniform1i("u_UseTexture", 1);
+        } else {
+            shader.SetUniform4f("u_Color", 1.0f, 0.5f, 0.2f, 1.0f);
+            shader.SetUniform1i("u_UseTexture", 0);
+        }
+        
         renderer.Draw(va, ib, shader);
 
         // Swap buffers and poll events

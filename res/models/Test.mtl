@@ -1,0 +1,7 @@
+# Test material with texture
+newmtl TestMaterial
+Ka 1.0 1.0 1.0
+Kd 1.0 1.0 1.0
+Ks 0.5 0.5 0.5
+Ns 32.0
+map_Kd Test.png

@@ -27,6 +27,9 @@ add_executable(RPG-Looter
     "src/InputSystem.h"
     "src/OBJLoader.h"
     "src/OBJLoader.cpp"
+    "src/Texture.h"
+    "src/Texture.cpp"
+    "src/Material.h"
     
     # OBJ and MTL parsers
     "include/obj/types.h"
@@ -41,6 +44,9 @@ add_executable(RPG-Looter
     
     # GLM Header
     "src/vendor/glm/glm.hpp"
+    
+    # stb_image Header
+    "src/vendor/stb/stb_image.h"
     
     "src/main.cpp"
 )
@@ -66,5 +72,19 @@ foreach(SHADER_FILE ${SHADER_FILES})
     get_filename_component(SHADER_NAME ${SHADER_FILE} NAME)
     configure_file(${SHADER_FILE} ${SHADER_BUILD_DIR}/${SHADER_NAME} COPYONLY)
 endforeach()
+
+# Copy models (res/models -> build/res/models)
+set(MODELS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/res/models")
+set(MODELS_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/res/models")
+
+if(EXISTS ${MODELS_SOURCE_DIR})
+    file(GLOB MODEL_FILES "${MODELS_SOURCE_DIR}/*")
+    file(MAKE_DIRECTORY ${MODELS_BUILD_DIR})
+    
+    foreach(MODEL_FILE ${MODEL_FILES})
+        get_filename_component(MODEL_NAME ${MODEL_FILE} NAME)
+        configure_file(${MODEL_FILE} ${MODELS_BUILD_DIR}/${MODEL_NAME} COPYONLY)
+    endforeach()
+endif()
 
 target_compile_definitions(RPG-Looter PRIVATE SHADER_DIR="${SHADER_BUILD_DIR}")
