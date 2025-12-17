@@ -25,6 +25,8 @@ add_executable(RPG-Looter
     "src/IndexBuffer.h"
     "src/IndexBuffer.cpp"
     "src/InputSystem.h"
+    "src/OBJLoader.h"
+    "src/OBJLoader.cpp"
     
     # GLAD
     "src/vendor/glad/glad.c"
