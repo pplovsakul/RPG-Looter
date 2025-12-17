@@ -90,15 +90,25 @@ void objparser::parse( std::istream& file )
 		else if( keyword == "vt" )
 		{
 			vec3d t;
-			ss >> std::ws >> t.x >> std::ws;
+			ss >> std::ws >> t.x;
 			
 			// Optional parameter
 			if( !ss.eof() )
-				ss >> t.y >> std::ws;
+			{
+				ss >> std::ws >> t.y;
+			}
 
-			// Optional parameter
-			if( !ss.eof() )
-				ss >> t.z;
+			// Optional parameter  
+			if( !ss.eof() && !ss.fail() )
+			{
+				ss >> std::ws >> t.z;
+			}
+
+			// Clear fail state if we just ran out of optional parameters
+			if( ss.fail() && ss.eof() )
+			{
+				ss.clear();
+			}
 
 			if( ss.fail() )
 			{
@@ -118,11 +128,12 @@ void objparser::parse( std::istream& file )
 			while( !ss.eof() )
 			{
 				std::string elem;
-				ss >> std::ws >> elem >> std::ws;
-				elements.push_back( elem );
+				ss >> std::ws >> elem;
+				if (!elem.empty())
+					elements.push_back( elem );
 			}
 
-			if( ss.fail() || elements.empty() )
+			if( elements.empty() )
 			{
 				errorSignal.send( _lineNumber, "Parse error reading face list, skipping it." );
 				continue;

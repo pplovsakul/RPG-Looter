@@ -181,6 +181,45 @@ void mtlparser::parse( std::istream& file )
 
 			refractionIndexSignal.send( i );
 		}
+		// Case emissive color
+		else if( keyword == "Ke" )
+		{
+			vec3d e;
+			ss >> std::ws;
+
+			// Check option
+			if( !ss.eof() && !isdigit( ss.peek() ) )
+			{
+				errorSignal.send( lineNumber, "Emissive color not RGB, skipping it." );
+				continue;
+			}
+
+			ss >> e.x >> std::ws >> e.y >> std::ws >> e.z;
+
+			if( ss.fail() )
+			{
+				errorSignal.send( lineNumber, "Parse error reading emissive color, skipping it." );
+				continue;
+			}
+
+			// Note: We parse it but don't send a signal as there's no emissive signal defined
+			// This silences the "Unknown keyword" error for Ke
+		}
+		// Case illumination model
+		else if( keyword == "illum" )
+		{
+			int illum;
+			ss >> std::ws >> illum;
+
+			if( ss.fail() )
+			{
+				errorSignal.send( lineNumber, "Parse error reading illumination model, skipping it." );
+				continue;
+			}
+
+			// Note: We parse it but don't send a signal as there's no illum signal defined
+			// This silences the "Unknown keyword" error for illum
+		}
 		// Case ambient texture map
 		else if( keyword == "map_Ka" || keyword == "map_a")
 		{

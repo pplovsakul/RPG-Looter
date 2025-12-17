@@ -58,13 +58,29 @@ newmtl YourMaterialName
 Ka 1.0 1.0 1.0  # Ambient color
 Kd 1.0 1.0 1.0  # Diffuse color
 Ks 0.5 0.5 0.5  # Specular color
+Ke 0.0 0.0 0.0  # Emissive color (optional)
 
 # Material properties
-Ns 32.0  # Specular exponent
+Ns 32.0   # Specular exponent
+illum 2   # Illumination model (optional, 0-10)
 
 # Diffuse texture map (relative path)
 map_Kd yourtexture.png
 ```
+
+### Supported MTL Keywords
+- `newmtl` - Material name
+- `Ka` - Ambient color
+- `Kd` - Diffuse color
+- `Ks` - Specular color
+- `Ke` - Emissive color (parsed but not used in rendering)
+- `Ns` - Specular exponent
+- `Ni` - Optical density / Index of refraction
+- `d` / `Tr` - Transparency (dissolve)
+- `illum` - Illumination model (parsed but not used in rendering)
+- `map_Ka` - Ambient texture map
+- `map_Kd` - Diffuse texture map
+- `map_Ks` - Specular texture map
 
 ## Important Notes
 
@@ -123,6 +139,14 @@ The test will report:
 - ✗ Any errors encountered
 
 ## Troubleshooting
+
+### "Failed to load texture: can't fopen"
+- **Most common cause**: The texture file doesn't exist at the resolved path
+- Check the console output to see the resolved path (e.g., `res/models/textures/Tex.png`)
+- Ensure the texture file exists at that exact location
+- If your MTL has `map_Kd textures\Tex.png`, make sure the `textures` subdirectory exists
+- Create the directory structure: `mkdir -p res/models/textures`
+- Copy your texture file to the correct location
 
 ### "Failed to load texture"
 - Check the file path in the MTL file
