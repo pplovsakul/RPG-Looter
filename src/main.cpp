@@ -147,7 +147,7 @@ int main(void) {
     // ===== LOAD MESH FROM OBJ FILE =====
     std::cout << "\n=== Loading Test.obj ===" << std::endl;
     OBJLoader::MeshData mesh;
-    if (!OBJLoader::LoadOBJ("res/models/Test.obj", mesh)) {
+    if (!OBJLoader::LoadOBJ("res/models/colored.obj", mesh)) {
         std::cerr << "ERROR: Failed to load Test.obj!" << std::endl;
         glfwDestroyWindow(window);
         glfwTerminate();
