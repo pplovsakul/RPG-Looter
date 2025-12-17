@@ -216,7 +216,7 @@ int main(void) {
 
     // Create buffers
     VertexBuffer vb(vertices, sizeof(vertices));
-    IndexBuffer ib(indices, sizeof(indices));
+    IndexBuffer ib(indices, indexCount);
     
     VertexArray va;
     VertexBufferLayout layout;
