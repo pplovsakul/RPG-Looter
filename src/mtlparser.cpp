@@ -1,6 +1,7 @@
 #include <obj/mtlparser.h>
 #include <fstream>
 #include <sstream>
+#include <cctype>
 
 using namespace obj;
 
