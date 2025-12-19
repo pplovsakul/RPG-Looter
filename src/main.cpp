@@ -146,14 +146,14 @@ int main(void) {
     glEnable(GL_DEPTH_TEST);
 
     // ===== LOAD MESH FROM OBJ FILE =====
-    //std::cout << "\n=== Loading Test.obj ===" << std::endl;
-    //OBJLoader::MeshData mesh;
-    //if (!OBJLoader::LoadOBJ("res/models/colored.obj", mesh)) {
-    //    std::cerr << "ERROR: Failed to load Test.obj!" << std::endl;
-    //    glfwDestroyWindow(window);
-    //    glfwTerminate();
-    //    return -1;
-    //}
+    std::cout << "\n=== Loading Test.obj ===" << std::endl;
+    OBJLoader::MeshData mesh;
+    if (!OBJLoader::LoadOBJ("res/models/Affe.obj", mesh)) {
+        std::cerr << "ERROR: Failed to load Test.obj!" << std::endl;
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        return -1;
+    }
 
     // Get mesh data
     std::vector<unsigned int> indices = OBJLoader::GetIndexData(mesh);
