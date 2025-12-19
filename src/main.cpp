@@ -147,6 +147,7 @@ int main(void) {
     glEnable(GL_DEPTH_TEST);
 
     // ===== LOAD MESH FROM OBJ FILE =====
+    // Note: This demo requires res/models/Test.obj to be present
     std::cout << "\n=== Loading Test.obj ===" << std::endl;
     OBJLoader::MeshData meshData;
     if (!OBJLoader::LoadOBJ("res/models/Test.obj", meshData)) {
