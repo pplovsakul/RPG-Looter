@@ -53,14 +53,19 @@ public:
     void SetSpeed(float speed);
     float GetSpeed() const;
 
-    // Gravity toggle
+    // Gravity management
     void SetUseGravity(bool enabled);
     bool GetUseGravity() const;
+    
+    // Gravity constant (m/s^2)
+    void SetGravity(float gravity);
+    float GetGravity() const;
 
 private:
     glm::vec3 m_position;
     glm::vec3 m_velocity;
     float m_speed = 5.0f;
+    float m_gravity = 9.81f; // Standard Earth gravity in m/s^2
     std::shared_ptr<Mesh> m_mesh;
     bool m_useGravity = false;
 };

@@ -29,7 +29,7 @@ void Player::Update(float dt)
 {
     // Apply gravity if enabled
     if (m_useGravity) {
-        m_velocity.y -= 9.81f * dt; // Standard gravity acceleration
+        m_velocity.y -= m_gravity * dt;
     }
 
     // Update position based on velocity
@@ -133,13 +133,20 @@ void Player::SetPosition(const glm::vec3& position)
 
 void Player::Teleport(const glm::vec3& position)
 {
-    // Teleport is just an alias for SetPosition - instantly moves player
+    // Teleport instantly moves player and resets velocity
+    // This prevents momentum from carrying over after teleportation
     SetPosition(position);
+    m_velocity = glm::vec3(0.0f, 0.0f, 0.0f);
 }
 
 // Speed management
 void Player::SetSpeed(float speed)
 {
+    // Validate speed is non-negative
+    if (speed < 0.0f) {
+        std::cerr << "Player::SetSpeed: Warning - speed cannot be negative. Using absolute value." << std::endl;
+        speed = -speed; // Use absolute value
+    }
     m_speed = speed;
 }
 
@@ -157,4 +164,15 @@ void Player::SetUseGravity(bool enabled)
 bool Player::GetUseGravity() const
 {
     return m_useGravity;
+}
+
+// Gravity constant management
+void Player::SetGravity(float gravity)
+{
+    m_gravity = gravity;
+}
+
+float Player::GetGravity() const
+{
+    return m_gravity;
 }

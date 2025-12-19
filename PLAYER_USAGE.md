@@ -110,6 +110,14 @@ player.SetUseGravity(true);
 
 // Disable gravity for flying mode
 player.SetUseGravity(false);
+
+// Customize gravity strength (default is 9.81 m/s^2)
+player.SetGravity(5.0f);  // Lower gravity (like on the Moon)
+player.SetGravity(20.0f); // Higher gravity
+float currentGravity = player.GetGravity();
+
+// Note: Teleport resets velocity, so it won't preserve fall speed
+player.Teleport(spawnPoint); // Player stops moving entirely
 ```
 
 ## Multiple Players
