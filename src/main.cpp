@@ -78,24 +78,24 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
     cameraFront = glm::normalize(front);
 }
 
-// Tastatur-Eingabe verarbeiten
+// Tastatur-Eingabe verarbeiten (Camera)
 void processInput(GLFWwindow* window) {
     float velocity = cameraSpeed * deltaTime;
 
-    // WASD Bewegung
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        cameraPos += velocity * cameraFront;  // Vorw�rts
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        cameraPos -= velocity * cameraFront;  // R�ckw�rts
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    // Arrow keys for camera movement (to avoid conflict with player WASD)
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+        cameraPos += velocity * cameraFront;  // Vorwärts
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+        cameraPos -= velocity * cameraFront;  // Rückwärts
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
         cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * velocity;  // Links
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
         cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * velocity;  // Rechts
     
-    // Hoch/Runter (Space/Shift)
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+    // Q/E for vertical camera movement
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
         cameraPos += velocity * cameraUp;  // Hoch
-    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
         cameraPos -= velocity * cameraUp;  // Runter
 }
 
@@ -133,11 +133,11 @@ int main(void) {
 
     std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
     std::cout << "\n=== STEUERUNG ===" << std::endl;
-    std::cout << "WASD    - Bewegen" << std::endl;
-    std::cout << "Maus    - Umsehen" << std::endl;
-    std::cout << "Space   - Hoch" << std::endl;
-    std::cout << "Shift   - Runter" << std::endl;
-    std::cout << "\nESC     - Beenden" << std::endl;
+    std::cout << "WASD        - Player bewegen" << std::endl;
+    std::cout << "Arrow Keys  - Kamera bewegen" << std::endl;
+    std::cout << "Q/E         - Kamera hoch/runter" << std::endl;
+    std::cout << "Maus        - Kamera umsehen" << std::endl;
+    std::cout << "\nESC         - Beenden" << std::endl;
 
     // Maus einfangen und Callback setzen
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
