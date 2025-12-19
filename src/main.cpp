@@ -12,6 +12,7 @@
 #include "BufferLimits.h"
 #include "OBJLoader.h"
 #include "Mesh.h"
+#include "Player.h"
 
 // GLM für Matrizen
 #include "vendor/glm/glm.hpp"
@@ -146,69 +147,31 @@ int main(void) {
     glEnable(GL_DEPTH_TEST);
 
     // ===== LOAD MESH FROM OBJ FILE =====
-    //std::cout << "\n=== Loading Test.obj ===" << std::endl;
-    //OBJLoader::MeshData mesh;
-    //if (!OBJLoader::LoadOBJ("res/models/colored.obj", mesh)) {
-    //    std::cerr << "ERROR: Failed to load Test.obj!" << std::endl;
-    //    glfwDestroyWindow(window);
-    //    glfwTerminate();
-    //    return -1;
-    //}
-
-    // Get mesh data
-    std::vector<unsigned int> indices = OBJLoader::GetIndexData(mesh);
-    std::vector<float> vertices = OBJLoader::GetInterleavedVertexData(mesh);
-
-    // ===== PLAUSIBILITY CHECK FOR INDEX DATA =====
-    // Calculate the number of indices from the loaded mesh
-    unsigned int indexCount = static_cast<unsigned int>(indices.size());
-    unsigned int vertexDataSize = static_cast<unsigned int>(vertices.size() * sizeof(float));
-    
-    // Check 1: Ensure index data is not empty
-    if (indexCount == 0) {
-        std::cerr << "ERROR: Index data is empty! Cannot create IndexBuffer." << std::endl;
+    std::cout << "\n=== Loading Test.obj ===" << std::endl;
+    OBJLoader::MeshData meshData;
+    if (!OBJLoader::LoadOBJ("res/models/Test.obj", meshData)) {
+        std::cerr << "ERROR: Failed to load Test.obj!" << std::endl;
         glfwDestroyWindow(window);
         glfwTerminate();
         return -1;
     }
     
-    // Check 2: Ensure vertex data is not empty
-    if (vertices.empty()) {
-        std::cerr << "ERROR: Vertex data is empty! Cannot create buffers." << std::endl;
-        glfwDestroyWindow(window);
-        glfwTerminate();
-        return -1;
-    }
+    std::cout << "Mesh loaded successfully!" << std::endl;
     
-    // Check 3: Ensure index count doesn't exceed the maximum limit
-    // This prevents uploading unreasonably large index buffers due to faulty mesh or OBJ parsing
-    if (indexCount > MAX_INDEX_COUNT) {
-        std::cerr << "ERROR: Index count (" << indexCount << ") exceeds maximum allowed (" 
-                  << MAX_INDEX_COUNT << ")!" << std::endl;
-        std::cerr << "This may indicate a faulty mesh or parsing error. Aborting." << std::endl;
-        glfwDestroyWindow(window);
-        glfwTerminate();
-        return -1;
-    }
+    // Create a shared mesh from the loaded data
+    auto mesh = std::make_shared<Mesh>(meshData);
+    mesh->SetupGL();
     
-    std::cout << "Mesh validation passed: " << indexCount << " indices, " 
-              << vertexDataSize << " bytes of vertex data" << std::endl;
-
-    // Create buffers
-    VertexBuffer vb(vertices.data(), vertexDataSize);
-    IndexBuffer ib(indices.data(), indexCount);
+    // Create player at origin
+    Player player(glm::vec3(0.0f, 0.0f, 0.0f));
+    player.SetMesh(mesh);
+    player.SetSpeed(2.5f);
     
-    VertexArray va;
-    VertexBufferLayout layout;
-    layout.AddFloat(3); // Position attribute (3 floats: x, y, z)
-    layout.AddFloat(2); // Texture coordinate attribute (2 floats: u, v)
-    va.AddBuffer(vb, layout);
+    std::cout << "Player created with mesh" << std::endl;
 
     // ===== SHADER UND RENDERER SETUP =====
     // basic.shader: Standard OpenGL Vertex/Fragment Shader für Rasterizer
     Shader shader("res/shaders/basic.shader");
-
-    Renderer renderer;
 
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     
@@ -216,9 +179,9 @@ int main(void) {
     bool useTexture = false;
     std::shared_ptr<Texture> activeTexture = nullptr;
     
-    if (!mesh.materials.empty()) {
+    if (!meshData.materials.empty()) {
         // Use the first material with a texture
-        for (const auto& matPair : mesh.materials) {
+        for (const auto& matPair : meshData.materials) {
             if (matPair.second.diffuseTexture && matPair.second.diffuseTexture->IsValid()) {
                 activeTexture = matPair.second.diffuseTexture;
                 useTexture = true;
@@ -240,9 +203,6 @@ int main(void) {
         0.1f,
         100.0f
     );
-    
-    // Model Matrix (Objekt bleibt am Ursprung)
-    glm::mat4 model = glm::mat4(1.0f);
 
     // Main loop
     while (!glfwWindowShouldClose(window) && glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS) {
@@ -255,27 +215,37 @@ int main(void) {
         float currentTime = static_cast<float>(glfwGetTime());
         if (currentTime - lastTitleUpdate >= 0.5f) {
             float fps = 1.0f / deltaTime;
-            std::string title = "3D Camera Demo - WASD + Maus - FPS: " + std::to_string(static_cast<int>(fps));
+            std::string title = "Player Test - WASD + Maus - FPS: " + std::to_string(static_cast<int>(fps));
             glfwSetWindowTitle(window, title.c_str());
             lastTitleUpdate = currentTime;
         }
 
-        // Eingabe verarbeiten
+        // Eingabe verarbeiten (Camera)
         processInput(window);
+        
+        // Player Input handling
+        InputState playerInput;
+        playerInput.up    = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
+        playerInput.down  = glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
+        playerInput.left  = glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS;
+        playerInput.right = glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
+        playerInput.jump  = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+        
+        player.HandleInput(playerInput);
+        player.Update(deltaTime);
 
         // Clear screen
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // View Matrix aus Kamera-Variablen berechnen
         glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-        
-        // MVP Matrix berechnen
-        glm::mat4 mvp = projection * view * model;
 
         // ===== RENDERING =====
-        // Standard OpenGL GPU-Rendering mit Vertex/Fragment Shadern
         shader.Bind();
-        shader.SetUniformMat4f("u_MVP", mvp);
+        
+        // Set view and projection matrices
+        shader.SetUniformMat4f("u_View", view);
+        shader.SetUniformMat4f("u_Projection", projection);
         
         if (useTexture && activeTexture) {
             activeTexture->Bind(0); // Bind to texture slot 0
@@ -286,7 +256,8 @@ int main(void) {
             shader.SetUniform1i("u_UseTexture", 0);
         }
         
-        renderer.Draw(va, ib, shader);
+        // Draw player (this will set u_Model matrix internally)
+        player.Draw(shader);
 
         // Swap buffers and poll events
         glfwSwapBuffers(window);
