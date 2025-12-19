@@ -1,7 +1,7 @@
 #include "Player.h"
 #include "Mesh.h"
 #include "Shader.h"
-#include <glm/gtc/matrix_transform.hpp>
+#include "vendor/glm/gtc/matrix_transform.hpp"
 #include <iostream>
 
 // Default constructor - initializes player at origin

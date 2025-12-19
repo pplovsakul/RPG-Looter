@@ -54,6 +54,7 @@ add_executable(RPG-Looter
 # Includes
 target_include_directories(RPG-Looter PUBLIC 
     "${CMAKE_CURRENT_SOURCE_DIR}/include/"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/"
 )
 
 # Link GLFW
