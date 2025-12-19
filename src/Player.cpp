@@ -78,7 +78,7 @@ void Player::HandleInput(const InputState& input)
 }
 
 // Draw the player
-void Player::Draw(const Shader& shader) const
+void Player::Draw(Shader& shader) const
 {
     // Check if mesh is set
     if (!m_mesh) {
@@ -88,17 +88,12 @@ void Player::Draw(const Shader& shader) const
     }
 
     // Ensure mesh has GL objects set up
-    // This check is important because SetupGL requires a valid OpenGL context
+    // Note: SetupGL() should be called on the mesh after OpenGL context initialization
+    // and before the first Draw call
     if (!m_mesh->HasGL()) {
-        // Try to setup GL objects
-        // Note: This assumes the GL context is current and GLAD is initialized
-        const_cast<Mesh*>(m_mesh.get())->SetupGL();
-        
-        if (!m_mesh->HasGL()) {
-            std::cerr << "Player::Draw: Failed to setup GL objects for mesh. "
-                      << "Ensure OpenGL context is current and GLAD is initialized." << std::endl;
-            return;
-        }
+        std::cerr << "Player::Draw: Mesh GL objects not initialized. "
+                  << "Call mesh->SetupGL() after OpenGL context initialization." << std::endl;
+        return;
     }
 
     // Create model matrix for this player's position
@@ -108,7 +103,7 @@ void Player::Draw(const Shader& shader) const
     // Set the model matrix uniform in the shader
     // Note: The shader must be bound before calling Draw()
     // The uniform name "u_Model" is assumed - adjust if your shader uses a different name
-    const_cast<Shader&>(shader).SetUniformMat4f("u_Model", model);
+    shader.SetUniformMat4f("u_Model", model);
     
     // Draw the mesh
     m_mesh->Draw();

@@ -38,7 +38,7 @@ public:
     // Core update methods
     void Update(float dt); // dt in seconds
     void HandleInput(const InputState& input);
-    void Draw(const Shader& shader) const; // Shader must be bound before calling
+    void Draw(Shader& shader) const; // Shader must be bound before calling
 
     // Mesh management
     void SetMesh(std::shared_ptr<Mesh> mesh);
