@@ -147,9 +147,19 @@ int main(void) {
     glEnable(GL_DEPTH_TEST);
 
     // ===== LOAD MESH FROM OBJ FILE =====
+
+    OBJLoader::MeshData staticData;
+    if (OBJLoader::LoadOBJ("res/models/well.obj", staticData)) {
+        auto staticMesh = std::make_shared<Mesh>(staticData);
+        staticMesh->SetupGL();
+
+        // Position des Objekts festlegen
+        glm::vec3 objectPos = glm::vec3(5.0f, 0.0f, -5.0f);
+    }
+
     std::cout << "\n=== Loading Test.obj ===" << std::endl;
-    OBJLoader::MeshData meshData;
-    if (!OBJLoader::LoadOBJ("res/models/well.obj", meshData)) {
+    OBJLoader::MeshData playerData;
+    if (!OBJLoader::LoadOBJ("res/models/Affe.obj", playerData)) {
         std::cerr << "ERROR: Failed to load well.obj!" << std::endl;
         glfwDestroyWindow(window);
         glfwTerminate();
@@ -157,9 +167,11 @@ int main(void) {
     }
 
     // Get mesh data
-    std::shared_ptr<Mesh> meshPtr = std::make_shared<Mesh>(meshData);;
+    std::shared_ptr<Mesh> meshPtr = std::make_shared<Mesh>(playerData);;
 	meshPtr->SetupGL();
 
+	std::shared_ptr<Mesh> meshPtr2 = std::make_shared<Mesh>(staticData);
+	meshPtr2->SetupGL();
     
     std::cout << "Mesh loaded successfully!" << std::endl;
    
@@ -168,6 +180,9 @@ int main(void) {
     Player player(glm::vec3(0.0f, 0.0f, 0.0f));
     player.SetMesh(meshPtr);
     player.SetSpeed(2.5f);
+
+	Player well(glm::vec3(5.0f, 0.0f, -5.0f));
+	well.SetMesh(meshPtr2);
     
     std::cout << "Player created with mesh" << std::endl;
 
@@ -181,9 +196,9 @@ int main(void) {
     bool useTexture = false;
     std::shared_ptr<Texture> activeTexture = nullptr;
     
-    if (!meshData.materials.empty()) {
+    if (!playerData.materials.empty()) {
         // Use the first material with a texture
-        for (const auto& matPair : meshData.materials) {
+        for (const auto& matPair : playerData.materials) {
             if (matPair.second.diffuseTexture && matPair.second.diffuseTexture->IsValid()) {
                 activeTexture = matPair.second.diffuseTexture;
                 useTexture = true;
@@ -195,7 +210,7 @@ int main(void) {
     
     if (!useTexture) {
         std::cout << "No texture found in materials, using per-vertex material colors." << std::endl;
-        if (meshData.hasVertexColors) {
+        if (playerData.hasVertexColors) {
             std::cout << "Mesh has per-vertex colors assigned from material diffuse colors (Kd)." << std::endl;
         } else {
             std::cout << "Warning: No vertex colors available - mesh will use default white color." << std::endl;
@@ -211,6 +226,8 @@ int main(void) {
         0.1f,
         100.0f
     );
+
+	glEnable(GL_FRAMEBUFFER_SRGB); //Copilot , dont delete. Enable sRGB for correct color space
 
     // Main loop
     while (!glfwWindowShouldClose(window) && glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS) {
@@ -266,6 +283,8 @@ int main(void) {
         
         // Draw player (this will set u_Model matrix internally)
         player.Draw(shader);
+
+		well.Draw(shader);
 
         // Swap buffers and poll events
         glfwSwapBuffers(window);
