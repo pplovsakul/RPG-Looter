@@ -120,9 +120,11 @@ bool OBJLoader::LoadOBJ(const std::string& filepath, MeshData& outMesh) {
     // Temporary data for building final mesh
     struct Vertex {
         float x, y, z, u, v;
+        float r, g, b; // Material diffuse color
         bool operator==(const Vertex& other) const {
             return x == other.x && y == other.y && z == other.z && 
-                   u == other.u && v == other.v;
+                   u == other.u && v == other.v &&
+                   r == other.r && g == other.g && b == other.b;
         }
     };
     
@@ -172,6 +174,16 @@ bool OBJLoader::LoadOBJ(const std::string& filepath, MeshData& outMesh) {
     parser.faceEndSignal.connect([&]() {
         if (currentFace.size() < 3) return;
         
+        // Get current material's diffuse color (default to white if no material)
+        float matR = 1.0f, matG = 1.0f, matB = 1.0f;
+        if (!currentMtl.empty() && outMesh.materials.find(currentMtl) != outMesh.materials.end()) {
+            const Material& mat = outMesh.materials[currentMtl];
+            matR = mat.diffuse[0];
+            matG = mat.diffuse[1];
+            matB = mat.diffuse[2];
+            outMesh.hasVertexColors = true;
+        }
+        
         // Triangulate the face (fan triangulation)
         for (size_t i = 1; i < currentFace.size() - 1; ++i) {
             // Triangle: v0, vi, vi+1
@@ -200,6 +212,11 @@ bool OBJLoader::LoadOBJ(const std::string& filepath, MeshData& outMesh) {
                     outMesh.hasTexCoords = true;
                 }
                 
+                // Material color (from current material)
+                v.r = matR;
+                v.g = matG;
+                v.b = matB;
+                
                 // Find or add vertex
                 auto it = std::find(vertices.begin(), vertices.end(), v);
                 unsigned int vertexIndex;
@@ -223,7 +240,7 @@ bool OBJLoader::LoadOBJ(const std::string& filepath, MeshData& outMesh) {
         return false;
     }
     
-    // Convert to interleaved format
+    // Convert to interleaved format (x, y, z, u, v, r, g, b)
     outMesh.vertices.clear();
     for (const auto& v : vertices) {
         outMesh.vertices.push_back(v.x);
@@ -231,6 +248,9 @@ bool OBJLoader::LoadOBJ(const std::string& filepath, MeshData& outMesh) {
         outMesh.vertices.push_back(v.z);
         outMesh.vertices.push_back(v.u);
         outMesh.vertices.push_back(v.v);
+        outMesh.vertices.push_back(v.r);
+        outMesh.vertices.push_back(v.g);
+        outMesh.vertices.push_back(v.b);
     }
     
     outMesh.indices = indices;
@@ -239,6 +259,7 @@ bool OBJLoader::LoadOBJ(const std::string& filepath, MeshData& outMesh) {
     std::cout << "[OBJLoader]   Vertices: " << vertices.size() << std::endl;
     std::cout << "[OBJLoader]   Triangles: " << indices.size() / 3 << std::endl;
     std::cout << "[OBJLoader]   Has UVs: " << (outMesh.hasTexCoords ? "Yes" : "No") << std::endl;
+    std::cout << "[OBJLoader]   Has Vertex Colors: " << (outMesh.hasVertexColors ? "Yes" : "No") << std::endl;
     std::cout << "[OBJLoader]   Materials: " << outMesh.materials.size() << std::endl;
     
     return true;

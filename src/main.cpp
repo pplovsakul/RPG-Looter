@@ -208,22 +208,8 @@ int main(void) {
         }
     }
     
-    // Extract material diffuse color for fallback (Lösung B)
-    glm::vec3 materialColor(1.0f, 0.5f, 0.2f); // Standardwert
-    
-    if (!meshData.materials.empty()) {
-        // Nimm einfach das erste Material, das wir finden
-        auto firstMat = meshData.materials.begin();
-        // diffuse[] ist in OBJ-Dateien die "Diffuse Color" (Kd)
-        materialColor = glm::vec3(firstMat->second.diffuse[0], 
-                                  firstMat->second.diffuse[1], 
-                                  firstMat->second.diffuse[2]);
-        std::cout << "Using material color: " << materialColor.x << ", " 
-                  << materialColor.y << ", " << materialColor.z << std::endl;
-    }
-    
     if (!useTexture) {
-        std::cout << "No texture found in materials, using fallback color." << std::endl;
+        std::cout << "No texture found in materials, using per-vertex material colors." << std::endl;
     }
 
     // Projection Matrix (Perspective)
@@ -283,8 +269,7 @@ int main(void) {
             shader.SetUniform1i("u_Texture", 0);
             shader.SetUniform1i("u_UseTexture", 1);
         } else {
-            // Nutze die ausgelesene Farbe statt der festen Zahlen
-            shader.SetUniform4f("u_Color", materialColor.x, materialColor.y, materialColor.z, 1.0f);
+            // Use per-vertex material colors
             shader.SetUniform1i("u_UseTexture", 0);
         }
         

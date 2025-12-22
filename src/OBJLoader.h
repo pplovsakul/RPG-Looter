@@ -9,11 +9,12 @@ class OBJLoader {
 public:
     // Structure to hold mesh data with texture coordinates
     struct MeshData {
-        std::vector<float> vertices;        // Interleaved vertex data (x, y, z, u, v)
+        std::vector<float> vertices;        // Interleaved vertex data (x, y, z, u, v, r, g, b)
         std::vector<unsigned int> indices;  // Triangle indices
         std::map<std::string, Material> materials; // Materials by name
         std::string activeMaterial;         // Currently active material name
         bool hasTexCoords = false;          // Whether mesh has texture coordinates
+        bool hasVertexColors = false;       // Whether mesh has per-vertex material colors
     };
 
     // Load an OBJ file and return mesh data with MTL support
@@ -25,7 +26,7 @@ public:
         return mesh.indices;
     }
     
-    // Get interleaved vertex data from mesh (x, y, z, u, v)
+    // Get interleaved vertex data from mesh (x, y, z, u, v, r, g, b)
     static std::vector<float> GetInterleavedVertexData(const MeshData& mesh) {
         return mesh.vertices;
     }

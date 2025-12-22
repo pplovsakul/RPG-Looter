@@ -61,9 +61,10 @@ bool Mesh::SetupGL()
         m_indices.data(),
         GL_STATIC_DRAW);
 
-    // Vertex-Layout: Position (location = 0) mit 3 floats (x,y,z)
-    //                und TexCoords (location = 1) mit 2 floats (u,v)
-    constexpr GLsizei stride = 5 * sizeof(float); // x, y, z, u, v
+    // Vertex-Layout: Position (location = 0) mit 3 floats (x,y,z),
+    //                TexCoords (location = 1) mit 2 floats (u,v),
+    //                und Color (location = 2) mit 3 floats (r,g,b)
+    constexpr GLsizei stride = 8 * sizeof(float); // x, y, z, u, v, r, g, b
     
     // Position attribute (location = 0)
     glEnableVertexAttribArray(0);
@@ -72,6 +73,10 @@ bool Mesh::SetupGL()
     // Texture coordinate attribute (location = 1)
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(3 * sizeof(float)));
+    
+    // Color attribute (location = 2)
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(5 * sizeof(float)));
 
     // Unbind VAO (EBO bleibt an VAO gebunden)
     glBindVertexArray(0);
