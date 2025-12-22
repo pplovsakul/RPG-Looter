@@ -195,6 +195,11 @@ int main(void) {
     
     if (!useTexture) {
         std::cout << "No texture found in materials, using per-vertex material colors." << std::endl;
+        if (meshData.hasVertexColors) {
+            std::cout << "Mesh has per-vertex colors assigned from material diffuse colors (Kd)." << std::endl;
+        } else {
+            std::cout << "Warning: No vertex colors available - mesh will use default white color." << std::endl;
+        }
     }
 
     // Projection Matrix (Perspective)
@@ -206,8 +211,6 @@ int main(void) {
         0.1f,
         100.0f
     );
-
-	glEnable(GL_FRAMEBUFFER_SRGB); // Enable sRGB for correct color space
 
     // Main loop
     while (!glfwWindowShouldClose(window) && glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS) {
