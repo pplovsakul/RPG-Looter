@@ -7,7 +7,7 @@
 #include "OBJLoader.h" // benutzt die vorhandene OBJLoader::MeshData
 
 // Einfache Mesh-Klasse:
-// - Speichert vertices (hier: interleaved x,y,z) und indices
+// - Speichert vertices (hier: interleaved x,y,z,u,v,r,g,b) und indices
 // - Optional: Create GL buffers (VAO/VBO/EBO) und Draw()
 // Hinweis: Wenn dein OBJ-Loader sp�ter Normals/Texcoords liefert, passe stride/Attribs an.
 class Mesh
@@ -21,7 +21,8 @@ public:
     void SetData(const OBJLoader::MeshData& data);
 
     // Erzeuge OpenGL-Objekte (VAO/VBO/EBO). Erwartet, dass gl context + glad initialisiert sind.
-    // Diese Methode richtet Attribut 0 (position: vec3) und Attribut 1 (texcoord: vec2) ein.
+    // Diese Methode richtet Attribut 0 (position: vec3), Attribut 1 (texcoord: vec2), 
+    // und Attribut 2 (color: vec3) ein.
     // Rückgabe: true wenn erfolgreich (GL-Kontext vorhanden und Daten vorhanden)
     bool SetupGL();
 
@@ -39,7 +40,7 @@ public:
     bool IsValid() const { return !m_vertices.empty() && !m_indices.empty(); }
 
 private:
-    std::vector<float> m_vertices;         // interleaved vertex attributes (x,y,z,u,v)
+    std::vector<float> m_vertices;         // interleaved vertex attributes (x,y,z,u,v,r,g,b)
     std::vector<unsigned int> m_indices;
 
     // GL handles

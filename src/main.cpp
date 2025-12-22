@@ -194,7 +194,7 @@ int main(void) {
     }
     
     if (!useTexture) {
-        std::cout << "No texture found in materials, using fallback color." << std::endl;
+        std::cout << "No texture found in materials, using per-vertex material colors." << std::endl;
     }
 
     // Projection Matrix (Perspective)
@@ -207,6 +207,7 @@ int main(void) {
         100.0f
     );
 
+	glEnable(GL_FRAMEBUFFER_SRGB); // Enable sRGB for correct color space
 
     // Main loop
     while (!glfwWindowShouldClose(window) && glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS) {
@@ -256,7 +257,7 @@ int main(void) {
             shader.SetUniform1i("u_Texture", 0);
             shader.SetUniform1i("u_UseTexture", 1);
         } else {
-            shader.SetUniform4f("u_Color", 1.0f, 0.5f, 0.2f, 1.0f);
+            // Use per-vertex material colors
             shader.SetUniform1i("u_UseTexture", 0);
         }
         
