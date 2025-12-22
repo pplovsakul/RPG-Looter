@@ -148,40 +148,25 @@ int main(void) {
 
     // ===== LOAD MESH FROM OBJ FILE =====
     std::cout << "\n=== Loading Test.obj ===" << std::endl;
-    OBJLoader::MeshData mesh;
-    if (!OBJLoader::LoadOBJ("res/models/Affe.obj", mesh)) {
-        std::cerr << "ERROR: Failed to load Test.obj!" << std::endl;
+    OBJLoader::MeshData meshData;
+    if (!OBJLoader::LoadOBJ("res/models/well.obj", meshData)) {
+        std::cerr << "ERROR: Failed to load well.obj!" << std::endl;
         glfwDestroyWindow(window);
         glfwTerminate();
         return -1;
     }
 
     // Get mesh data
-    std::vector<unsigned int> indices = OBJLoader::GetIndexData(mesh);
-    std::vector<float> vertices = OBJLoader::GetInterleavedVertexData(mesh);
+    std::shared_ptr<Mesh> meshPtr = std::make_shared<Mesh>(meshData);;
+	meshPtr->SetupGL();
 
-    // ===== PLAUSIBILITY CHECK FOR INDEX DATA =====
-    // Calculate the number of indices from the loaded mesh
-    unsigned int indexCount = static_cast<unsigned int>(indices.size());
-    unsigned int vertexDataSize = static_cast<unsigned int>(vertices.size() * sizeof(float));
-    
-    // Check 1: Ensure index data is not empty
-    if (indexCount == 0) {
-        std::cerr << "ERROR: Index data is empty! Cannot create IndexBuffer." << std::endl;
-        glfwDestroyWindow(window);
-        glfwTerminate();
-        return -1;
-    }
     
     std::cout << "Mesh loaded successfully!" << std::endl;
-    
-    // Create a shared mesh from the loaded data
-    auto mesh = std::make_shared<Mesh>(meshData);
-    mesh->SetupGL();
+   
     
     // Create player at origin
     Player player(glm::vec3(0.0f, 0.0f, 0.0f));
-    player.SetMesh(mesh);
+    player.SetMesh(meshPtr);
     player.SetSpeed(2.5f);
     
     std::cout << "Player created with mesh" << std::endl;
@@ -215,11 +200,13 @@ int main(void) {
     // Projection Matrix (Perspective)
     float aspectRatio = (float)windowWidth / (float)windowHeight;
     glm::mat4 projection = glm::perspective(
+
         glm::radians(45.0f),
         aspectRatio,
         0.1f,
         100.0f
     );
+
 
     // Main loop
     while (!glfwWindowShouldClose(window) && glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS) {
