@@ -207,8 +207,6 @@ int main(void) {
         100.0f
     );
 
-	glEnable(GL_FRAMEBUFFER_SRGB); // Enable sRGB for correct color space
-
     // Main loop
     while (!glfwWindowShouldClose(window) && glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS) {
         // Delta Time berechnen
