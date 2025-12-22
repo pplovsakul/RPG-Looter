@@ -149,7 +149,7 @@ int main(void) {
     // ===== LOAD MESH FROM OBJ FILE =====
     std::cout << "\n=== Loading Test.obj ===" << std::endl;
     OBJLoader::MeshData meshData;
-    if (!OBJLoader::LoadOBJ("res/models/Affe.obj", meshData)) {
+    if (!OBJLoader::LoadOBJ("res/models/well.obj", meshData)) {
         std::cerr << "ERROR: Failed to load Test.obj!" << std::endl;
         glfwDestroyWindow(window);
         glfwTerminate();
@@ -220,6 +220,8 @@ int main(void) {
         0.1f,
         100.0f
     );
+
+	glEnable(GL_FRAMEBUFFER_SRGB); // Enable sRGB for correct color space
 
     // Main loop
     while (!glfwWindowShouldClose(window) && glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS) {
