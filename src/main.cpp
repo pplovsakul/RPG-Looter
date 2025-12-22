@@ -192,28 +192,53 @@ int main(void) {
 
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     
-    // Check if we have a texture from the loaded materials
-    bool useTexture = false;
-    std::shared_ptr<Texture> activeTexture = nullptr;
+    // Check if we have a texture from the loaded materials for player
+    bool usePlayerTexture = false;
+    std::shared_ptr<Texture> playerTexture = nullptr;
     
     if (!playerData.materials.empty()) {
         // Use the first material with a texture
         for (const auto& matPair : playerData.materials) {
             if (matPair.second.diffuseTexture && matPair.second.diffuseTexture->IsValid()) {
-                activeTexture = matPair.second.diffuseTexture;
-                useTexture = true;
-                std::cout << "Using texture from material: " << matPair.first << std::endl;
+                playerTexture = matPair.second.diffuseTexture;
+                usePlayerTexture = true;
+                std::cout << "Using texture from player material: " << matPair.first << std::endl;
                 break;
             }
         }
     }
     
-    if (!useTexture) {
-        std::cout << "No texture found in materials, using per-vertex material colors." << std::endl;
+    if (!usePlayerTexture) {
+        std::cout << "No texture found in player materials, using per-vertex material colors." << std::endl;
         if (playerData.hasVertexColors) {
             std::cout << "Mesh has per-vertex colors assigned from material diffuse colors (Kd)." << std::endl;
         } else {
             std::cout << "Warning: No vertex colors available - mesh will use default white color." << std::endl;
+        }
+    }
+    
+    // Check if we have a texture from the loaded materials for well (staticData)
+    bool useWellTexture = false;
+    std::shared_ptr<Texture> wellTexture = nullptr;
+    
+    if (!staticData.materials.empty()) {
+        // Use the first material with a texture
+        for (const auto& matPair : staticData.materials) {
+            if (matPair.second.diffuseTexture && matPair.second.diffuseTexture->IsValid()) {
+                wellTexture = matPair.second.diffuseTexture;
+                useWellTexture = true;
+                std::cout << "Using texture from well material: " << matPair.first << std::endl;
+                break;
+            }
+        }
+    }
+    
+    if (!useWellTexture) {
+        std::cout << "No texture found in well materials, using per-vertex material colors." << std::endl;
+        if (staticData.hasVertexColors) {
+            std::cout << "Well mesh has per-vertex colors assigned from material diffuse colors (Kd)." << std::endl;
+        } else {
+            std::cout << "Warning: Well has no vertex colors available - mesh will use default white color." << std::endl;
         }
     }
 
@@ -272,8 +297,9 @@ int main(void) {
         shader.SetUniformMat4f("u_View", view);
         shader.SetUniformMat4f("u_Projection", projection);
         
-        if (useTexture && activeTexture) {
-            activeTexture->Bind(0); // Bind to texture slot 0
+        // Draw player with its texture state
+        if (usePlayerTexture && playerTexture) {
+            playerTexture->Bind(0); // Bind to texture slot 0
             shader.SetUniform1i("u_Texture", 0);
             shader.SetUniform1i("u_UseTexture", 1);
         } else {
@@ -284,7 +310,17 @@ int main(void) {
         // Draw player (this will set u_Model matrix internally)
         player.Draw(shader);
 
-		well.Draw(shader);
+        // Draw well with its texture state
+        if (useWellTexture && wellTexture) {
+            wellTexture->Bind(0); // Bind to texture slot 0
+            shader.SetUniform1i("u_Texture", 0);
+            shader.SetUniform1i("u_UseTexture", 1);
+        } else {
+            // Use per-vertex material colors for well
+            shader.SetUniform1i("u_UseTexture", 0);
+        }
+
+        well.Draw(shader);
 
         // Swap buffers and poll events
         glfwSwapBuffers(window);
