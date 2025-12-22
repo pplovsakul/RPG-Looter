@@ -147,11 +147,27 @@ int main(void) {
     glEnable(GL_DEPTH_TEST);
 
     // ===== LOAD MESH FROM OBJ FILE =====
-    // Note: This demo requires res/models/Test.obj to be present
     std::cout << "\n=== Loading Test.obj ===" << std::endl;
-    OBJLoader::MeshData meshData;
-    if (!OBJLoader::LoadOBJ("res/models/Test.obj", meshData)) {
+    OBJLoader::MeshData mesh;
+    if (!OBJLoader::LoadOBJ("res/models/Affe.obj", mesh)) {
         std::cerr << "ERROR: Failed to load Test.obj!" << std::endl;
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        return -1;
+    }
+
+    // Get mesh data
+    std::vector<unsigned int> indices = OBJLoader::GetIndexData(mesh);
+    std::vector<float> vertices = OBJLoader::GetInterleavedVertexData(mesh);
+
+    // ===== PLAUSIBILITY CHECK FOR INDEX DATA =====
+    // Calculate the number of indices from the loaded mesh
+    unsigned int indexCount = static_cast<unsigned int>(indices.size());
+    unsigned int vertexDataSize = static_cast<unsigned int>(vertices.size() * sizeof(float));
+    
+    // Check 1: Ensure index data is not empty
+    if (indexCount == 0) {
+        std::cerr << "ERROR: Index data is empty! Cannot create IndexBuffer." << std::endl;
         glfwDestroyWindow(window);
         glfwTerminate();
         return -1;
