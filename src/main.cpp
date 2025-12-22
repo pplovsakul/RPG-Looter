@@ -148,8 +148,8 @@ int main(void) {
 
     // ===== LOAD MESH FROM OBJ FILE =====
     std::cout << "\n=== Loading Test.obj ===" << std::endl;
-    OBJLoader::MeshData mesh;
-    if (!OBJLoader::LoadOBJ("res/models/Affe.obj", mesh)) {
+    OBJLoader::MeshData meshData;
+    if (!OBJLoader::LoadOBJ("res/models/Affe.obj", meshData)) {
         std::cerr << "ERROR: Failed to load Test.obj!" << std::endl;
         glfwDestroyWindow(window);
         glfwTerminate();
@@ -157,8 +157,8 @@ int main(void) {
     }
 
     // Get mesh data
-    std::vector<unsigned int> indices = OBJLoader::GetIndexData(mesh);
-    std::vector<float> vertices = OBJLoader::GetInterleavedVertexData(mesh);
+    std::vector<unsigned int> indices = OBJLoader::GetIndexData(meshData);
+    std::vector<float> vertices = OBJLoader::GetInterleavedVertexData(meshData);
 
     // ===== PLAUSIBILITY CHECK FOR INDEX DATA =====
     // Calculate the number of indices from the loaded mesh
@@ -206,6 +206,20 @@ int main(void) {
                 break;
             }
         }
+    }
+    
+    // Extract material diffuse color for fallback (Lösung B)
+    glm::vec3 materialColor(1.0f, 0.5f, 0.2f); // Standardwert
+    
+    if (!meshData.materials.empty()) {
+        // Nimm einfach das erste Material, das wir finden
+        auto firstMat = meshData.materials.begin();
+        // diffuse[] ist in OBJ-Dateien die "Diffuse Color" (Kd)
+        materialColor = glm::vec3(firstMat->second.diffuse[0], 
+                                  firstMat->second.diffuse[1], 
+                                  firstMat->second.diffuse[2]);
+        std::cout << "Using material color: " << materialColor.x << ", " 
+                  << materialColor.y << ", " << materialColor.z << std::endl;
     }
     
     if (!useTexture) {
@@ -269,7 +283,8 @@ int main(void) {
             shader.SetUniform1i("u_Texture", 0);
             shader.SetUniform1i("u_UseTexture", 1);
         } else {
-            shader.SetUniform4f("u_Color", 1.0f, 0.5f, 0.2f, 1.0f);
+            // Nutze die ausgelesene Farbe statt der festen Zahlen
+            shader.SetUniform4f("u_Color", materialColor.x, materialColor.y, materialColor.z, 1.0f);
             shader.SetUniform1i("u_UseTexture", 0);
         }
         
