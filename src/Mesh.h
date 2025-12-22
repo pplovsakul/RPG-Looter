@@ -9,7 +9,7 @@
 // Einfache Mesh-Klasse:
 // - Speichert vertices (hier: interleaved x,y,z) und indices
 // - Optional: Create GL buffers (VAO/VBO/EBO) und Draw()
-// Hinweis: Wenn dein OBJ-Loader später Normals/Texcoords liefert, passe stride/Attribs an.
+// Hinweis: Wenn dein OBJ-Loader spï¿½ter Normals/Texcoords liefert, passe stride/Attribs an.
 class Mesh
 {
 public:
@@ -21,14 +21,14 @@ public:
     void SetData(const OBJLoader::MeshData& data);
 
     // Erzeuge OpenGL-Objekte (VAO/VBO/EBO). Erwartet, dass gl context + glad initialisiert sind.
-    // Diese Methode richtet aktuell nur Attribut 0 (position: vec3) ein.
-    // Rückgabe: true wenn erfolgreich (GL-Kontext vorhanden und Daten vorhanden)
+    // Diese Methode richtet Attribut 0 (position: vec3) und Attribut 1 (texcoord: vec2) ein.
+    // RÃ¼ckgabe: true wenn erfolgreich (GL-Kontext vorhanden und Daten vorhanden)
     bool SetupGL();
 
-    // Zeichne das Mesh (benötigt ein gebundenes Shader-Programm)
+    // Zeichne das Mesh (benï¿½tigt ein gebundenes Shader-Programm)
     void Draw() const;
 
-    // Löscht die GL-Objekte (wird auch im Destruktor aufgerufen)
+    // Lï¿½scht die GL-Objekte (wird auch im Destruktor aufgerufen)
     void DestroyGL();
 
     // Zugriffe auf Rohdaten
@@ -39,7 +39,7 @@ public:
     bool IsValid() const { return !m_vertices.empty() && !m_indices.empty(); }
 
 private:
-    std::vector<float> m_vertices;         // interleaved vertex attributes (aktuell: x,y,z)
+    std::vector<float> m_vertices;         // interleaved vertex attributes (x,y,z,u,v)
     std::vector<unsigned int> m_indices;
 
     // GL handles

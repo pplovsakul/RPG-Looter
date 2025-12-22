@@ -12,6 +12,7 @@
 #include "BufferLimits.h"
 #include "OBJLoader.h"
 #include "Mesh.h"
+#include "Player.h"
 
 // GLM für Matrizen
 #include "vendor/glm/glm.hpp"
@@ -77,24 +78,24 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
     cameraFront = glm::normalize(front);
 }
 
-// Tastatur-Eingabe verarbeiten
+// Tastatur-Eingabe verarbeiten (Camera)
 void processInput(GLFWwindow* window) {
     float velocity = cameraSpeed * deltaTime;
 
-    // WASD Bewegung
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        cameraPos += velocity * cameraFront;  // Vorw�rts
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        cameraPos -= velocity * cameraFront;  // R�ckw�rts
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    // Arrow keys for camera movement (to avoid conflict with player WASD)
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+        cameraPos += velocity * cameraFront;  // Vorwärts
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+        cameraPos -= velocity * cameraFront;  // Rückwärts
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
         cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * velocity;  // Links
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
         cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * velocity;  // Rechts
     
-    // Hoch/Runter (Space/Shift)
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+    // Q/E for vertical camera movement
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
         cameraPos += velocity * cameraUp;  // Hoch
-    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
         cameraPos -= velocity * cameraUp;  // Runter
 }
 
@@ -132,11 +133,11 @@ int main(void) {
 
     std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
     std::cout << "\n=== STEUERUNG ===" << std::endl;
-    std::cout << "WASD    - Bewegen" << std::endl;
-    std::cout << "Maus    - Umsehen" << std::endl;
-    std::cout << "Space   - Hoch" << std::endl;
-    std::cout << "Shift   - Runter" << std::endl;
-    std::cout << "\nESC     - Beenden" << std::endl;
+    std::cout << "WASD        - Player bewegen" << std::endl;
+    std::cout << "Arrow Keys  - Kamera bewegen" << std::endl;
+    std::cout << "Q/E         - Kamera hoch/runter" << std::endl;
+    std::cout << "Maus        - Kamera umsehen" << std::endl;
+    std::cout << "\nESC         - Beenden" << std::endl;
 
     // Maus einfangen und Callback setzen
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -172,43 +173,22 @@ int main(void) {
         return -1;
     }
     
-    // Check 2: Ensure vertex data is not empty
-    if (vertices.empty()) {
-        std::cerr << "ERROR: Vertex data is empty! Cannot create buffers." << std::endl;
-        glfwDestroyWindow(window);
-        glfwTerminate();
-        return -1;
-    }
+    std::cout << "Mesh loaded successfully!" << std::endl;
     
-    // Check 3: Ensure index count doesn't exceed the maximum limit
-    // This prevents uploading unreasonably large index buffers due to faulty mesh or OBJ parsing
-    if (indexCount > MAX_INDEX_COUNT) {
-        std::cerr << "ERROR: Index count (" << indexCount << ") exceeds maximum allowed (" 
-                  << MAX_INDEX_COUNT << ")!" << std::endl;
-        std::cerr << "This may indicate a faulty mesh or parsing error. Aborting." << std::endl;
-        glfwDestroyWindow(window);
-        glfwTerminate();
-        return -1;
-    }
+    // Create a shared mesh from the loaded data
+    auto mesh = std::make_shared<Mesh>(meshData);
+    mesh->SetupGL();
     
-    std::cout << "Mesh validation passed: " << indexCount << " indices, " 
-              << vertexDataSize << " bytes of vertex data" << std::endl;
-
-    // Create buffers
-    VertexBuffer vb(vertices.data(), vertexDataSize);
-    IndexBuffer ib(indices.data(), indexCount);
+    // Create player at origin
+    Player player(glm::vec3(0.0f, 0.0f, 0.0f));
+    player.SetMesh(mesh);
+    player.SetSpeed(2.5f);
     
-    VertexArray va;
-    VertexBufferLayout layout;
-    layout.AddFloat(3); // Position attribute (3 floats: x, y, z)
-    layout.AddFloat(2); // Texture coordinate attribute (2 floats: u, v)
-    va.AddBuffer(vb, layout);
+    std::cout << "Player created with mesh" << std::endl;
 
     // ===== SHADER UND RENDERER SETUP =====
     // basic.shader: Standard OpenGL Vertex/Fragment Shader für Rasterizer
     Shader shader("res/shaders/basic.shader");
-
-    Renderer renderer;
 
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     
@@ -216,9 +196,9 @@ int main(void) {
     bool useTexture = false;
     std::shared_ptr<Texture> activeTexture = nullptr;
     
-    if (!mesh.materials.empty()) {
+    if (!meshData.materials.empty()) {
         // Use the first material with a texture
-        for (const auto& matPair : mesh.materials) {
+        for (const auto& matPair : meshData.materials) {
             if (matPair.second.diffuseTexture && matPair.second.diffuseTexture->IsValid()) {
                 activeTexture = matPair.second.diffuseTexture;
                 useTexture = true;
@@ -240,9 +220,6 @@ int main(void) {
         0.1f,
         100.0f
     );
-    
-    // Model Matrix (Objekt bleibt am Ursprung)
-    glm::mat4 model = glm::mat4(1.0f);
 
     // Main loop
     while (!glfwWindowShouldClose(window) && glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS) {
@@ -255,27 +232,37 @@ int main(void) {
         float currentTime = static_cast<float>(glfwGetTime());
         if (currentTime - lastTitleUpdate >= 0.5f) {
             float fps = 1.0f / deltaTime;
-            std::string title = "3D Camera Demo - WASD + Maus - FPS: " + std::to_string(static_cast<int>(fps));
+            std::string title = "Player Test - WASD + Maus - FPS: " + std::to_string(static_cast<int>(fps));
             glfwSetWindowTitle(window, title.c_str());
             lastTitleUpdate = currentTime;
         }
 
-        // Eingabe verarbeiten
+        // Eingabe verarbeiten (Camera)
         processInput(window);
+        
+        // Player Input handling
+        InputState playerInput;
+        playerInput.up    = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
+        playerInput.down  = glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
+        playerInput.left  = glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS;
+        playerInput.right = glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
+        playerInput.jump  = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+        
+        player.HandleInput(playerInput);
+        player.Update(deltaTime);
 
         // Clear screen
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // View Matrix aus Kamera-Variablen berechnen
         glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-        
-        // MVP Matrix berechnen
-        glm::mat4 mvp = projection * view * model;
 
         // ===== RENDERING =====
-        // Standard OpenGL GPU-Rendering mit Vertex/Fragment Shadern
         shader.Bind();
-        shader.SetUniformMat4f("u_MVP", mvp);
+        
+        // Set view and projection matrices
+        shader.SetUniformMat4f("u_View", view);
+        shader.SetUniformMat4f("u_Projection", projection);
         
         if (useTexture && activeTexture) {
             activeTexture->Bind(0); // Bind to texture slot 0
@@ -286,7 +273,8 @@ int main(void) {
             shader.SetUniform1i("u_UseTexture", 0);
         }
         
-        renderer.Draw(va, ib, shader);
+        // Draw player (this will set u_Model matrix internally)
+        player.Draw(shader);
 
         // Swap buffers and poll events
         glfwSwapBuffers(window);

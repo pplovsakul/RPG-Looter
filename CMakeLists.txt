@@ -49,11 +49,12 @@ add_executable(RPG-Looter
     "src/vendor/stb/stb_image.h"
     
     "src/main.cpp"
- "src/Mesh.h" "src/Mesh.cpp")
+ "src/Mesh.h" "src/Mesh.cpp" "include/Player.h" "src/Player.cpp")
 
 # Includes
 target_include_directories(RPG-Looter PUBLIC 
     "${CMAKE_CURRENT_SOURCE_DIR}/include/"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/"
 )
 
 # Link GLFW
