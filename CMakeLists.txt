@@ -49,7 +49,15 @@ add_executable(RPG-Looter
     "src/vendor/stb/stb_image.h"
     
     "src/main.cpp"
- "src/Mesh.h" "src/Mesh.cpp" "include/Player.h" "src/Player.cpp")
+ "src/Mesh.h" "src/Mesh.cpp" "include/Player.h" "src/Player.cpp"
+ 
+ # Collision Detection System
+ "src/AABB.h"
+ "src/Triangle.h"
+ "src/Octree.h"
+ "src/Octree.cpp"
+ "src/CollisionSystem.h"
+ "src/CollisionSystem.cpp")
 
 # Includes
 target_include_directories(RPG-Looter PUBLIC 
