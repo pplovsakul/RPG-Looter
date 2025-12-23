@@ -5,22 +5,22 @@
 #include "vendor/glm/glm.hpp"
 
 /**
- * AABB (Axis-Aligned Bounding Box) - Achsenparallele Hüllbox
+ * AABB (Axis-Aligned Bounding Box)
  * 
- * Die AABB wird durch zwei Punkte definiert:
- * - min: Punkt mit den kleinsten Koordinaten in allen drei Achsen
- * - max: Punkt mit den größten Koordinaten in allen drei Achsen
+ * The AABB is defined by two points:
+ * - min: Point with the smallest coordinates in all three axes
+ * - max: Point with the largest coordinates in all three axes
  * 
- * Diese einfache Struktur ermöglicht sehr schnelle Überschneidungstests
- * und ist ideal als erste Stufe der Kollisionserkennung (Broad Phase).
+ * This simple structure enables very fast intersection tests
+ * and is ideal as the first stage of collision detection (Broad Phase).
  */
 struct AABB
 {
-    glm::vec3 min;  // Kleinste Koordinaten (-X, -Y, -Z Ecke)
-    glm::vec3 max;  // Größte Koordinaten (+X, +Y, +Z Ecke)
+    glm::vec3 min;  // Smallest coordinates (-X, -Y, -Z corner)
+    glm::vec3 max;  // Largest coordinates (+X, +Y, +Z corner)
 
-    // Standard-Konstruktor: Initialisiert eine "umgekehrte" AABB,
-    // die beim Hinzufügen von Punkten automatisch korrekt wächst
+    // Default constructor: Initializes an "inverted" AABB that
+    // automatically grows correctly when points are added
     AABB()
         : min(std::numeric_limits<float>::max(),
               std::numeric_limits<float>::max(),
@@ -31,7 +31,7 @@ struct AABB
     {
     }
 
-    // Konstruktor mit expliziten Grenzen
+    // Constructor with explicit bounds
     AABB(const glm::vec3& minCorner, const glm::vec3& maxCorner)
         : min(minCorner)
         , max(maxCorner)
@@ -39,8 +39,8 @@ struct AABB
     }
 
     /**
-     * Prüft, ob diese AABB gültige Grenzen hat
-     * Eine AABB ist ungültig, wenn min > max in einer Achse
+     * Checks if this AABB has valid bounds
+     * An AABB is invalid if min > max in any axis
      */
     bool IsValid() const
     {
@@ -48,7 +48,7 @@ struct AABB
     }
 
     /**
-     * Berechnet das Zentrum der AABB
+     * Calculates the center of the AABB
      */
     glm::vec3 GetCenter() const
     {
@@ -56,7 +56,7 @@ struct AABB
     }
 
     /**
-     * Berechnet die Ausdehnung (Größe) der AABB
+     * Calculates the extents (size) of the AABB
      */
     glm::vec3 GetExtents() const
     {
@@ -64,7 +64,7 @@ struct AABB
     }
 
     /**
-     * Berechnet das halbe Ausmaß der AABB (Halbachsenlängen)
+     * Calculates the half-extents of the AABB
      */
     glm::vec3 GetHalfExtents() const
     {
@@ -72,7 +72,7 @@ struct AABB
     }
 
     /**
-     * Erweitert die AABB um einen einzelnen Punkt
+     * Expands the AABB to include a single point
      */
     void ExpandToInclude(const glm::vec3& point)
     {
@@ -85,7 +85,7 @@ struct AABB
     }
 
     /**
-     * Erweitert die AABB um eine andere AABB
+     * Expands the AABB to include another AABB
      */
     void ExpandToInclude(const AABB& other)
     {
@@ -94,8 +94,8 @@ struct AABB
     }
 
     /**
-     * Transformiert die AABB mit einer Position (Translation)
-     * Gibt eine neue, transformierte AABB zurück
+     * Transforms the AABB with a position (translation)
+     * Returns a new, transformed AABB
      */
     AABB Transformed(const glm::vec3& position) const
     {
@@ -104,18 +104,18 @@ struct AABB
 };
 
 /**
- * Namespace für AABB-Hilfsfunktionen
+ * Namespace for AABB utility functions
  */
 namespace AABBUtils
 {
     /**
-     * Berechnet die AABB für ein Mesh aus interleaved Vertex-Daten
+     * Computes the AABB for a mesh from interleaved vertex data
      * 
-     * @param vertices Interleaved Vertex-Daten (x, y, z, u, v, r, g, b pro Vertex)
-     * @param stride   Anzahl der Floats pro Vertex (Standard: 8 für Position + TexCoord + Color)
-     * @return         Die berechnete AABB
+     * @param vertices Interleaved vertex data (x, y, z, u, v, r, g, b per vertex)
+     * @param stride   Number of floats per vertex (default: 8 for Position + TexCoord + Color)
+     * @return         The computed AABB
      * 
-     * Das Format entspricht dem in Mesh.cpp verwendeten Layout:
+     * The format corresponds to the layout used in Mesh.cpp:
      * - Offset 0: Position (vec3: x, y, z)
      * - Offset 3: Texture Coordinates (vec2: u, v)
      * - Offset 5: Color (vec3: r, g, b)
@@ -126,7 +126,7 @@ namespace AABBUtils
         
         if (vertices.empty() || stride < 3)
         {
-            return result; // Ungültige AABB zurückgeben
+            return result; // Return invalid AABB
         }
 
         const size_t vertexCount = vertices.size() / stride;
@@ -146,10 +146,10 @@ namespace AABBUtils
     }
 
     /**
-     * Berechnet die AABB für ein einzelnes Dreieck
+     * Computes the AABB for a single triangle
      * 
-     * @param v0, v1, v2 Die drei Eckpunkte des Dreiecks
-     * @return           Die AABB, die das Dreieck umschließt
+     * @param v0, v1, v2 The three vertices of the triangle
+     * @return           The AABB that encloses the triangle
      */
     inline AABB ComputeFromTriangle(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2)
     {
@@ -161,21 +161,21 @@ namespace AABBUtils
     }
 
     /**
-     * AABB-AABB Kollisionserkennung (Überschneidungstest)
+     * AABB-AABB collision detection (intersection test)
      * 
-     * Zwei AABBs überschneiden sich, wenn sie sich in allen drei Achsen überlappen.
-     * Dies ist ein sehr schneller Test (nur 6 Vergleiche).
+     * Two AABBs intersect if they overlap in all three axes.
+     * This is a very fast test (only 6 comparisons).
      * 
-     * @param a Erste AABB
-     * @param b Zweite AABB
-     * @return  true wenn die AABBs sich überschneiden, sonst false
+     * @param a First AABB
+     * @param b Second AABB
+     * @return  true if the AABBs intersect, false otherwise
      */
     inline bool Intersects(const AABB& a, const AABB& b)
     {
-        // Separating Axis Test: Wenn es eine Achse gibt, bei der sich die
-        // Projektionen nicht überlappen, dann gibt es keine Kollision.
+        // Separating Axis Test: If there is an axis where the
+        // projections do not overlap, then there is no collision.
         // 
-        // Überlappung auf einer Achse: a.min <= b.max && b.min <= a.max
+        // Overlap on an axis: a.min <= b.max && b.min <= a.max
         
         if (a.max.x < b.min.x || a.min.x > b.max.x) return false;
         if (a.max.y < b.min.y || a.min.y > b.max.y) return false;
@@ -185,11 +185,11 @@ namespace AABBUtils
     }
 
     /**
-     * Prüft ob ein Punkt innerhalb einer AABB liegt
+     * Checks if a point is inside an AABB
      * 
-     * @param aabb Die AABB
-     * @param point Der zu prüfende Punkt
-     * @return true wenn der Punkt innerhalb der AABB liegt
+     * @param aabb The AABB
+     * @param point The point to check
+     * @return true if the point is inside the AABB
      */
     inline bool ContainsPoint(const AABB& aabb, const glm::vec3& point)
     {
@@ -199,11 +199,11 @@ namespace AABBUtils
     }
 
     /**
-     * Prüft ob eine AABB vollständig in einer anderen enthalten ist
+     * Checks if an AABB is completely contained within another
      * 
-     * @param outer Die äußere AABB
-     * @param inner Die innere AABB
-     * @return true wenn inner vollständig in outer enthalten ist
+     * @param outer The outer AABB
+     * @param inner The inner AABB
+     * @return true if inner is completely contained in outer
      */
     inline bool Contains(const AABB& outer, const AABB& inner)
     {

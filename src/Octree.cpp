@@ -162,18 +162,18 @@ AABB OctreeNode::GetChildBounds(int childIndex) const
     glm::vec3 center = m_bounds.GetCenter();
     glm::vec3 halfExtents = m_bounds.GetHalfExtents() * 0.5f;
 
-    // Bestimme die Position des Kindes basierend auf dem Index
-    // Bit 0: X-Achse (0 = negativ, 1 = positiv)
-    // Bit 1: Y-Achse (0 = negativ, 1 = positiv)
-    // Bit 2: Z-Achse (0 = negativ, 1 = positiv)
+    // Determine child position based on index using standard bit mapping:
+    // Bit 0: X-axis (0 = negative, 1 = positive)
+    // Bit 1: Y-axis (0 = negative, 1 = positive)
+    // Bit 2: Z-axis (0 = negative, 1 = positive)
     // 
-    // Korrigierte Zuordnung:
-    // 0: -X, -Y, -Z    1: -X, +Y, -Z    2: -X, -Y, +Z    3: -X, +Y, +Z
-    // 4: +X, -Y, -Z    5: +X, +Y, -Z    6: +X, -Y, +Z    7: +X, +Y, +Z
+    // Child index mapping:
+    // 0: -X, -Y, -Z    1: +X, -Y, -Z    2: -X, +Y, -Z    3: +X, +Y, -Z
+    // 4: -X, -Y, +Z    5: +X, -Y, +Z    6: -X, +Y, +Z    7: +X, +Y, +Z
     glm::vec3 offset;
-    offset.x = (childIndex & 4) ? halfExtents.x : -halfExtents.x;
-    offset.y = (childIndex & 1) ? halfExtents.y : -halfExtents.y;
-    offset.z = (childIndex & 2) ? halfExtents.z : -halfExtents.z;
+    offset.x = (childIndex & 1) ? halfExtents.x : -halfExtents.x;
+    offset.y = (childIndex & 2) ? halfExtents.y : -halfExtents.y;
+    offset.z = (childIndex & 4) ? halfExtents.z : -halfExtents.z;
 
     glm::vec3 childCenter = center + offset;
     return AABB(childCenter - halfExtents, childCenter + halfExtents);

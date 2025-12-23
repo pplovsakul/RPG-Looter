@@ -4,10 +4,10 @@
 #include <cmath>
 
 /**
- * Triangle - Dreieck-Struktur für Kollisionserkennung
+ * Triangle - Triangle structure for collision detection
  * 
- * Speichert die drei Eckpunkte eines Dreiecks und bietet
- * Hilfsfunktionen für geometrische Berechnungen.
+ * Stores the three vertices of a triangle and provides
+ * helper functions for geometric calculations.
  */
 struct Triangle
 {
@@ -21,7 +21,7 @@ struct Triangle
     }
 
     /**
-     * Berechnet die Normale des Dreiecks (nicht normalisiert)
+     * Calculates the normal of the triangle (not normalized)
      */
     glm::vec3 GetNormal() const
     {
@@ -29,7 +29,7 @@ struct Triangle
     }
 
     /**
-     * Berechnet die normalisierte Normale des Dreiecks
+     * Calculates the normalized normal of the triangle
      */
     glm::vec3 GetNormalizedNormal() const
     {
@@ -39,11 +39,11 @@ struct Triangle
         {
             return normal / len;
         }
-        return glm::vec3(0.0f, 1.0f, 0.0f); // Default bei degeneriertem Dreieck
+        return glm::vec3(0.0f, 1.0f, 0.0f); // Default for degenerate triangle
     }
 
     /**
-     * Berechnet den Schwerpunkt (Centroid) des Dreiecks
+     * Calculates the centroid of the triangle
      */
     glm::vec3 GetCentroid() const
     {
@@ -52,18 +52,18 @@ struct Triangle
 };
 
 /**
- * Namespace für Dreieck-Kollisionserkennung
+ * Namespace for triangle collision detection
  * 
- * Implementiert den Möller-Trumbore Algorithmus für schnelle
- * Dreieck-gegen-Dreieck Kollisionserkennung.
+ * Implements the Separating Axis Theorem (SAT) for fast
+ * triangle-to-triangle collision detection.
  */
 namespace TriangleCollision
 {
-    // Epsilon für Fließkomma-Vergleiche
+    // Epsilon for floating-point comparisons
     constexpr float EPSILON = 1e-6f;
 
     /**
-     * Projiziert einen Punkt auf eine Achse
+     * Projects a point onto an axis
      */
     inline float ProjectOntoAxis(const glm::vec3& point, const glm::vec3& axis)
     {
@@ -71,7 +71,7 @@ namespace TriangleCollision
     }
 
     /**
-     * Berechnet das Projektionsintervall eines Dreiecks auf eine Achse
+     * Calculates the projection interval of a triangle onto an axis
      */
     inline void ProjectTriangle(const Triangle& tri, const glm::vec3& axis, 
                                 float& outMin, float& outMax)
@@ -85,7 +85,7 @@ namespace TriangleCollision
     }
 
     /**
-     * Prüft ob zwei Intervalle sich überlappen
+     * Checks if two intervals overlap
      */
     inline bool IntervalsOverlap(float min1, float max1, float min2, float max2)
     {
@@ -93,8 +93,8 @@ namespace TriangleCollision
     }
 
     /**
-     * Separating Axis Test für eine bestimmte Achse
-     * Gibt true zurück, wenn die Dreiecke auf dieser Achse getrennt sind
+     * Separating Axis Test for a specific axis
+     * Returns true if the triangles are separated on this axis
      */
     inline bool TestSeparatingAxis(const Triangle& tri1, const Triangle& tri2, 
                                    const glm::vec3& axis)
@@ -102,7 +102,7 @@ namespace TriangleCollision
         float axisLen = glm::length(axis);
         if (axisLen < EPSILON)
         {
-            // Degenerierte Achse - kein Separator
+            // Degenerate axis - no separator
             return false;
         }
 
@@ -112,49 +112,49 @@ namespace TriangleCollision
         ProjectTriangle(tri1, normalizedAxis, min1, max1);
         ProjectTriangle(tri2, normalizedAxis, min2, max2);
 
-        // Wenn die Intervalle sich nicht überlappen, ist dies eine separierende Achse
+        // If intervals don't overlap, this is a separating axis
         return !IntervalsOverlap(min1, max1, min2, max2);
     }
 
     /**
-     * Dreieck-gegen-Dreieck Kollisionserkennung
+     * Triangle-to-triangle collision detection
      * 
-     * Verwendet den Separating Axis Theorem (SAT) Ansatz:
-     * Zwei konvexe Objekte überschneiden sich nicht, wenn es eine Achse gibt,
-     * auf der ihre Projektionen getrennt sind.
+     * Uses the Separating Axis Theorem (SAT) approach:
+     * Two convex objects do not intersect if there is an axis on which
+     * their projections are separated.
      * 
-     * Für zwei Dreiecke müssen wir folgende Achsen testen:
-     * 1. Die Normalen beider Dreiecke (2 Achsen)
-     * 2. Die Kreuzprodukte der Kanten beider Dreiecke (9 Achsen)
+     * For two triangles we must test the following axes:
+     * 1. The normals of both triangles (2 axes)
+     * 2. The cross products of the edges of both triangles (9 axes)
      * 
-     * @param tri1 Erstes Dreieck
-     * @param tri2 Zweites Dreieck
-     * @return true wenn die Dreiecke sich überschneiden
+     * @param tri1 First triangle
+     * @param tri2 Second triangle
+     * @return true if the triangles intersect
      */
     inline bool Intersects(const Triangle& tri1, const Triangle& tri2)
     {
-        // Kanten des ersten Dreiecks
+        // Edges of the first triangle
         glm::vec3 edge1_0 = tri1.v1 - tri1.v0;
         glm::vec3 edge1_1 = tri1.v2 - tri1.v1;
         glm::vec3 edge1_2 = tri1.v0 - tri1.v2;
 
-        // Kanten des zweiten Dreiecks
+        // Edges of the second triangle
         glm::vec3 edge2_0 = tri2.v1 - tri2.v0;
         glm::vec3 edge2_1 = tri2.v2 - tri2.v1;
         glm::vec3 edge2_2 = tri2.v0 - tri2.v2;
 
-        // Normale des ersten Dreiecks
-        glm::vec3 normal1 = glm::cross(edge1_0, edge1_1);
-        // Normale des zweiten Dreiecks
-        glm::vec3 normal2 = glm::cross(edge2_0, edge2_1);
+        // Normal of the first triangle (using v1-v0 and v2-v0)
+        glm::vec3 normal1 = glm::cross(edge1_0, tri1.v2 - tri1.v0);
+        // Normal of the second triangle (using v1-v0 and v2-v0)
+        glm::vec3 normal2 = glm::cross(edge2_0, tri2.v2 - tri2.v0);
 
-        // Test Achse 1: Normale von Dreieck 1
+        // Test axis 1: Normal of triangle 1
         if (TestSeparatingAxis(tri1, tri2, normal1)) return false;
 
-        // Test Achse 2: Normale von Dreieck 2
+        // Test axis 2: Normal of triangle 2
         if (TestSeparatingAxis(tri1, tri2, normal2)) return false;
 
-        // Test die 9 Kreuzprodukt-Achsen (Kante1 x Kante2)
+        // Test the 9 cross product axes (edge1 x edge2)
         glm::vec3 edges1[3] = { edge1_0, edge1_1, edge1_2 };
         glm::vec3 edges2[3] = { edge2_0, edge2_1, edge2_2 };
 
@@ -167,48 +167,48 @@ namespace TriangleCollision
             }
         }
 
-        // Keine separierende Achse gefunden -> Kollision
+        // No separating axis found -> collision
         return true;
     }
 
     /**
-     * Prüft ob ein Dreieck und eine AABB sich überschneiden
-     * Verwendet den SAT-Algorithmus
+     * Checks if a triangle and an AABB intersect
+     * Uses the SAT algorithm
      */
     inline bool IntersectsAABB(const Triangle& tri, const glm::vec3& aabbMin, 
                                const glm::vec3& aabbMax)
     {
-        // Verschiebe alles so, dass die AABB am Ursprung zentriert ist
+        // Translate everything so the AABB is centered at origin
         glm::vec3 center = (aabbMin + aabbMax) * 0.5f;
         glm::vec3 halfExtents = (aabbMax - aabbMin) * 0.5f;
 
-        // Verschiebe das Dreieck
+        // Translate the triangle
         glm::vec3 v0 = tri.v0 - center;
         glm::vec3 v1 = tri.v1 - center;
         glm::vec3 v2 = tri.v2 - center;
 
-        // Kanten des Dreiecks
+        // Edges of the triangle
         glm::vec3 e0 = v1 - v0;
         glm::vec3 e1 = v2 - v1;
         glm::vec3 e2 = v0 - v2;
 
-        // Test AABB-Achsen (X, Y, Z)
-        // X-Achse
+        // Test AABB axes (X, Y, Z)
+        // X-axis
         float minX = std::min({v0.x, v1.x, v2.x});
         float maxX = std::max({v0.x, v1.x, v2.x});
         if (minX > halfExtents.x || maxX < -halfExtents.x) return false;
 
-        // Y-Achse
+        // Y-axis
         float minY = std::min({v0.y, v1.y, v2.y});
         float maxY = std::max({v0.y, v1.y, v2.y});
         if (minY > halfExtents.y || maxY < -halfExtents.y) return false;
 
-        // Z-Achse
+        // Z-axis
         float minZ = std::min({v0.z, v1.z, v2.z});
         float maxZ = std::max({v0.z, v1.z, v2.z});
         if (minZ > halfExtents.z || maxZ < -halfExtents.z) return false;
 
-        // Test Dreiecks-Normale
+        // Test triangle normal
         glm::vec3 normal = glm::cross(e0, e1);
         float d = glm::dot(normal, v0);
         float r = halfExtents.x * std::abs(normal.x) +
@@ -216,18 +216,20 @@ namespace TriangleCollision
                   halfExtents.z * std::abs(normal.z);
         if (std::abs(d) > r) return false;
 
-        // Test die 9 Kreuzprodukt-Achsen
-        // Für jede AABB-Achse (X, Y, Z) und jede Dreieckskante
+        // Test the 9 cross product axes
+        // For each AABB axis (X, Y, Z) and each triangle edge
         auto testAxis = [&](const glm::vec3& axis) -> bool
         {
             float axisLen = glm::length(axis);
-            if (axisLen < EPSILON) return true; // Degenerierte Achse
+            if (axisLen < EPSILON) return true; // Degenerate axis
 
             float p0 = glm::dot(v0, axis);
             float p1 = glm::dot(v1, axis);
             float p2 = glm::dot(v2, axis);
-            float triRadius = std::max({p0, p1, p2}) - std::min({p0, p1, p2});
-            float triCenter = (std::max({p0, p1, p2}) + std::min({p0, p1, p2})) * 0.5f;
+            float triMin = std::min({p0, p1, p2});
+            float triMax = std::max({p0, p1, p2});
+            float triRadius = triMax - triMin;
+            float triCenter = (triMax + triMin) * 0.5f;
 
             float boxRadius = halfExtents.x * std::abs(axis.x) +
                               halfExtents.y * std::abs(axis.y) +
@@ -236,17 +238,17 @@ namespace TriangleCollision
             return std::abs(triCenter) <= boxRadius + triRadius * 0.5f;
         };
 
-        // Kreuzprodukte mit X-Achse
+        // Cross products with X-axis
         if (!testAxis(glm::cross(glm::vec3(1, 0, 0), e0))) return false;
         if (!testAxis(glm::cross(glm::vec3(1, 0, 0), e1))) return false;
         if (!testAxis(glm::cross(glm::vec3(1, 0, 0), e2))) return false;
 
-        // Kreuzprodukte mit Y-Achse
+        // Cross products with Y-axis
         if (!testAxis(glm::cross(glm::vec3(0, 1, 0), e0))) return false;
         if (!testAxis(glm::cross(glm::vec3(0, 1, 0), e1))) return false;
         if (!testAxis(glm::cross(glm::vec3(0, 1, 0), e2))) return false;
 
-        // Kreuzprodukte mit Z-Achse
+        // Cross products with Z-axis
         if (!testAxis(glm::cross(glm::vec3(0, 0, 1), e0))) return false;
         if (!testAxis(glm::cross(glm::vec3(0, 0, 1), e1))) return false;
         if (!testAxis(glm::cross(glm::vec3(0, 0, 1), e2))) return false;

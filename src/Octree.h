@@ -9,41 +9,40 @@
 #include "Triangle.h"
 
 /**
- * Octree - Hierarchische räumliche Datenstruktur für Kollisionserkennung
+ * Octree - Hierarchical spatial data structure for collision detection
  * 
- * Ein Octree teilt den 3D-Raum rekursiv in 8 gleichgroße Kinder auf.
- * Dies ermöglicht eine effiziente Broad-Phase-Kollisionserkennung durch
- * schnelles Ausschließen von Bereichen ohne mögliche Kollisionen.
+ * An octree recursively divides 3D space into 8 equal-sized children.
+ * This enables efficient broad-phase collision detection by quickly
+ * excluding regions without possible collisions.
  * 
- * Eigenschaften:
- * - Jeder Knoten hat eine AABB, die seinen Bereich definiert
- * - Blattknoten enthalten Dreieck-Indizes
- * - Innere Knoten haben 8 Kindknoten
- * - Maximale Tiefe und minimale Dreieckszahl pro Knoten sind konfigurierbar
+ * Properties:
+ * - Each node has an AABB defining its region
+ * - Leaf nodes contain triangle indices
+ * - Internal nodes have 8 child nodes
+ * - Maximum depth and minimum triangles per node are configurable
  * 
- * Indizes der 8 Kinder (basierend auf Position relativ zum Zentrum):
- * 0: -X, -Y, -Z    4: +X, -Y, -Z
- * 1: -X, +Y, -Z    5: +X, +Y, -Z
- * 2: -X, -Y, +Z    6: +X, -Y, +Z
- * 3: -X, +Y, +Z    7: +X, +Y, +Z
+ * Child indices (based on position relative to center):
+ * Bit 0: X-axis, Bit 1: Y-axis, Bit 2: Z-axis (0=negative, 1=positive)
+ * 0: -X, -Y, -Z    1: +X, -Y, -Z    2: -X, +Y, -Z    3: +X, +Y, -Z
+ * 4: -X, -Y, +Z    5: +X, -Y, +Z    6: -X, +Y, +Z    7: +X, +Y, +Z
  */
 class OctreeNode
 {
 public:
-    static constexpr int MAX_DEPTH = 8;           // Maximale Rekursionstiefe
-    static constexpr int MIN_TRIANGLES = 4;       // Minimale Dreiecke zum Aufteilen
-    static constexpr int MAX_TRIANGLES_LEAF = 16; // Max Dreiecke in einem Blattknoten
+    static constexpr int MAX_DEPTH = 8;           // Maximum recursion depth
+    static constexpr int MIN_TRIANGLES = 4;       // Minimum triangles to split
+    static constexpr int MAX_TRIANGLES_LEAF = 16; // Max triangles in a leaf node
 
     OctreeNode(const AABB& bounds, int depth = 0);
     ~OctreeNode() = default;
 
-    // Fügt einen Dreieck-Index hinzu und teilt bei Bedarf auf
+    // Inserts a triangle index and subdivides if necessary
     void Insert(size_t triangleIndex, const Triangle& triangle);
 
-    // Gibt alle Dreieck-Indizes zurück, die mit der AABB kollidieren könnten
+    // Returns all triangle indices that could collide with the AABB
     void Query(const AABB& queryBounds, std::vector<size_t>& outIndices) const;
 
-    // Gibt alle Dreieck-Indizes in diesem Knoten und seinen Kindern zurück
+    // Returns all triangle indices in this node and its children
     void GetAllTriangles(std::vector<size_t>& outIndices) const;
 
     // Getters
@@ -53,27 +52,27 @@ public:
     size_t GetTriangleCount() const { return m_triangleIndices.size(); }
 
 private:
-    // Teilt diesen Knoten in 8 Kindknoten auf
+    // Splits this node into 8 child nodes
     void Subdivide();
 
-    // Bestimmt welche Kind-Indizes ein Dreieck überlappen kann
+    // Determines which child indices a triangle could overlap
     std::vector<int> GetChildIndicesForTriangle(const Triangle& triangle) const;
 
-    // Berechnet die AABB für einen bestimmten Kindknoten
+    // Calculates the AABB for a specific child node
     AABB GetChildBounds(int childIndex) const;
 
-    AABB m_bounds;                                      // Begrenzung dieses Knotens
-    int m_depth;                                        // Tiefe im Baum (0 = Wurzel)
-    std::vector<size_t> m_triangleIndices;              // Dreieck-Indizes in diesem Knoten
-    std::array<std::unique_ptr<OctreeNode>, 8> m_children; // 8 Kindknoten
-    std::vector<Triangle> m_tempTriangles;              // Temporäre Dreiecke für Subdivision
+    AABB m_bounds;                                      // Bounds of this node
+    int m_depth;                                        // Depth in the tree (0 = root)
+    std::vector<size_t> m_triangleIndices;              // Triangle indices in this node
+    std::array<std::unique_ptr<OctreeNode>, 8> m_children; // 8 child nodes
+    std::vector<Triangle> m_tempTriangles;              // Temporary triangles for subdivision
 };
 
 /**
- * Octree - Hauptklasse für die Octree-Datenstruktur
+ * Octree - Main class for the octree data structure
  * 
- * Diese Klasse verwaltet den Wurzelknoten und bietet eine einfache
- * Schnittstelle zum Aufbauen und Abfragen des Octrees.
+ * This class manages the root node and provides a simple
+ * interface for building and querying the octree.
  */
 class Octree
 {
@@ -82,44 +81,44 @@ public:
     ~Octree() = default;
 
     /**
-     * Baut den Octree aus Mesh-Daten auf
+     * Builds the octree from mesh data
      * 
-     * @param vertices Interleaved Vertex-Daten (x, y, z, u, v, r, g, b)
-     * @param indices  Dreieck-Indizes
-     * @param stride   Anzahl Floats pro Vertex (Standard: 8)
+     * @param vertices Interleaved vertex data (x, y, z, u, v, r, g, b)
+     * @param indices  Triangle indices
+     * @param stride   Number of floats per vertex (default: 8)
      */
     void Build(const std::vector<float>& vertices,
                const std::vector<unsigned int>& indices,
                size_t stride = 8);
 
     /**
-     * Gibt alle Dreieck-Indizes zurück, die mit der AABB kollidieren könnten
+     * Returns all triangle indices that could collide with the AABB
      */
     void Query(const AABB& queryBounds, std::vector<size_t>& outTriangleIndices) const;
 
     /**
-     * Gibt die Dreiecke zurück
+     * Returns the triangles
      */
     const std::vector<Triangle>& GetTriangles() const { return m_triangles; }
 
     /**
-     * Gibt die AABB des gesamten Meshes zurück
+     * Returns the AABB of the entire mesh
      */
     const AABB& GetBounds() const { return m_bounds; }
 
     /**
-     * Prüft ob der Octree aufgebaut wurde
+     * Checks if the octree has been built
      */
     bool IsBuilt() const { return m_root != nullptr; }
 
     /**
-     * Löscht den Octree
+     * Clears the octree
      */
     void Clear();
 
 private:
-    std::unique_ptr<OctreeNode> m_root;   // Wurzelknoten
-    std::vector<Triangle> m_triangles;     // Alle Dreiecke des Meshes
-    AABB m_bounds;                         // Gesamte AABB des Meshes
+    std::unique_ptr<OctreeNode> m_root;   // Root node
+    std::vector<Triangle> m_triangles;     // All triangles of the mesh
+    AABB m_bounds;                         // Total AABB of the mesh
 };
 
