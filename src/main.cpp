@@ -48,6 +48,10 @@ float lastTitleUpdate = 0.0f;
 bool showAABBs = false;        // Toggle AABB visualization with K key
 bool kKeyWasPressed = false;  // To detect key press (not hold)
 
+// ===== COLLISION DEBUG OUTPUT =====
+float lastCollisionPrint = 0.0f;
+const float COLLISION_PRINT_INTERVAL = 0.1f;  // Print collision info every 100ms
+
 // Maus-Callback Funktion
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
     float xpos = static_cast<float>(xposIn);
@@ -326,8 +330,9 @@ int main(void) {
         // Update player position in collision system
         collisionSystem.UpdatePosition(playerCollisionId, player.GetPosition());
         
-        // Check if player collides with well
-        bool isColliding = collisionSystem.CheckCollision(playerCollisionId, wellCollisionId);
+        // Efficient collision check with info in a single call
+        CollisionInfo collisionInfo;
+        bool isColliding = collisionSystem.CheckCollisionWithInfo(playerCollisionId, wellCollisionId, &collisionInfo);
         
         // Print collision state change messages
         if (isColliding && !wasColliding) {
@@ -336,12 +341,12 @@ int main(void) {
             std::cout << "*** Player left the well area ***" << std::endl;
         }
         
-        // Print collision point every frame if colliding
-        if (isColliding) {
-            CollisionInfo info = collisionSystem.GetDetailedCollision(playerCollisionId, wellCollisionId);
-            if (info.hasCollision) {
-                std::cout << "Collision point: (" << info.collisionPoint.x << ", " 
-                          << info.collisionPoint.y << ", " << info.collisionPoint.z << ")" << std::endl;
+        // Print collision point periodically (not every frame to avoid FPS drop)
+        if (isColliding && collisionInfo.hasCollision) {
+            if (currentTime - lastCollisionPrint >= COLLISION_PRINT_INTERVAL) {
+                std::cout << "Collision point: (" << collisionInfo.collisionPoint.x << ", " 
+                          << collisionInfo.collisionPoint.y << ", " << collisionInfo.collisionPoint.z << ")" << std::endl;
+                lastCollisionPrint = currentTime;
             }
         }
         wasColliding = isColliding;

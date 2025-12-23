@@ -120,6 +120,11 @@ bool CollisionSystem::CheckAABBCollision(size_t objectIdA, size_t objectIdB) con
 
 bool CollisionSystem::CheckCollision(size_t objectIdA, size_t objectIdB) const
 {
+    return CheckCollisionWithInfo(objectIdA, objectIdB, nullptr);
+}
+
+bool CollisionSystem::CheckCollisionWithInfo(size_t objectIdA, size_t objectIdB, CollisionInfo* outInfo) const
+{
     const CollisionObject* objA = GetObject(objectIdA);
     const CollisionObject* objB = GetObject(objectIdB);
 
@@ -135,48 +140,14 @@ bool CollisionSystem::CheckCollision(size_t objectIdA, size_t objectIdB) const
     }
 
     // Schritt 2+3: Mid-Phase und Narrow-Phase - Octree und Dreieck-Tests
-    return CheckOctreeCollision(*objA, *objB);
+    return CheckOctreeCollision(*objA, *objB, outInfo);
 }
 
 CollisionInfo CollisionSystem::GetDetailedCollision(size_t objectIdA, size_t objectIdB) const
 {
     CollisionInfo info;
     info.hasCollision = false;
-
-    const CollisionObject* objA = GetObject(objectIdA);
-    const CollisionObject* objB = GetObject(objectIdB);
-
-    if (!objA || !objB)
-    {
-        return info;
-    }
-
-    // Broad-Phase
-    AABB aabbA = objA->GetWorldAABB();
-    AABB aabbB = objB->GetWorldAABB();
-    
-    if (!AABBUtils::Intersects(aabbA, aabbB))
-    {
-        return info;
-    }
-
-    // Mid-Phase: Finde potenziell kollidierende Dreiecke über Octree
-    const Octree& octreeA = objA->GetOctree();
-    const Octree& octreeB = objB->GetOctree();
-
-    // Transformiere die Query-AABB in das lokale Koordinatensystem
-    AABB queryForA(aabbB.min - objA->GetPosition(), aabbB.max - objA->GetPosition());
-    AABB queryForB(aabbA.min - objB->GetPosition(), aabbA.max - objB->GetPosition());
-
-    std::vector<size_t> triangleIndicesA;
-    std::vector<size_t> triangleIndicesB;
-
-    octreeA.Query(queryForA, triangleIndicesA);
-    octreeB.Query(queryForB, triangleIndicesB);
-
-    // Narrow-Phase: Dreieck-gegen-Dreieck Tests mit Detail-Rückgabe
-    CheckTriangleCollision(*objA, *objB, triangleIndicesA, triangleIndicesB, &info);
-
+    CheckCollisionWithInfo(objectIdA, objectIdB, &info);
     return info;
 }
 
@@ -235,7 +206,8 @@ CollisionObject* CollisionSystem::GetObject(size_t objectId)
 }
 
 bool CollisionSystem::CheckOctreeCollision(const CollisionObject& objA,
-                                            const CollisionObject& objB) const
+                                            const CollisionObject& objB,
+                                            CollisionInfo* outInfo) const
 {
     const Octree& octreeA = objA.GetOctree();
     const Octree& octreeB = objB.GetOctree();
@@ -274,7 +246,7 @@ bool CollisionSystem::CheckOctreeCollision(const CollisionObject& objA,
     }
 
     // Narrow-Phase: Teste alle Dreieck-Paare
-    return CheckTriangleCollision(objA, objB, triangleIndicesA, triangleIndicesB);
+    return CheckTriangleCollision(objA, objB, triangleIndicesA, triangleIndicesB, outInfo);
 }
 
 bool CollisionSystem::CheckTriangleCollision(const CollisionObject& objA,

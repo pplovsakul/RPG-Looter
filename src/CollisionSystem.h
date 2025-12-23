@@ -191,6 +191,17 @@ public:
     bool CheckCollision(size_t objectIdA, size_t objectIdB) const;
 
     /**
+     * Effiziente Kollisionsprüfung mit optionaler Detail-Rückgabe
+     * Vermeidet doppelte Arbeit wenn sowohl Kollision als auch Details benötigt werden
+     * 
+     * @param objectIdA Erstes Objekt
+     * @param objectIdB Zweites Objekt
+     * @param outInfo Optional: Zeiger auf CollisionInfo für Details (kann nullptr sein)
+     * @return true wenn eine echte Kollision vorliegt
+     */
+    bool CheckCollisionWithInfo(size_t objectIdA, size_t objectIdB, CollisionInfo* outInfo) const;
+
+    /**
      * Detaillierter Kollisionstest mit Rückgabe von Kollisionsinformationen
      * 
      * @param objectIdA Erstes Objekt
@@ -233,7 +244,8 @@ private:
 
     // Führt die hierarchische Octree-basierte Kollisionserkennung durch
     bool CheckOctreeCollision(const CollisionObject& objA, 
-                              const CollisionObject& objB) const;
+                              const CollisionObject& objB,
+                              CollisionInfo* outInfo = nullptr) const;
 
     // Führt Dreieck-gegen-Dreieck Tests für die gegebenen Indizes durch
     bool CheckTriangleCollision(const CollisionObject& objA,
