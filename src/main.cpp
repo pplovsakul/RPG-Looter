@@ -13,6 +13,7 @@
 #include "OBJLoader.h"
 #include "Mesh.h"
 #include "Player.h"
+#include "CollisionSystem.h"
 
 // GLM für Matrizen
 #include "vendor/glm/glm.hpp"
@@ -186,6 +187,22 @@ int main(void) {
     
     std::cout << "Player created with mesh" << std::endl;
 
+    // ===== COLLISION SYSTEM SETUP =====
+    CollisionSystem collisionSystem;
+    
+    // Add player and well to collision system
+    size_t playerCollisionId = collisionSystem.AddObject(*meshPtr);
+    size_t wellCollisionId = collisionSystem.AddObject(*meshPtr2);
+    
+    // Set initial positions
+    collisionSystem.UpdatePosition(playerCollisionId, player.GetPosition());
+    collisionSystem.UpdatePosition(wellCollisionId, well.GetPosition());
+    
+    std::cout << "Collision system initialized with player and well" << std::endl;
+    
+    // Track collision state to avoid spamming messages
+    bool wasColliding = false;
+
     // ===== SHADER UND RENDERER SETUP =====
     // basic.shader: Standard OpenGL Vertex/Fragment Shader für Rasterizer
     Shader shader("res/shaders/basic.shader");
@@ -283,6 +300,29 @@ int main(void) {
         
         player.HandleInput(playerInput);
         player.Update(deltaTime);
+
+        // ===== COLLISION DETECTION =====
+        // Update player position in collision system
+        collisionSystem.UpdatePosition(playerCollisionId, player.GetPosition());
+        
+        // Check if player collides with well
+        bool isColliding = collisionSystem.CheckCollision(playerCollisionId, wellCollisionId);
+        
+        // Print message only when collision state changes
+        if (isColliding && !wasColliding) {
+            std::cout << "*** COLLISION DETECTED: Player touched the well! ***" << std::endl;
+            
+            // Get detailed collision info
+            CollisionInfo info = collisionSystem.GetDetailedCollision(playerCollisionId, wellCollisionId);
+            if (info.hasCollision) {
+                std::cout << "    Collision point: (" << info.collisionPoint.x << ", " 
+                          << info.collisionPoint.y << ", " << info.collisionPoint.z << ")" << std::endl;
+                std::cout << "    Penetration depth: " << info.penetrationDepth << std::endl;
+            }
+        } else if (!isColliding && wasColliding) {
+            std::cout << "*** Player left the well area ***" << std::endl;
+        }
+        wasColliding = isColliding;
 
         // Clear screen
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
