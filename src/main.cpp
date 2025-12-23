@@ -14,6 +14,7 @@
 #include "Mesh.h"
 #include "Player.h"
 #include "CollisionSystem.h"
+#include "AABBRenderer.h"
 
 // GLM für Matrizen
 #include "vendor/glm/glm.hpp"
@@ -42,6 +43,10 @@ float lastFrame = 0.0f;
 
 // ===== FPS COUNTER =====
 float lastTitleUpdate = 0.0f;
+
+// ===== DEBUG VISUALIZATION =====
+bool showAABBs = false;        // Toggle AABB visualization with K key
+bool kKeyWasPressed = false;  // To detect key press (not hold)
 
 // Maus-Callback Funktion
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
@@ -138,6 +143,7 @@ int main(void) {
     std::cout << "Arrow Keys  - Kamera bewegen" << std::endl;
     std::cout << "Q/E         - Kamera hoch/runter" << std::endl;
     std::cout << "Maus        - Kamera umsehen" << std::endl;
+    std::cout << "K           - AABBs anzeigen/verbergen (pink)" << std::endl;
     std::cout << "\nESC         - Beenden" << std::endl;
 
     // Maus einfangen und Callback setzen
@@ -206,6 +212,13 @@ int main(void) {
     // ===== SHADER UND RENDERER SETUP =====
     // basic.shader: Standard OpenGL Vertex/Fragment Shader für Rasterizer
     Shader shader("res/shaders/basic.shader");
+    
+    // Debug shader for AABB visualization
+    Shader debugShader("res/shaders/debug.shader");
+    
+    // Initialize AABB renderer for debug visualization
+    AABBRenderer aabbRenderer;
+    aabbRenderer.Initialize();
 
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     
@@ -290,6 +303,14 @@ int main(void) {
         // Eingabe verarbeiten (Camera)
         processInput(window);
         
+        // Toggle AABB visualization with K key
+        bool kKeyPressed = glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS;
+        if (kKeyPressed && !kKeyWasPressed) {
+            showAABBs = !showAABBs;
+            std::cout << "AABB Visualization: " << (showAABBs ? "ON" : "OFF") << std::endl;
+        }
+        kKeyWasPressed = kKeyPressed;
+        
         // Player Input handling
         InputState playerInput;
         playerInput.up    = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
@@ -308,19 +329,20 @@ int main(void) {
         // Check if player collides with well
         bool isColliding = collisionSystem.CheckCollision(playerCollisionId, wellCollisionId);
         
-        // Print message only when collision state changes
+        // Print collision state change messages
         if (isColliding && !wasColliding) {
             std::cout << "*** COLLISION DETECTED: Player touched the well! ***" << std::endl;
-            
-            // Get detailed collision info
-            CollisionInfo info = collisionSystem.GetDetailedCollision(playerCollisionId, wellCollisionId);
-            if (info.hasCollision) {
-                std::cout << "    Collision point: (" << info.collisionPoint.x << ", " 
-                          << info.collisionPoint.y << ", " << info.collisionPoint.z << ")" << std::endl;
-                std::cout << "    Penetration depth: " << info.penetrationDepth << std::endl;
-            }
         } else if (!isColliding && wasColliding) {
             std::cout << "*** Player left the well area ***" << std::endl;
+        }
+        
+        // Print collision point every frame if colliding
+        if (isColliding) {
+            CollisionInfo info = collisionSystem.GetDetailedCollision(playerCollisionId, wellCollisionId);
+            if (info.hasCollision) {
+                std::cout << "Collision point: (" << info.collisionPoint.x << ", " 
+                          << info.collisionPoint.y << ", " << info.collisionPoint.z << ")" << std::endl;
+            }
         }
         wasColliding = isColliding;
 
@@ -362,12 +384,29 @@ int main(void) {
 
         well.Draw(shader);
 
+        // ===== AABB DEBUG VISUALIZATION =====
+        if (showAABBs) {
+            // Get the world AABBs for player and well
+            AABB playerAABB = collisionSystem.GetObjectAABB(playerCollisionId);
+            AABB wellAABB = collisionSystem.GetObjectAABB(wellCollisionId);
+            
+            // Pink color for AABBs
+            glm::vec3 pinkColor(1.0f, 0.4f, 0.7f);
+            
+            // Draw AABBs with thicker lines for better visibility
+            glLineWidth(2.0f);
+            aabbRenderer.Draw(playerAABB, debugShader, view, projection, pinkColor);
+            aabbRenderer.Draw(wellAABB, debugShader, view, projection, pinkColor);
+            glLineWidth(1.0f);
+        }
+
         // Swap buffers and poll events
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
     // Cleanup
+    aabbRenderer.Cleanup();
     glfwDestroyWindow(window);
     glfwTerminate();
 

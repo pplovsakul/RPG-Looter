@@ -57,7 +57,9 @@ add_executable(RPG-Looter
  "src/Octree.h"
  "src/Octree.cpp"
  "src/CollisionSystem.h"
- "src/CollisionSystem.cpp")
+ "src/CollisionSystem.cpp"
+ "src/AABBRenderer.h"
+ "src/AABBRenderer.cpp")
 
 # Includes
 target_include_directories(RPG-Looter PUBLIC 
