@@ -157,10 +157,11 @@ int main(void) {
         glm::vec3 objectPos = glm::vec3(5.0f, 0.0f, -5.0f);
     }
 
-    std::cout << "\n=== Loading Test.obj ===" << std::endl;
+    std::cout << "\n=== Loading Player Modell ===" << std::endl;
     OBJLoader::MeshData playerData;
-    if (!OBJLoader::LoadOBJ("res/models/Affe.obj", playerData)) {
-        std::cerr << "ERROR: Failed to load well.obj!" << std::endl;
+	char ModelPath[] = "res/models/player-bean.obj";
+    if (!OBJLoader::LoadOBJ(ModelPath, playerData)) {
+        std::cerr << "ERROR: Failed to load" << ModelPath <<"!" << std::endl;
         glfwDestroyWindow(window);
         glfwTerminate();
         return -1;
