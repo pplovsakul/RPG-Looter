@@ -149,7 +149,7 @@ int main(void) {
     // ===== LOAD MESH FROM OBJ FILE =====
 
     OBJLoader::MeshData staticData;
-    if (OBJLoader::LoadOBJ("res/models/well.obj", staticData)) {
+    if (OBJLoader::LoadOBJ("res/models/Test.obj", staticData)) {
         auto staticMesh = std::make_shared<Mesh>(staticData);
         staticMesh->SetupGL();
 
@@ -159,7 +159,7 @@ int main(void) {
 
     std::cout << "\n=== Loading Player Modell ===" << std::endl;
     OBJLoader::MeshData playerData;
-	char ModelPath[] = "res/models/player-bean.obj";
+	char ModelPath[] = "res/models/Test.obj";
     if (!OBJLoader::LoadOBJ(ModelPath, playerData)) {
         std::cerr << "ERROR: Failed to load" << ModelPath <<"!" << std::endl;
         glfwDestroyWindow(window);
