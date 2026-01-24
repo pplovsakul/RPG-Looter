@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.13)
 
+# Workaround: Linker-Check beim Compiler-Test überspringen, um Fehler in VS zu vermeiden
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+
 project(RPG-Looter)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -89,3 +92,4 @@ if(EXISTS ${MODELS_SOURCE_DIR})
 endif()
 
 target_compile_definitions(RPG-Looter PRIVATE SHADER_DIR="${SHADER_BUILD_DIR}")
+
